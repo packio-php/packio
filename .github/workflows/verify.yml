@@ -3,7 +3,7 @@ name: Public verification
 on:
   pull_request:
   push:
-    branches: [master]
+    branches: [main]
     tags: ['v*']
   workflow_dispatch:
 
@@ -93,8 +93,8 @@ jobs:
             exit 1
           fi
           {
-            if git rev-parse --verify --quiet 'refs/remotes/origin/master^{commit}' > /dev/null; then
-              echo refs/remotes/origin/master
+            if git rev-parse --verify --quiet 'refs/remotes/origin/main^{commit}' > /dev/null; then
+              echo refs/remotes/origin/main
             fi
             git for-each-ref --format='%(refname)' refs/tags
             echo HEAD

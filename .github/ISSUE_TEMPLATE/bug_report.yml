@@ -1,0 +1,61 @@
+name: Bug report
+description: Report a reproducible Packio problem
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets or private data. For a suspected security vulnerability, stop here and report it privately to [info@packio.us](mailto:info@packio.us); do not add vulnerability details to a public issue.
+  - type: input
+    id: version
+    attributes:
+      label: Packio version or commit
+      description: Include the version/commit and, for containers, the image tag and registry digest if available.
+      placeholder: "commit SHA or image@sha256:digest"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system/architecture, PHP version, database version, and runtime (RoadRunner or development runtime).
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Describe the observed behavior without credentials or personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Safe reproduction steps
+      description: Use synthetic data. Mask tokens, hostnames if private, email addresses, and any customer data. Do not paste environment files, database dumps, archives, request headers, or mail bodies.
+      placeholder: |
+        1. ...
+        2. ...
+        3. ...
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant redacted error
+      description: Include only the smallest useful excerpt. Remove authorization headers, cookies, tokens, secret values, personal data, and full request payloads.
+    validations:
+      required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked that this report contains no credentials, tokens, private package data, database dump, or unredacted personal data.
+          required: true

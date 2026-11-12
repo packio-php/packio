@@ -1,0 +1,8 @@
+{
+  "zen": "Fixed a bug",
+  "hook_id": 123456789,
+  "repository": {
+    "id": 123,
+    "html_url": "https://github.com/example/example.git"
+  }
+}

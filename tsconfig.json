@@ -1,0 +1,26 @@
+{
+  "extends": "./node_modules/@tsconfig/svelte/tsconfig.json",
+  "compilerOptions": {
+    "allowJs": true,
+    "baseUrl": ".",
+    "checkJs": false,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "target": "ES2022",
+    "strict": true,
+    "noImplicitAny": true,
+    "verbatimModuleSyntax": true,
+    "paths": {
+      "@/*": ["resources/js/*"]
+    },
+    "types": ["vite/client", "node"]
+  },
+  "include": [
+    "resources/js/**/*.ts",
+    "resources/js/**/*.js",
+    "resources/js/**/*.svelte",
+    "resources/js/**/*.d.ts"
+  ],
+  "exclude": ["node_modules", "public", "runtime", "vendor"]
+}

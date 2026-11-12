@@ -1,0 +1,18 @@
+{% extends 'errors/base.twig' %}
+
+{% block title %}{{ status|default(500) }} {{ title|default('Server error') }}{% endblock %}
+
+{% block content %}
+    <p class="error-code">{{ status|default(500) }}</p>
+    <h1 class="error-title" id="error-title">{{ title|default('Server error') }}</h1>
+    <p class="error-message">{{ message|default('Something went wrong while processing your request.') }}</p>
+
+    {% if error is defined and error %}
+        <section class="error-debug">
+            <h2>Debug information</h2>
+            <p><strong>Message:</strong> {{ error.message|default('') }}</p>
+            <p><strong>File:</strong> {{ error.file|default('') }}:{{ error.line|default('') }}</p>
+            <pre>{{ error.traceAsString|default('') }}</pre>
+        </section>
+    {% endif %}
+{% endblock %}

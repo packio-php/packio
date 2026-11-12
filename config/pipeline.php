@@ -1,0 +1,80 @@
+<?php
+
+declare(strict_types=1);
+
+use Laminas\Stratigility\Middleware\ErrorHandler;
+use Mezzio\Application;
+use Mezzio\Flash\FlashMessageMiddleware;
+use Mezzio\Handler\NotFoundHandler;
+use Mezzio\Helper\BodyParams\BodyParamsMiddleware;
+use Mezzio\Helper\ServerUrlMiddleware;
+use Mezzio\Helper\UrlHelperMiddleware;
+use Mezzio\MiddlewareFactoryInterface;
+use Mezzio\Router\Middleware\DispatchMiddleware;
+use Mezzio\Router\Middleware\ImplicitHeadMiddleware;
+use Mezzio\Router\Middleware\ImplicitOptionsMiddleware;
+use Mezzio\Router\Middleware\MethodNotAllowedMiddleware;
+use Mezzio\Router\Middleware\RouteMiddleware;
+use Mezzio\Session\SessionMiddleware;
+use Packio\Application\Middleware\ApiAuthenticationAttemptRateLimitMiddleware;
+use Packio\Application\Middleware\CsrfValidationMiddleware;
+use Packio\Application\Middleware\HandleAuthorizationExceptionMiddleware;
+use Packio\Application\Middleware\HandleInertiaRequests;
+use Packio\Application\Middleware\HtmlCacheControlMiddleware;
+use Packio\Application\Middleware\OperationalProbeDispatchMiddleware;
+use Packio\Application\Middleware\OptionalRouteAuthenticationMiddleware;
+use Packio\Application\Middleware\RefreshAuthenticatedSessionMiddleware;
+use Packio\Application\Middleware\RequestSizeLimitMiddleware;
+use Packio\Application\Middleware\RequireEmailVerificationMiddleware;
+use Packio\Application\Middleware\RequireUnbannedUserMiddleware;
+use Packio\Application\Middleware\ResolveCurrentMembershipMiddleware;
+use Packio\Application\Middleware\ResolveCurrentOrganizationMiddleware;
+use Packio\Application\Middleware\ResolveCurrentUserMiddleware;
+use Packio\Application\Middleware\ResolveOrganizationActorContextMiddleware;
+use Packio\Application\Middleware\RuntimeCorsMiddleware;
+use Packio\Application\Middleware\SecurityHeadersMiddleware;
+use Packio\Application\Middleware\StripPackageMappingErrorInertiaDecorationMiddleware;
+use Packio\Registry\Infrastructure\Middleware\ResolveRegistryOrganizationAttributeMiddleware;
+use Packio\Registry\Infrastructure\Middleware\RestrictRegistrySubdomainMiddleware;
+use Psr\Container\ContainerInterface;
+use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
+use Sirix\SentryPsr\Middleware\SentryErrorMiddleware;
+
+return function(Application $app, MiddlewareFactoryInterface $factory, ContainerInterface $container): void {
+    $app->pipe(SecurityHeadersMiddleware::class);
+    $app->pipe(ErrorHandler::class);
+    $app->pipe(SentryErrorMiddleware::class);
+    $app->pipe(OperationalProbeDispatchMiddleware::class);
+    $app->pipe(RuntimeCorsMiddleware::class);
+    $app->pipe(HtmlCacheControlMiddleware::class);
+    $app->pipe(ServerUrlMiddleware::class);
+    $app->pipe(RequestSizeLimitMiddleware::class);
+    $app->pipe(BodyParamsMiddleware::class);
+    $app->pipe(RouteMiddleware::class);
+    $app->pipe(RestrictRegistrySubdomainMiddleware::class);
+    $app->pipe(SessionMiddleware::class);
+    $app->pipe(FlashMessageMiddleware::class);
+    $app->pipe(CsrfValidationMiddleware::class);
+    $app->pipe(StripPackageMappingErrorInertiaDecorationMiddleware::class);
+    $app->pipe(InertiaMiddleware::class);
+    $app->pipe(ApiAuthenticationAttemptRateLimitMiddleware::class);
+    $app->pipe(OptionalRouteAuthenticationMiddleware::class);
+    $app->pipe(RefreshAuthenticatedSessionMiddleware::class);
+    $app->pipe(ResolveCurrentUserMiddleware::class);
+    $app->pipe(RequireUnbannedUserMiddleware::class);
+    $app->pipe(RequireEmailVerificationMiddleware::class);
+    $app->pipe(ResolveRegistryOrganizationAttributeMiddleware::class);
+    $app->pipe(ResolveCurrentOrganizationMiddleware::class);
+    $app->pipe(ResolveCurrentMembershipMiddleware::class);
+    $app->pipe(ResolveOrganizationActorContextMiddleware::class);
+    $app->pipe(HandleAuthorizationExceptionMiddleware::class);
+    $app->pipe(HandleInertiaRequests::class);
+
+    // Routing
+    $app->pipe(ImplicitHeadMiddleware::class);
+    $app->pipe(ImplicitOptionsMiddleware::class);
+    $app->pipe(MethodNotAllowedMiddleware::class);
+    $app->pipe(UrlHelperMiddleware::class);
+    $app->pipe(DispatchMiddleware::class);
+    $app->pipe(NotFoundHandler::class);
+};

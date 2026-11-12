@@ -1,0 +1,97 @@
+services:
+  postgres:
+    image: ${POSTGRES_IMAGE:?Resolve the PostgreSQL fixture image first}
+
+  app:
+    build: !reset null
+    env_file: !reset []
+    image: ${APP_IMAGE:?Supply the immutable app image}
+    environment:
+      APP_SECRET_ENCRYPTION_KEY: ${PRODUCT_PRIVATE_KEY:?}
+      APP_URL: ${PRODUCT_APP_URL:?}
+      BRAND_DOMAIN: app.fixture.test
+      BRAND_REGISTRY_BASE_DOMAIN: ${PRODUCT_REGISTRY_BASE_DOMAIN:?}
+      DATABASE_PASS: ${PRODUCT_DATABASE_PASS:?}
+      DATABASE_USER: packio
+      DATABASE_NAME: packio
+      DATABASE_HOST: postgres
+      DEFAULT_DB_CONNECTION: postgres
+      APP_DEBUG: "false"
+      APP_PRODUCTION: "true"
+      RUN_MIGRATIONS: "true"
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: http://ssr:13714/render
+      TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      CURL_CA_BUNDLE: /run/fixture/root-ca.pem
+      SSL_CERT_FILE: /run/fixture/root-ca.pem
+      GIT_SSL_CAINFO: /run/fixture/root-ca.pem
+    volumes:
+      - ${PRODUCT_LOCAL_CONFIG:?}:/app/config/autoload/local.php:ro
+      - ${PRODUCT_CA_CERT:?}:/run/fixture/root-ca.pem:ro
+      - ${PRODUCT_CA_INI:?}:/usr/local/etc/php/conf.d/99-e1-fixture-ca.ini:ro
+    ports: !override []
+
+  workers:
+    build: !reset null
+    env_file: !reset []
+    image: ${WORKER_IMAGE:?Supply the immutable worker image}
+    environment:
+      APP_SECRET_ENCRYPTION_KEY: ${PRODUCT_PRIVATE_KEY:?}
+      APP_URL: ${PRODUCT_APP_URL:?}
+      BRAND_DOMAIN: app.fixture.test
+      BRAND_REGISTRY_BASE_DOMAIN: ${PRODUCT_REGISTRY_BASE_DOMAIN:?}
+      DATABASE_PASS: ${PRODUCT_DATABASE_PASS:?}
+      DATABASE_USER: packio
+      DATABASE_NAME: packio
+      DATABASE_HOST: postgres
+      DEFAULT_DB_CONNECTION: postgres
+      APP_DEBUG: "false"
+      APP_PRODUCTION: "true"
+      RUN_MIGRATIONS: "false"
+      TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
+      MAIL_HOST: mailpit
+      MAIL_PORT: "1025"
+      CURL_CA_BUNDLE: /run/fixture/root-ca.pem
+      SSL_CERT_FILE: /run/fixture/root-ca.pem
+      GIT_SSL_CAINFO: /run/fixture/root-ca.pem
+    volumes:
+      - ${PRODUCT_LOCAL_CONFIG:?}:/app/config/autoload/local.php:ro
+      - ${PRODUCT_CA_CERT:?}:/run/fixture/root-ca.pem:ro
+      - ${PRODUCT_CA_INI:?}:/usr/local/etc/php/conf.d/99-e1-fixture-ca.ini:ro
+
+  ssr:
+    image: ${SSR_IMAGE:?Supply the immutable SSR image}
+    build: !reset null
+    env_file: !reset []
+
+  mailpit:
+    image: ${MAILPIT_IMAGE:?Resolve the Mailpit fixture image first}
+    ports: !override
+      - "127.0.0.1:${PRODUCT_MAILPIT_API_PORT:?}:8025"
+
+  provider:
+    image: ${CADDY_IMAGE:?Resolve the Caddy fixture image first}
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - ${PRODUCT_PROVIDER_CADDYFILE:?}:/etc/caddy/Caddyfile:ro
+      - ${PRODUCT_PROVIDER_DATA:?}:/srv/git:ro
+    build: !reset null
+
+  tls:
+    image: ${CADDY_IMAGE:?Resolve the Caddy fixture image first}
+    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    build: !reset null
+    ports: !override
+      - "127.0.0.1:${PRODUCT_HTTP_PORT:?}:443"
+    volumes:
+      - ${PRODUCT_EDGE_CADDYFILE:?}:/etc/caddy/Caddyfile:ro
+      - ${PRODUCT_TLS_CERT:?}:/run/fixture/server-cert.pem:ro
+      - ${PRODUCT_TLS_KEY:?}:/run/fixture/server-key.pem:ro
+    networks:
+      default:
+        aliases:
+          - app.fixture.test
+          - provider.fixture.test
+          - org.registry.fixture.test

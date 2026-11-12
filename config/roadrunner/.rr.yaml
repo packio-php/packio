@@ -1,0 +1,44 @@
+version: "3"
+
+server:
+  command: "php /app/public/index-roadrunner.php"
+  relay: "pipes"
+  relay_timeout: "${RR_RELAY_TIMEOUT}"
+
+rpc:
+  listen: "tcp://127.0.0.1:6001"
+
+http:
+  address: "0.0.0.0:80"
+  middleware: ["static"]
+  pool:
+    num_workers: ${RR_NUM_WORKERS}
+    max_jobs: ${RR_MAX_JOBS}
+    max_queue_size: ${RR_MAX_QUEUE_SIZE}
+    allocate_timeout: "${RR_ALLOCATE_TIMEOUT}"
+    destroy_timeout: "${RR_DESTROY_TIMEOUT}"
+    supervisor:
+      max_worker_memory: ${RR_MAX_WORKER_MEMORY_MB}
+      exec_ttl: "${RR_EXEC_TTL}"
+  max_request_size: ${RR_MAX_REQUEST_SIZE_MB}
+  static:
+    dir: "/app/public"
+    # Serve only browser assets from public/. Requests for application entrypoints,
+    # dotfiles, source and backup files are passed to the application instead.
+    allow: [".css", ".ico", ".js", ".json", ".png", ".svg", ".woff2"]
+    forbid: [".env", ".git", ".htaccess", ".php", ".phtml", ".phar", ".inc", ".bak", ".backup", ".old", ".orig", ".save", ".sql", ".swp", ".yaml", ".yml"]
+    calculate_etag: true
+    weak: false
+  # RR access logs include the request URI; do not log query strings that may
+  # contain credentials or reset tokens until a redacting logger is available.
+  access_logs: false
+
+logs:
+  mode: production
+  level: warn
+  encoding: json
+  output: ["stderr"]
+  err_output: ["stderr"]
+
+status:
+  address: "127.0.0.1:2114"

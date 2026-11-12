@@ -1,0 +1,55 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Packio\Admin\Infrastructure\Handler;
+
+use Laminas\Diactoros\Response\RedirectResponse;
+use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Infrastructure\Http\RouteAttributes;
+use Packio\Organization\Api\OrganizationApiFacadeInterface;
+use Psr\Http\Message\ResponseInterface;
+use Psr\Http\Message\ServerRequestInterface;
+use Psr\Http\Server\RequestHandlerInterface;
+use Sirix\Mezzio\Authentication\Attribute\Authenticated;
+use Sirix\Mezzio\Rbac\Attribute\Can;
+use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
+
+use function is_string;
+
+#[Post('/admin/organizations/:organizationId/invitations/:invitationId/revoke', name: 'admin.organizations.invitations.revoke')]
+#[Authenticated]
+#[Can('admin.access')]
+final readonly class AdminInvitationRevokeHandler implements RequestHandlerInterface
+{
+    public function __construct(
+        private OrganizationApiFacadeInterface $organizationApiFacade,
+        private InertiaNotificationMessenger $inertiaNotificationMessenger
+    ) {}
+
+    public function handle(ServerRequestInterface $request): ResponseInterface
+    {
+        $organizationId = $request->getAttribute('organizationId');
+
+        if (! is_string($organizationId) || '' === $organizationId) {
+            $this->inertiaNotificationMessenger->flash($request, 'error', 'Organization not found.');
+
+            return new RedirectResponse('/admin/organizations');
+        }
+
+        // the redirect keeps the raw route value; only the facade needs a canonical UUID
+        $organizationUuid = RouteAttributes::uuid($request, 'organizationId');
+        $invitationId     = RouteAttributes::uuid($request, 'invitationId');
+        $revoked          = '' !== $organizationUuid
+            && '' !== $invitationId
+            && $this->organizationApiFacade->revokeInvitation($organizationUuid, $invitationId);
+
+        $this->inertiaNotificationMessenger->flash(
+            $request,
+            $revoked ? 'success' : 'error',
+            $revoked ? 'Invitation revoked.' : 'Invitation not found.',
+        );
+
+        return new RedirectResponse('/admin/organizations/' . $organizationId);
+    }
+}

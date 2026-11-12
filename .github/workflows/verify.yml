@@ -1,0 +1,313 @@
+name: Public verification
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  secret-scan:
+    name: Scan checkout and selected publication history
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify frozen refs and scan with pinned native Gitleaks
+        shell: bash
+        run: |
+          set -euo pipefail
+          umask 077
+          work_dir="$(mktemp -d "${RUNNER_TEMP}/gitleaks.XXXXXX")"
+          chmod 700 "$work_dir"
+          trap 'rm -rf -- "$work_dir"' EXIT
+
+          archive="$work_dir/gitleaks.tar.gz"
+          curl --fail --silent --show-error --location --proto '=https' --tlsv1.2 \
+            https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz \
+            --output "$archive"
+          printf '%s  %s\n' '551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb' "$archive" | sha256sum --check --status || {
+            echo '::error::Gitleaks archive integrity verification failed'
+            exit 1
+          }
+          tar -xzf "$archive" -C "$work_dir" gitleaks
+          scanner="$work_dir/gitleaks"
+          chmod 700 "$scanner"
+          printf '%s  %s\n' '88f91962aa2f93ac6ab281d553b9e125f5197bbbce38f9f2437f7299c32e5509' "$scanner" | sha256sum --check --status || {
+            echo '::error::Gitleaks binary integrity verification failed'
+            exit 1
+          }
+          scanner_version="$(env -u GITLEAKS_CONFIG -u GITLEAKS_CONFIG_TOML "$scanner" --no-banner --no-color version 2>/dev/null)" || {
+            echo '::error::Gitleaks execution failed'
+            exit 1
+          }
+          if [ "$scanner_version" != '8.30.1' ]; then
+            echo '::error::Unexpected Gitleaks version'
+            exit 1
+          fi
+
+          cat > "$work_dir/gitleaks.toml" <<'GITLEAKS_CONFIG'
+          [extend]
+          useDefault = true
+
+          [[rules]]
+          id = "generic-api-key"
+
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?compose\.runtime-smoke\.yaml$''']
+          regexes = ['''^(0123456789abcdef){4}$''']
+
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?test/Support/Release/dependencies\.test\.py$''']
+          regexes = ['''^(0123456789abcdef){4}$''']
+
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?test/Support/Release/image\.test\.py$''']
+          regexes = ['''^(0123456789abcdef){4}$''']
+
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?test/Unit/Source/Infrastructure/Request/ProviderAuthorizationOAuthRequestTest\.php$''']
+          regexes = ['''^0196f38d-3c8c-73d0-b184-e624de30bdf2$''']
+          GITLEAKS_CONFIG
+          : > "$work_dir/empty-ignore"
+
+          if [ "$(git rev-parse --is-shallow-repository)" != 'false' ]; then
+            echo '::error::full Git history is required; scan not run'
+            exit 1
+          fi
+          {
+            if git rev-parse --verify --quiet 'refs/remotes/origin/master^{commit}' > /dev/null; then
+              echo refs/remotes/origin/master
+            fi
+            git for-each-ref --format='%(refname)' refs/tags
+            echo HEAD
+          } > "$work_dir/scan-refs"
+          history_refs="$(paste -sd ' ' "$work_dir/scan-refs")"
+          scan() {
+            local scope="$1"
+            shift
+            local report="$work_dir/$scope.json"
+            local status=0
+            if env -u GITLEAKS_CONFIG -u GITLEAKS_CONFIG_TOML "$scanner" \
+              --no-banner --no-color --log-level error --redact=100 \
+              --ignore-gitleaks-allow --gitleaks-ignore-path "$work_dir/empty-ignore" \
+              --config "$work_dir/gitleaks.toml" --report-format json --report-path "$report" \
+              --timeout 900 "$@" > "$work_dir/$scope.log" 2>&1; then
+              status=0
+            else
+              status=$?
+            fi
+            if [ ! -f "$report" ] || ! python3 -c 'import json,sys; value=json.load(open(sys.argv[1], encoding="utf-8")); assert isinstance(value,list); print(len(value))' "$report" > "$work_dir/$scope.count" 2> "$work_dir/$scope.parse.log"; then
+              echo "::error::$scope scan failed or did not produce a valid private report (exit $status)"
+              return 1
+            fi
+            local count
+            count="$(cat "$work_dir/$scope.count")"
+            if [ "$status" -ne 0 ] || [ "$count" -ne 0 ]; then
+              echo "::error::$scope scan failed (exit $status, findings $count); report remains private"
+              return 1
+            fi
+          }
+          scan checkout dir .
+          scan history git --log-opts="--root --full-history -m $history_refs" .
+          echo 'Gitleaks 8.30.1 checkout and selected-history scans passed.'
+  backend:
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [base, concurrency]
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_DB: packio_test
+          POSTGRES_USER: packio_test
+          POSTGRES_PASSWORD: packio_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U packio_test -d packio_test"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+    env:
+      PACKIO_TEST_RUNNER_MODE: ci
+      PACKIO_TEST_DATABASE_HOST: 127.0.0.1
+      PACKIO_TEST_DATABASE_PORT: '5432'
+      PACKIO_TEST_DATABASE_NAME: packio_test
+      PACKIO_TEST_DATABASE_USER: packio_test
+      PACKIO_TEST_DATABASE_PASS: packio_test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ctype, curl, dom, filter, iconv, mbstring, openssl, pcntl, pdo_pgsql, posix, session, simplexml, sockets, sodium, xmlwriter
+          coverage: none
+          tools: composer:v2
+      - run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - run: composer validate --strict && composer check-platform-reqs && composer audit --locked
+      - name: Validate and audit locked tools
+        run: |
+          set -eu
+          for manifest in tools/*/composer.json; do
+            tool=$(dirname "$manifest")
+            composer --working-dir="$tool" validate --no-check-publish
+            composer --working-dir="$tool" install --no-interaction --prefer-dist --no-progress
+            composer --working-dir="$tool" check-platform-reqs
+            composer --working-dir="$tool" audit --locked
+          done
+      - if: matrix.suite == 'base'
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py
+      - if: matrix.suite == 'concurrency'
+        run: composer test:concurrency
+
+  frontend:
+    runs-on: ubuntu-24.04
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: node --version && npm --version && npm ci --no-audit --no-fund
+      - run: npm audit --audit-level=high && npm ls
+      - run: npm run check
+      - run: npm run openapi-assets
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: frontend-reports
+          path: |
+            data/coverage/vitest.junit.xml
+            test-results/
+            playwright-report/
+          if-no-files-found: error
+
+  runtime:
+    name: Runtime images and private Composer product
+    # Heavy end-to-end image check (~25 min): manual runs and release tags only. The release
+    # workflow needs one successful run of it on the exact candidate commit.
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.5'
+          extensions: ctype, curl, dom, filter, iconv, mbstring, openssl, pcntl, pdo_pgsql, posix, session, simplexml, sockets, sodium, xmlwriter
+          coverage: none
+          tools: composer:v2
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Preserve image provenance in the disposable Docker store
+        uses: docker/setup-docker-action@v5
+        with:
+          version: v29.9.0
+          daemon-config: '{"features":{"containerd-snapshotter":true}}'
+      - name: Require Docker and verify production images, layers and startup
+        run: |
+          set -eu
+          candidate_sha="$(git rev-parse --verify 'HEAD^{commit}')"
+          case "$candidate_sha" in
+            *[!0-9a-f]*|'') echo 'Expected a full candidate commit SHA' >&2; exit 1 ;;
+          esac
+          [ "${#candidate_sha}" -eq 40 ] || { echo 'Expected a full candidate commit SHA' >&2; exit 1; }
+          metadata_file="$RUNNER_TEMP/release.json"
+          php bin/generate-release-metadata.php --output="$metadata_file"
+          release_version="$(php -r '$metadata=json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR); if (!is_array($metadata) || !is_string($metadata["sha"] ?? null) || !str_starts_with($argv[2], $metadata["sha"]) || ($metadata["dirty"] ?? true) !== false || !is_string($metadata["version"] ?? null)) { fwrite(STDERR, "Release metadata does not match the clean candidate checkout.\\n"); exit(1); } echo $metadata["version"];' "$metadata_file" "$candidate_sha")"
+          printf 'PACKIO_CANDIDATE_SHA=%s\nPACKIO_RELEASE_VERSION=%s\n' "$candidate_sha" "$release_version" >> "$GITHUB_ENV"
+          docker info
+          docker compose version
+          python3 test/Support/Release/image-harness.test.py
+          python3 test/Support/Release/product-harness.test.py
+          docker pull postgres:17-alpine
+          mkdir -p data/coverage/images
+          docker_version="${release_version//+/-}"
+          for target in prod prod-worker prod-ssr; do
+            local_tag="packio-local-${target}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}:${docker_version}"
+            if docker image inspect "$local_tag" >/dev/null 2>&1; then
+              echo "Refusing to replace existing local image reference: $local_tag" >&2
+              exit 1
+            fi
+          done
+          for target in prod prod-worker prod-ssr; do
+            local_tag="packio-local-${target}-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}:${docker_version}"
+            docker build --provenance=true -f .docker/Dockerfile.roadrunner --target "$target" \
+              --tag "$local_tag" \
+              --label "org.opencontainers.image.source=https://github.com/packio-php/packio" \
+              --label "org.opencontainers.image.revision=$candidate_sha" \
+              --label "org.opencontainers.image.version=$release_version" \
+              --label "org.opencontainers.image.licenses=MIT" \
+              --iidfile "data/coverage/images/$target.id" \
+              --metadata-file "data/coverage/images/$target.build.json" .
+          done
+          app_image=$(cat data/coverage/images/prod.id)
+          worker_image=$(cat data/coverage/images/prod-worker.id)
+          ssr_image=$(cat data/coverage/images/prod-ssr.id)
+          python3 test/Support/Release/image.test.py --verify-only \
+            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
+            --expected-sha "$candidate_sha" --report data/coverage/images/report.json
+          python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
+          python3 test/Support/RoadRunner/services.test.py "$worker_image"
+          docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify real production SSR and proxy browser contract
+        run: |
+          set -eu
+          docker pull caddy:2.11.2-alpine
+          browser_id=$(docker run -d --user pwuser --network host --ipc=host \
+            --mount type=bind,src="$PWD/node_modules",dst=/work/node_modules,readonly \
+            --workdir /work mcr.microsoft.com/playwright:v1.62.1-noble \
+            node node_modules/playwright/cli.js run-server --host 127.0.0.1 --port 3000)
+          trap 'docker rm -f "$browser_id"' EXIT
+          PACKIO_PROXY_APP_IMAGE=$(cat data/coverage/images/prod.id) \
+          PACKIO_PROXY_SSR_IMAGE=$(cat data/coverage/images/prod-ssr.id) \
+          python3 test/Support/Release/proxy.test.py --node "$(command -v node)" --browser-endpoint ws://127.0.0.1:3000/
+      - name: Require private Composer install and tenant isolation on the same immutable images
+        run: |
+          set -eu
+          docker pull composer:2.8
+          docker pull axllent/mailpit
+          python3 test/Support/Release/product.test.py \
+            --app-image "$(cat data/coverage/images/prod.id)" \
+            --worker-image "$(cat data/coverage/images/prod-worker.id)" \
+            --ssr-image "$(cat data/coverage/images/prod-ssr.id)" \
+            --expected-sha "$PACKIO_CANDIDATE_SHA" --report data/coverage/images/product-report.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: verified-runtime-images
+          path: data/coverage/images/
+          compression-level: 0
+          if-no-files-found: error

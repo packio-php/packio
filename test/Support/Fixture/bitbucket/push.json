@@ -1,0 +1,13 @@
+{
+  "repository": {
+    "full_name": "workspace/repo",
+    "links": {
+      "html": {
+        "href": "https://bitbucket.org/workspace/repo"
+      }
+    }
+  },
+  "push": {
+    "changes": []
+  }
+}

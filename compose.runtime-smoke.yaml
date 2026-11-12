@@ -1,0 +1,16 @@
+services:
+  app:
+    build:
+      target: prod
+    environment:
+      # Exercise the production-only validation paths with a deterministic,
+      # non-secret CI value. Real deployments supply this from secret storage.
+      APP_DEBUG: "false"
+      APP_PRODUCTION: "true"
+      APP_SECRET_ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      # Exercise trusted proxy origin handling without disabling the normal
+      # CORS allowlist that runs before the CSRF middleware.
+      CORS_ALLOWED_ORIGINS: "http://packio.localhost:8080,https://trusted-runtime.test"
+    # CI must exercise the immutable production filesystem, not the bind-mounted
+    # development tree supplied by compose.yaml.
+    volumes: !override []

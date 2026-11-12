@@ -1,0 +1,63 @@
+{
+  "name": "packio-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run build:client && npm run build:ssr",
+    "build:client": "vite build",
+    "build:ssr": "vite build --mode ssr --ssr resources/js/ssr.ts",
+    "openapi-assets": "mkdir -p public/api-doc/assets && cp node_modules/swagger-ui-dist/swagger-ui.css node_modules/swagger-ui-dist/swagger-ui-bundle.js node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js node_modules/swagger-ui-dist/favicon-16x16.png node_modules/swagger-ui-dist/favicon-32x32.png node_modules/swagger-ui-dist/LICENSE node_modules/swagger-ui-dist/NOTICE node_modules/swagger-ui-dist/swagger-ui-bundle.js.LICENSE.txt node_modules/swagger-ui-dist/swagger-ui-standalone-preset.js.LICENSE.txt public/api-doc/assets/",
+    "preview": "vite preview",
+    "test:front": "vitest run",
+    "test:front:ci": "mkdir -p data/coverage && vitest run --reporter=default --reporter=junit --outputFile.junit=data/coverage/vitest.junit.xml",
+    "test:front:watch": "vitest",
+    "test:front:coverage": "vitest run --coverage",
+    "test:ssr": "npm run build:ssr && vitest run --config vitest.ssr.config.ts",
+    "test:e2e:browser": "playwright test",
+    "check:inertia-v3": "node tools/check-inertia-v3.mjs",
+    "check": "npm run check:types && npm run lint && npm run check:inertia-v3 && npm run test:front:ci && npm run test:ssr && npm run test:e2e:browser && npm run format:check && npm run build",
+    "check:types": "svelte-check --tsconfig ./tsconfig.json && tsc --noEmit",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier \"resources/**/*.{js,ts,svelte,css}\" package.json package-lock.json tsconfig.json svelte.config.js eslint.config.js prettier.config.js vite.config.js vitest.config.ts --write",
+    "format:check": "prettier \"resources/**/*.{js,ts,svelte,css}\" package.json package-lock.json tsconfig.json svelte.config.js eslint.config.js prettier.config.js vite.config.js vitest.config.ts --check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.25.1",
+    "@inertiajs/svelte": "^3.6.1",
+    "@lucide/svelte": "^1.21.0",
+    "@playwright/test": "^1.62.1",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/svelte": "^5.3.1",
+    "@testing-library/user-event": "^14.6.1",
+    "@tsconfig/svelte": "^5.0.5",
+    "@types/node": "^24.5.2",
+    "@vitest/coverage-v8": "^4.1.12",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.36.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-svelte": "^3.12.3",
+    "globals": "^16.4.0",
+    "jsdom": "^29.1.1",
+    "prettier": "^3.6.2",
+    "prettier-plugin-svelte": "^3.4.0",
+    "simple-icons": "^16.22.0",
+    "svelte": "^5.55.0",
+    "svelte-check": "^4.3.1",
+    "swagger-ui-dist": "^5.32.8",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.44.1",
+    "vite": "^8.0.2",
+    "vitest": "^4.1.12"
+  },
+  "overrides": {
+    "cookie": "0.7.2"
+  },
+  "engines": {
+    "node": "24.21.0"
+  }
+}

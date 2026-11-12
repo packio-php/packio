@@ -1,0 +1,36 @@
+RewriteEngine On
+
+<IfModule mod_headers.c>
+    Header set Cache-Control "public, max-age=31536000, immutable" env=PACKIO_STATIC_ASSET
+    Header set Cache-Control "no-cache, must-revalidate" env=PACKIO_VOLATILE_ASSET
+</IfModule>
+
+# The following rule allows authentication to work with fast-cgi
+RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Cache real static assets aggressively, but do not attach immutable caching
+# to missing build files that will fall through to the application 404.
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} \.(?:css|js|mjs|woff2|png|jpg|jpeg|gif|svg|ico)$ [NC]
+RewriteRule ^ - [E=PACKIO_STATIC_ASSET:1]
+
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteCond %{REQUEST_URI} /manifest\.json$ [NC]
+RewriteRule ^ - [E=PACKIO_VOLATILE_ASSET:1]
+
+# The following rule tells Apache that if the requested filename
+# exists, simply serve it.
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -l [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [NC,L]
+
+# The following rewrites all other queries to index.php. The
+# condition ensures that if you are using Apache aliases to do
+# mass virtual hosting, the base path will be prepended to
+# allow proper resolution of the index.php file; it will work
+# in non-aliased environments as well, providing a safe, one-size
+# fits all solution.
+RewriteCond $0::%{REQUEST_URI} ^([^:]*+(?::[^:]*+)*?)::(/.+?)\1$
+RewriteRule .+ - [E=BASE:%2]
+RewriteRule .* %{ENV:BASE}index.php [NC,L]

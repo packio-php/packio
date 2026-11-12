@@ -1,0 +1,29 @@
+FROM node:24.21.0-alpine AS frontend-build
+
+WORKDIR /app
+COPY package.json package-lock.json /app/
+RUN npm ci --no-audit --no-fund
+COPY resources /app/resources
+COPY vite.config.js svelte.config.js /app/
+RUN npm run build:ssr
+
+FROM node:24.21.0-alpine AS dev-ssr
+
+WORKDIR /app
+
+RUN apk add --no-cache curl
+
+COPY .docker/entrypoint-ssr.sh /usr/local/bin/ssr-entrypoint.sh
+COPY .docker/healthcheck-ssr.sh /usr/local/bin/ssr-healthcheck.sh
+
+RUN chmod +x /usr/local/bin/ssr-entrypoint.sh /usr/local/bin/ssr-healthcheck.sh
+COPY --from=frontend-build /app/data/ssr /app/data/ssr
+RUN test -f /app/data/ssr/ssr.mjs
+
+ENV INERTIA_SSR_HOST=0.0.0.0
+ENV INERTIA_SSR_PORT=13714
+ENV INERTIA_SSR_BUNDLE=data/ssr/ssr.mjs
+
+EXPOSE 13714
+
+ENTRYPOINT ["/usr/local/bin/ssr-entrypoint.sh"]

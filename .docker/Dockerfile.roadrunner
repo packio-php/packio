@@ -1,0 +1,210 @@
+# The RoadRunner binary reference is deliberately immutable and matches the
+# spiral/roadrunner v2025.1.15 PHP package selected in composer.lock.
+FROM ghcr.io/roadrunner-server/roadrunner:2025.1.15@sha256:18378c1313a71ce1c3cfc493c99e75c189ef5fb2eaf85290b8a99080fcb0f64f AS roadrunner
+
+FROM php:8.5-cli-bookworm@sha256:819080ed413631f6ec564184dd9acd08d9425bd863b9f8b5876b5ea2147d55e7 AS php-build
+
+ENV SOURCE_DATE_EPOCH=1790083926
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        $PHPIZE_DEPS \
+        libargon2-dev \
+        libcurl4-openssl-dev \
+        libonig-dev \
+        libpq-dev \
+        libreadline-dev \
+        libxml2-dev \
+        libsodium-dev \
+        zlib1g-dev; \
+    echo 'PACKIO_BUILD_INPUTS_BEGIN'; \
+    LC_ALL=C dpkg-query -W -f='${binary:Package}\t${Version}\t${Architecture}\t${source:Package}\t${source:Version}\n' > /tmp/packio-build-inputs; \
+    LC_ALL=C sort /tmp/packio-build-inputs; \
+    rm /tmp/packio-build-inputs; \
+    echo 'PACKIO_BUILD_INPUTS_END'; \
+    echo 'd9be75c08e8c316f4c8f4194d8fbe1750a15f6a6d9d4e3fe72082abeeb800360  /usr/src/php.tar.xz' | sha256sum --check -; \
+    docker-php-source extract; \
+    cd /usr/src/php; \
+    ./configure \
+        --prefix=/usr/local \
+        --with-config-file-path=/usr/local/etc \
+        --with-config-file-scan-dir=/usr/local/etc/php/conf.d \
+        --enable-option-checking=fatal \
+        --with-mhash \
+        --with-pic \
+        --enable-mbstring=shared \
+        --with-password-argon2 \
+        --with-sodium=shared \
+        --without-pdo-sqlite \
+        --without-sqlite3 \
+        --with-curl=shared \
+        --with-iconv \
+        --with-openssl \
+        --with-readline \
+        --with-zlib \
+        --with-pear \
+        --enable-pcntl=shared \
+        --enable-sockets=shared \
+        --with-pdo-pgsql=shared \
+        --enable-dom=shared \
+        --enable-simplexml=shared \
+        --enable-xml=shared \
+        --enable-xmlreader=shared \
+        --enable-xmlwriter=shared; \
+    make -j"$(nproc)"; \
+    make install; \
+    for extension in curl dom mbstring pcntl pdo_pgsql simplexml sockets sodium xml xmlreader xmlwriter; do \
+        echo "extension=${extension}" > "/usr/local/etc/php/conf.d/docker-php-ext-${extension}.ini"; \
+    done; \
+    curl --fail --location --silent --show-error \
+        --output /usr/src/protobuf-5.36.2.tgz \
+        https://pecl.php.net/get/protobuf-5.36.2.tgz; \
+    test "$(stat -c '%s' /usr/src/protobuf-5.36.2.tgz)" -eq 546033; \
+    echo 'f0a17c67de29df0fb0e5215a381df9b155125e1ace6252dd617bf16b4194dd5b  /usr/src/protobuf-5.36.2.tgz' | sha256sum --check -; \
+    mkdir /usr/src/protobuf-5.36.2; \
+    tar -xzf /usr/src/protobuf-5.36.2.tgz --no-same-owner --no-same-permissions --strip-components=1 -C /usr/src/protobuf-5.36.2 protobuf-5.36.2; \
+    cd /usr/src/protobuf-5.36.2; \
+    phpize; \
+    ./configure --with-php-config=/usr/local/bin/php-config; \
+    make -j"$(nproc)"; \
+    make install; \
+    install -D -m 644 LICENSE /usr/local/lib/php/doc/protobuf/LICENSE; \
+    install -D -m 644 third_party/utf8_range/LICENSE /usr/local/lib/php/doc/protobuf/third_party/utf8_range/LICENSE; \
+    echo "extension=protobuf" > "/usr/local/etc/php/conf.d/docker-php-ext-protobuf.ini"
+
+FROM debian:bookworm-slim AS app-runtime
+
+ARG APP_USER=app
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+WORKDIR /app
+
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends \
+        ca-certificates \
+        curl \
+        libargon2-1 \
+        libcurl4 \
+        libonig5 \
+        libpq5 \
+        libreadline8 \
+        libxml2 \
+        libsodium23; \
+    rm -rf /var/lib/apt/lists/*; \
+    groupadd --gid "${APP_GID}" "${APP_USER}"; \
+    useradd --uid "${APP_UID}" --gid "${APP_GID}" --create-home --home-dir /app --shell /usr/sbin/nologin "${APP_USER}"; \
+    mkdir -p /app/data/cache/proxies /app/data/rate-limits /app/data/sessions /app/data/db/cycle/migrations /app/data/db/cycle/seeds; \
+    chown -R "${APP_USER}:${APP_USER}" /app
+
+COPY --from=php-build /usr/local /usr/local
+COPY --from=roadrunner /usr/bin/rr /usr/bin/rr
+COPY .docker/entrypoint-roadrunner.sh /usr/local/bin/roadrunner-entrypoint.sh
+COPY .docker/healthcheck-roadrunner.sh /usr/local/bin/roadrunner-healthcheck.sh
+COPY .docker/run-migrations.sh /usr/local/bin/run-migrations.sh
+COPY .docker/php/roadrunner.ini /usr/local/etc/php/conf.d/zz-roadrunner.ini
+
+RUN chmod +x /usr/local/bin/roadrunner-entrypoint.sh /usr/local/bin/roadrunner-healthcheck.sh /usr/local/bin/run-migrations.sh
+
+USER ${APP_USER}
+
+ENTRYPOINT ["/usr/local/bin/roadrunner-entrypoint.sh"]
+
+EXPOSE 80
+
+FROM app-runtime AS app-base
+
+FROM app-runtime AS prod-dependencies
+
+USER root
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
+COPY composer.json composer.lock /app/
+COPY src /app/src
+COPY data/db/cycle/seeds /app/data/db/cycle/seeds
+RUN set -eux; \
+    apt-get update; \
+    apt-get install -y --no-install-recommends git unzip; \
+    rm -rf /var/lib/apt/lists/*; \
+    composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts --optimize-autoloader
+
+FROM node:24.21.0-bookworm-slim AS frontend-build
+
+WORKDIR /app
+
+COPY package.json package-lock.json /app/
+RUN npm ci --no-audit --no-fund
+COPY resources /app/resources
+COPY vite.config.js svelte.config.js /app/
+RUN npm run build && npm run openapi-assets
+COPY public/api-doc/assets/THIRD_PARTY_NOTICES.md /app/public/api-doc/assets/
+
+FROM prod-dependencies AS release-source
+
+# Restore the tracked tree so Git can calculate the release version against a
+# complete checkout. The local build inputs then replace only allowlisted paths.
+COPY .git /app/.git
+RUN git config --global --add safe.directory /app && git -C /app checkout-index -a -f
+COPY . /app/
+RUN git -C /app rev-parse --verify HEAD && php bin/generate-release-metadata.php
+
+FROM app-runtime AS prod
+
+USER root
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/LICENSE /app/THIRD_PARTY_NOTICES.md /app/third-party-sources.json /app/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/vendor /app/vendor
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.json /app/composer.json
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.lock /app/composer.lock
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/bin /app/bin
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/config /app/config
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/src /app/src
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/templates /app/templates
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/index.php /app/public/index-worker.php /app/public/index-roadrunner.php /app/public/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/manifest.json /app/public/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/favicon.ico /app/public/favicon.svg /app/public/favicon-16x16.png /app/public/favicon-32x32.png /app/public/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/apple-touch-icon.png /app/public/android-chrome-192x192.png /app/public/android-chrome-512x512.png /app/public/og-image.png /app/public/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/fonts /app/public/fonts
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/db/cycle/migrations /app/data/db/cycle/migrations
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/db/cycle/seeds /app/data/db/cycle/seeds
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/build/release.json /app/data/build/release.json
+COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/build /app/public/build
+COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/api-doc/assets /app/public/api-doc/assets
+COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/data/ssr /app/data/ssr
+
+RUN set -eux; \
+    sed -i 's/opcache.validate_timestamps = 1/opcache.validate_timestamps = 0/' /usr/local/etc/php/conf.d/zz-roadrunner.ini; \
+    mkdir -p /app/data/package-archives; \
+    chown -R "${APP_USER}:${APP_USER}" /app/data
+
+USER ${APP_USER}
+
+# Companion services reuse the same application code and locked dependencies.
+FROM prod AS prod-worker
+
+USER root
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git openssh-client \
+    && rm -rf /var/lib/apt/lists/*
+COPY --chmod=755 .docker/entrypoint-*.sh .docker/healthcheck-*.sh .docker/maintenance-process.sh .docker/run-worker.sh .docker/warmup-object-mapper.sh /usr/local/bin/
+USER ${APP_USER}
+ENTRYPOINT ["/usr/local/bin/entrypoint-roadrunner-services.sh"]
+
+FROM node:24.21.0-bookworm-slim AS prod-ssr
+WORKDIR /app
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+COPY --from=release-source --chown=node:node /app/LICENSE /app/THIRD_PARTY_NOTICES.md /app/third-party-sources.json /app/
+COPY --from=release-source --chown=node:node /app/public/fonts/LICENSE-JetBrainsMono.txt /app/public/fonts/LICENSE-PlusJakartaSans.txt /app/public/fonts/
+COPY --from=frontend-build --chown=node:node /app/public/api-doc/assets/LICENSE /app/public/api-doc/assets/NOTICE /app/public/api-doc/assets/THIRD_PARTY_NOTICES.md /app/public/api-doc/assets/
+COPY --from=frontend-build --chown=node:node /app/public/api-doc/assets/swagger-ui-bundle.js.LICENSE.txt /app/public/api-doc/assets/swagger-ui-standalone-preset.js.LICENSE.txt /app/public/api-doc/assets/
+COPY --from=frontend-build --chown=node:node /app/data/ssr /app/data/ssr
+COPY --chmod=755 .docker/entrypoint-ssr.sh .docker/healthcheck-ssr.sh /usr/local/bin/
+USER node
+ENV INERTIA_SSR_HOST=0.0.0.0 INERTIA_SSR_PORT=13714
+EXPOSE 13714
+ENTRYPOINT ["/usr/local/bin/entrypoint-ssr.sh"]
+
+# Preserve the HTTP application as the default build target.
+FROM prod AS default-prod

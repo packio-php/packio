@@ -1,0 +1,33 @@
+<?php
+
+/**
+ * Local configuration.
+ *
+ * Copy this file to `local.php` and change its settings as required.
+ * `local.php` is ignored by git and safe to use for local and sensitive data like usernames and passwords.
+ */
+
+declare(strict_types=1);
+
+return [
+    // 'storage' => [
+    //     'archive' => [
+    //         'driver' => 'local',
+    //         'local' => [
+    //             'path' => 'data/package-archives',
+    //             'prefix' => 'private',
+    //         ],
+    //         // 'driver' => 's3',
+    //         // 's3' => [
+    //         //     'bucket' => 'packio-archives',
+    //         //     'region' => 'fsn1',
+    //         //     'endpoint' => 'https://fsn1.your-objectstorage.com',
+    //         //     'access_key' => '',
+    //         //     'secret_key' => '',
+    //         //     'path_style_endpoint' => false,
+    //         //     'use_ssl' => true,
+    //         //     'prefix' => 'private',
+    //         // ],
+    //     ],
+    // ],
+];

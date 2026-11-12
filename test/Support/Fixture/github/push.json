@@ -1,0 +1,9 @@
+{
+  "ref": "refs/heads/main",
+  "repository": {
+    "html_url": "https://github.com/example/example.git"
+  },
+  "pusher": {
+    "name": "ci-bot"
+  }
+}

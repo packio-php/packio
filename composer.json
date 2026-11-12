@@ -1,0 +1,253 @@
+{
+    "name": "packio/packio",
+    "description": "Packio - Lightweight private package registry for Composer",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Sirix",
+            "homepage": "https://github.com/packio-php/packio"
+        }
+    ],
+    "require": {
+        "php": "~8.5.0",
+        "ext-ctype": "*",
+        "ext-curl": "*",
+        "ext-dom": "*",
+        "ext-filter": "*",
+        "ext-iconv": "*",
+        "ext-mbstring": "*",
+        "ext-openssl": "*",
+        "ext-pcntl": "*",
+        "ext-pdo": "*",
+        "ext-pdo_pgsql": "*",
+        "ext-posix": "*",
+        "ext-session": "*",
+        "ext-simplexml": "*",
+        "ext-sockets": "*",
+        "ext-sodium": "*",
+        "ext-xmlwriter": "*",
+        "aws/aws-sdk-php": "^3.384",
+        "cakephp/chronos": "^3.1",
+        "composer/composer": "^2.8",
+        "cuyz/valinor": "^2.4",
+        "cycle/database": "^2.23",
+        "cycle/entity-behavior": "^1.7",
+        "cycle/entity-behavior-uuid": "^1.2",
+        "cycle/migrations": "^4.2",
+        "cycle/orm": "^2.18",
+        "cycle/schema-builder": "^2.12",
+        "cycle/schema-migrations-generator": "^2.3",
+        "friendsofphp/proxy-manager-lts": "^1.0",
+        "guzzlehttp/guzzle": "^7.9",
+        "guzzlehttp/promises": "^2.5",
+        "guzzlehttp/psr7": "^2.13",
+        "laminas/laminas-cli": "^1.11",
+        "laminas/laminas-component-installer": "^3.5",
+        "laminas/laminas-config-aggregator": "^1.17",
+        "laminas/laminas-diactoros": "^3.5.0",
+        "laminas/laminas-httphandlerrunner": "^2.14",
+        "laminas/laminas-servicemanager": "^4.0",
+        "laminas/laminas-stdlib": "^3.20",
+        "laminas/laminas-stratigility": "^4.3",
+        "league/commonmark": "^2.7",
+        "mezzio/mezzio": "^3.20",
+        "mezzio/mezzio-cors": "^1.16",
+        "mezzio/mezzio-flash": "^1.10",
+        "mezzio/mezzio-helpers": "^5.17",
+        "mezzio/mezzio-router": "^3.7",
+        "mezzio/mezzio-session": "^1.17",
+        "mezzio/mezzio-session-ext": "^1.21",
+        "mezzio/mezzio-template": "^2.13",
+        "mezzio/mezzio-twigrenderer": "^2.19",
+        "monolog/monolog": "^3.12",
+        "psr/container": "^2.0",
+        "psr/event-dispatcher": "^1.0",
+        "psr/http-factory": "^1.1",
+        "psr/http-message": "^2.0",
+        "psr/http-server-handler": "^1.0",
+        "psr/http-server-middleware": "^1.0",
+        "psr/log": "^3.0",
+        "ramsey/uuid": "^4.9",
+        "sirix/container-resolver": "^1.0",
+        "sirix/cycle-orm-extensions": "^5.0",
+        "sirix/cycle-orm-factory": "^5.0",
+        "sirix/inertia-psr15": "^3.0",
+        "sirix/inertia-psr15-mezzio-flash": "^1.0",
+        "sirix/mezzio-authentication": "^2.1",
+        "sirix/mezzio-eventdispatcher": "^0.1.0",
+        "sirix/mezzio-radixrouter": "^3.0",
+        "sirix/mezzio-rbac": "^2.0",
+        "sirix/mezzio-routing-attributes": "^1.4",
+        "sirix/mezzio-routing-contracts": "^1.2",
+        "sirix/mezzio-valinor-request-mapper": "^4.0",
+        "sirix/monolog": "^2.0",
+        "sirix/object-mapper": "^0.10",
+        "sirix/redaction": "^2.1.2",
+        "sirix/sentry-psr": "^2.2",
+        "sirix/sirix-config": "^3.0",
+        "sirix/twig-vite-extension": "^1.0",
+        "spiral/goridge": "^4.2",
+        "spiral/roadrunner-http": "^4.1",
+        "spiral/roadrunner-worker": "^3.6",
+        "symfony/console": "^8.1",
+        "symfony/mailer": "^7.2",
+        "symfony/mime": "^8.1",
+        "vlucas/phpdotenv": "^5.6",
+        "yiisoft/validator": "^2.1",
+        "zircote/swagger-php": "^6.2"
+    },
+    "require-dev": {
+        "bamarni/composer-bin-plugin": "^1.8",
+        "deployer/deployer": "^8.0",
+        "filp/whoops": "^2.16",
+        "laminas/laminas-development-mode": "^3.13.0",
+        "league/event": "^3.0",
+        "phpunit/phpunit": "^12.0",
+        "sentry/sentry": "^4.33",
+        "symfony/event-dispatcher": "^8.1"
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Common\\": "src/Common/src/",
+            "Packio\\Access\\": "src/Module/Access/src/",
+            "Packio\\Admin\\": "src/Module/Admin/src/",
+            "Packio\\Rest\\": "src/Module/Rest/src/",
+            "Packio\\Application\\": "src/Application/src/",
+            "Packio\\Audit\\": "src/Module/Audit/src/",
+            "Packio\\Identity\\": "src/Module/Identity/src/",
+            "Packio\\Organization\\": "src/Module/Organization/src/",
+            "Packio\\Package\\": "src/Module/Package/src/",
+            "Packio\\Publication\\": "src/Module/Publication/src/",
+            "Packio\\Registry\\": "src/Module/Registry/src/",
+            "Packio\\Release\\": "src/Module/Release/src/",
+            "Packio\\Shared\\": "src/Module/Shared/src/",
+            "Packio\\Source\\": "src/Module/Source/src/",
+            "Packio\\Webhook\\": "src/Module/Webhook/src/",
+            "Packio\\Worker\\": "src/Module/Worker/src/",
+            "Seed\\": "data/db/cycle/seeds/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "PackioTest\\": "test/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "bamarni/composer-bin-plugin": true,
+            "laminas/laminas-component-installer": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "bamarni-bin": {
+            "bin-links": false,
+            "forward-command": true,
+            "target-directory": "tools"
+        },
+        "laminas": {
+            "component-whitelist": [
+                "mezzio/mezzio-helpers",
+                "laminas/laminas-httphandlerrunner"
+            ]
+        }
+    },
+    "scripts": {
+        "post-install-cmd": [
+            "@clear-application-cache"
+        ],
+        "post-create-project-cmd": [
+            "@development-enable"
+        ],
+        "analyse-deps": "tools/composer-dependency-analyser/vendor/bin/composer-dependency-analyser",
+        "check": [
+            "Composer\\Config::disableProcessTimeout",
+            "@cs-check",
+            "@rector",
+            "@phpstan",
+            "@deptrac",
+            "@test:runner",
+            "@test:base",
+            "@check-flaky"
+        ],
+        "check-flaky": "sh -c 'grep -rnE \"Group\\(.flaky.\\)|@group[[:space:]]+flaky\" test; status=$?; [ \"$status\" -eq 1 ] && exit 0; [ \"$status\" -eq 0 ] && echo \"Found flaky group tests. Move them to quarantined job or remove the group.\"; exit 1'",
+        "clear-application-cache": [
+            "@clear-config-cache",
+            "@refresh-route-cache"
+        ],
+        "clear-config-cache": "php bin/clear-config-cache.php",
+        "create-release-tag": "php bin/create-release-tag.php",
+        "cs-check": "php tools/php-cs-fixer/vendor/bin/php-cs-fixer fix --dry-run -vvv --diff",
+        "cs-fix": "php tools/php-cs-fixer/vendor/bin/php-cs-fixer fix -vvv",
+        "dead-code": "php tools/phpstan/vendor/bin/phpstan analyse -c phpstan-dead-code.neon --memory-limit=2G",
+        "deptrac": "php tools/deptrac/vendor/bin/deptrac analyse --fail-on-uncovered --report-uncovered",
+        "development-disable": [
+            "laminas-development-mode disable",
+            "@clear-application-cache"
+        ],
+        "development-enable": [
+            "laminas-development-mode enable",
+            "@clear-application-cache"
+        ],
+        "development-status": "laminas-development-mode status",
+        "generate-release-metadata": "php bin/generate-release-metadata.php",
+        "mezzio": "laminas --ansi",
+        "normalize": "@composer bin composer-normalize normalize --diff ../../composer.json",
+        "openapi-check": [
+            "@openapi-generate",
+            "git diff --exit-code -- public/openapi.json"
+        ],
+        "openapi-generate": "vendor/bin/openapi src/Module/Rest/src -o public/openapi.json --format json",
+        "phpstan": "php tools/phpstan/vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=2G",
+        "rector": "php tools/rector/vendor/bin/rector process --dry-run --memory-limit=2G",
+        "rector-fix": "php tools/rector/vendor/bin/rector process --memory-limit=2G",
+        "refresh-route-cache": "php bin/refresh-route-cache.php",
+        "serve": [
+            "Composer\\Config::disableProcessTimeout",
+            "php -S 0.0.0.0:8080 -t public/"
+        ],
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite unit,integration,feature --testdox"
+        ],
+        "test:base": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite unit,integration,feature --exclude-group slow --testdox"
+        ],
+        "test:concurrency": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite integration,feature --group slow --testdox"
+        ],
+        "test:coverage": [
+            "Composer\\Config::disableProcessTimeout",
+            "mkdir -p data/coverage",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite unit,integration,feature --exclude-group slow --coverage-text --only-summary-for-coverage-text --coverage-clover data/coverage/clover.xml --coverage-cobertura data/coverage/cobertura.xml --log-junit data/coverage/phpunit.junit.xml --testdox"
+        ],
+        "test:feature": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite feature --exclude-group slow --testdox"
+        ],
+        "test:integration": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite integration --exclude-group slow --testdox"
+        ],
+        "test:regression": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite feature --filter \"Security|Auth|Registry|Webhook\" --testdox"
+        ],
+        "test:runner": [
+            "sh test/Support/Runner/with-postgres-test.test.sh",
+            "sh test/Support/Runner/bootstrap.test.sh"
+        ],
+        "test:unit": [
+            "Composer\\Config::disableProcessTimeout",
+            "bin/with-postgres-test php vendor/bin/phpunit --testsuite unit --exclude-group slow --testdox"
+        ],
+        "verify-vite-assets": "php bin/verify-vite-assets.php"
+    },
+    "scripts-descriptions": {
+        "clear-config-cache": "Clears merged config cache. Required for config changes to be applied."
+    }
+}

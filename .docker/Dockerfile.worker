@@ -1,0 +1,80 @@
+FROM php:8.5-cli-alpine AS php-ext-builder
+
+RUN apk add --no-cache \
+        $PHPIZE_DEPS \
+        linux-headers \
+        libxml2-dev \
+        postgresql-dev \
+    && docker-php-ext-install \
+        pcntl \
+        pdo_pgsql \
+        sockets \
+        simplexml
+
+FROM php:8.5-cli-alpine AS worker-base
+
+ARG APP_USER=app
+ARG APP_UID=1000
+ARG APP_GID=1000
+
+WORKDIR /app
+
+RUN apk add --no-cache \
+        git \
+        libpq \
+        openssh-client \
+        unzip
+
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
+
+COPY .docker/maintenance-process.sh /usr/local/bin/maintenance-process.sh
+COPY .docker/entrypoint-worker.sh /usr/local/bin/worker-entrypoint.sh
+COPY .docker/run-worker.sh /usr/local/bin/run-worker.sh
+COPY .docker/warmup-object-mapper.sh /usr/local/bin/warmup-object-mapper.sh
+COPY .docker/entrypoint-worker-cleanup.sh /usr/local/bin/worker-cleanup-entrypoint.sh
+COPY .docker/entrypoint-email-verification-cleanup.sh /usr/local/bin/email-verification-cleanup-entrypoint.sh
+COPY .docker/entrypoint-password-reset-cleanup.sh /usr/local/bin/password-reset-cleanup-entrypoint.sh
+COPY .docker/entrypoint-source-oauth-refresh.sh /usr/local/bin/source-oauth-refresh-entrypoint.sh
+COPY .docker/healthcheck-worker.sh /usr/local/bin/worker-healthcheck.sh
+COPY .docker/healthcheck-worker-cleanup.sh /usr/local/bin/worker-cleanup-healthcheck.sh
+COPY .docker/healthcheck-email-verification-cleanup.sh /usr/local/bin/email-verification-cleanup-healthcheck.sh
+COPY .docker/healthcheck-password-reset-cleanup.sh /usr/local/bin/password-reset-cleanup-healthcheck.sh
+COPY .docker/healthcheck-source-oauth-refresh.sh /usr/local/bin/source-oauth-refresh-healthcheck.sh
+
+RUN chmod +x \
+        /usr/local/bin/worker-entrypoint.sh \
+        /usr/local/bin/run-worker.sh \
+        /usr/local/bin/warmup-object-mapper.sh \
+        /usr/local/bin/worker-cleanup-entrypoint.sh \
+        /usr/local/bin/email-verification-cleanup-entrypoint.sh \
+        /usr/local/bin/password-reset-cleanup-entrypoint.sh \
+        /usr/local/bin/source-oauth-refresh-entrypoint.sh \
+        /usr/local/bin/worker-healthcheck.sh \
+        /usr/local/bin/worker-cleanup-healthcheck.sh \
+        /usr/local/bin/email-verification-cleanup-healthcheck.sh \
+        /usr/local/bin/password-reset-cleanup-healthcheck.sh \
+        /usr/local/bin/source-oauth-refresh-healthcheck.sh
+
+RUN addgroup -g ${APP_GID} ${APP_USER} \
+    && adduser -D -u ${APP_UID} -G ${APP_USER} ${APP_USER}
+
+FROM worker-base AS worker
+
+ARG APP_USER=app
+
+COPY --from=php-ext-builder /usr/local/lib/php/extensions/ /usr/local/lib/php/extensions/
+COPY --from=php-ext-builder /usr/local/etc/php/conf.d/docker-php-ext-*.ini /usr/local/etc/php/conf.d/
+
+COPY --chown=${APP_USER}:${APP_USER} . /app
+
+RUN mkdir -p \
+        /app/data/cache \
+        /app/data/logs \
+        /app/data/rate-limits \
+        /app/data/db/cycle/migrations \
+        /app/data/db/cycle/seeds \
+    && chown -R ${APP_USER}:${APP_USER} /app/data
+
+USER ${APP_USER}
+
+ENTRYPOINT ["/usr/local/bin/worker-entrypoint.sh"]

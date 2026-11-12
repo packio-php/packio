@@ -1,0 +1,10 @@
+{
+  "object_kind": "push",
+  "project": {
+    "id": 123456,
+    "web_url": "https://gitlab.com/example/example"
+  },
+  "checkout_sha": "9d7c1e6b2f3a4a9f2dcf6f6e2c1a7d",
+  "after": "9d7c1e6b2f3a4a9f2dcf6f6e2c1a7d",
+  "ref": "refs/heads/main"
+}

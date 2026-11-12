@@ -1,0 +1,3761 @@
+{
+    "openapi": "3.1.0",
+    "info": {
+        "title": "Packio API",
+        "description": "Stateless JSON API for Packio automation.",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "/",
+            "description": "Current Packio instance"
+        }
+    ],
+    "paths": {
+        "/api/v1/user/api-tokens": {
+            "get": {
+                "tags": [
+                    "User API Tokens"
+                ],
+                "operationId": "listApiTokens",
+                "responses": {
+                    "200": {
+                        "description": "API token list"
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "User API Tokens"
+                ],
+                "operationId": "createApiToken",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "name"
+                                ],
+                                "properties": {
+                                    "name": {
+                                        "description": "Human-readable token name.",
+                                        "type": "string",
+                                        "example": "CI automation",
+                                        "minLength": 1
+                                    },
+                                    "scopes": {
+                                        "description": "Requested scopes. The admin scope is only granted to users with the admin role.",
+                                        "type": "array",
+                                        "items": {
+                                            "type": "string",
+                                            "enum": [
+                                                "read",
+                                                "write",
+                                                "admin"
+                                            ]
+                                        },
+                                        "example": [
+                                            "read",
+                                            "write"
+                                        ]
+                                    },
+                                    "expires_at": {
+                                        "description": "Optional expiration date in RFC3339 format.",
+                                        "type": [
+                                            "string",
+                                            "null"
+                                        ],
+                                        "format": "date-time",
+                                        "example": "2026-12-31T23:59:59+00:00"
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "API token created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "data",
+                                        "plain_token"
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ApiAccessTokenResource"
+                                        },
+                                        "plain_token": {
+                                            "description": "Plain token value. It is returned once and is never stored in plaintext.",
+                                            "type": "string",
+                                            "example": "packio_api_example"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid request",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/api-tokens/{tokenId}": {
+            "delete": {
+                "tags": [
+                    "User API Tokens"
+                ],
+                "operationId": "revokeApiToken",
+                "parameters": [
+                    {
+                        "name": "tokenId",
+                        "in": "path",
+                        "description": "API token UUID.",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "API token revoked"
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Token not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/health": {
+            "get": {
+                "tags": [
+                    "System"
+                ],
+                "operationId": "apiHealth",
+                "responses": {
+                    "200": {
+                        "description": "API health status",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "status"
+                                    ],
+                                    "properties": {
+                                        "status": {
+                                            "type": "string",
+                                            "example": "OK"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/v1/me": {
+            "get": {
+                "tags": [
+                    "User"
+                ],
+                "operationId": "currentUser",
+                "responses": {
+                    "200": {
+                        "description": "Current user",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "required": [
+                                        "data"
+                                    ],
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/UserResource"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Authentication required",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/user/api-tokens/{tokenId}/regenerate": {
+            "put": {
+                "tags": [
+                    "User API Tokens"
+                ],
+                "operationId": "regenerateApiToken",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/TokenIdPath"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "API token regenerated"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "404": {
+                        "description": "API token not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations": {
+            "get": {
+                "tags": [
+                    "Organizations"
+                ],
+                "operationId": "listOrganizations",
+                "responses": {
+                    "200": {
+                        "description": "Organization list"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Organizations"
+                ],
+                "operationId": "createOrganization",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateOrganizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Organization created"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}": {
+            "get": {
+                "tags": [
+                    "Organizations"
+                ],
+                "operationId": "showOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Organization details"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    },
+                    "404": {
+                        "description": "Organization not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Organizations"
+                ],
+                "operationId": "deleteOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Organization deleted or scheduled for deletion"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Owner permissions required"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Organizations"
+                ],
+                "operationId": "updateOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateOrganizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Organization updated"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Owner permissions required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/members": {
+            "get": {
+                "tags": [
+                    "Organization Members"
+                ],
+                "operationId": "listOrganizationMembers",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Member list"
+                    },
+                    "401": {
+                        "description": "Authentication required"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/members/{memberId}": {
+            "delete": {
+                "tags": [
+                    "Organization Members"
+                ],
+                "operationId": "deleteOrganizationMember",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MemberIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Member removed"
+                    },
+                    "403": {
+                        "description": "Owner permissions required"
+                    },
+                    "404": {
+                        "description": "Member not found"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Organization Members"
+                ],
+                "operationId": "updateOrganizationMember",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/MemberIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateMemberRoleRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Member updated"
+                    },
+                    "403": {
+                        "description": "Owner permissions required"
+                    },
+                    "404": {
+                        "description": "Member not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/invitations": {
+            "get": {
+                "tags": [
+                    "Organization Invitations"
+                ],
+                "operationId": "listOrganizationInvitations",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Invitation list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Organization Invitations"
+                ],
+                "operationId": "createOrganizationInvitation",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateInvitationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Invitation created"
+                    },
+                    "403": {
+                        "description": "Manage invitations permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/invitations/{invitationId}/revoke": {
+            "post": {
+                "tags": [
+                    "Organization Invitations"
+                ],
+                "operationId": "revokeOrganizationInvitation",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InvitationIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Invitation revoked"
+                    },
+                    "403": {
+                        "description": "Manage invitations permission required"
+                    },
+                    "404": {
+                        "description": "Invitation not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/invitations/{invitationId}": {
+            "delete": {
+                "tags": [
+                    "Organization Invitations"
+                ],
+                "operationId": "deleteOrganizationInvitation",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InvitationIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Invitation deleted"
+                    },
+                    "403": {
+                        "description": "Manage invitations permission required"
+                    },
+                    "404": {
+                        "description": "Invitation not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/registry-tokens": {
+            "get": {
+                "tags": [
+                    "Registry Tokens"
+                ],
+                "operationId": "listRegistryTokens",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Registry token list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Registry Tokens"
+                ],
+                "operationId": "createRegistryToken",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateRegistryTokenRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Registry token created"
+                    },
+                    "403": {
+                        "description": "Manage registry token permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/registry-tokens/{tokenId}": {
+            "delete": {
+                "tags": [
+                    "Registry Tokens"
+                ],
+                "operationId": "deleteRegistryToken",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/TokenIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Registry token revoked"
+                    },
+                    "403": {
+                        "description": "Manage registry token permission required"
+                    },
+                    "404": {
+                        "description": "Token not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/registry-tokens/{tokenId}/regenerate": {
+            "put": {
+                "tags": [
+                    "Registry Tokens"
+                ],
+                "operationId": "regenerateRegistryToken",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/TokenIdPath"
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Registry token regenerated"
+                    },
+                    "403": {
+                        "description": "Manage registry token permission required"
+                    },
+                    "404": {
+                        "description": "Token not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/registry/overview": {
+            "get": {
+                "tags": [
+                    "Registry"
+                ],
+                "operationId": "showRegistryOverview",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Registry package overview"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            }
+        },
+        "/api/v1/source-providers": {
+            "get": {
+                "tags": [
+                    "Source Providers"
+                ],
+                "operationId": "listSourceProviders",
+                "responses": {
+                    "200": {
+                        "description": "Source provider list"
+                    }
+                },
+                "security": []
+            }
+        },
+        "/api/v1/organizations/{organization}/source-provider-instances": {
+            "get": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "listSourceProviderInstances",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "name": "provider_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider instance list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    },
+                    "422": {
+                        "description": "Invalid provider instance filter"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "createSourceProviderInstance",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceProviderInstanceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Provider instance created"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/source-provider-instances/{instanceId}": {
+            "delete": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "deleteSourceProviderInstance",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InstanceIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Provider instance deleted"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "updateSourceProviderInstance",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InstanceIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SourceProviderInstanceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Provider instance updated"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "404": {
+                        "description": "Provider instance not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/source-provider-instances/{instanceId}/activate": {
+            "post": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "activateSourceProviderInstance",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InstanceIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider instance activated"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/source-provider-instances/{instanceId}/deactivate": {
+            "post": {
+                "tags": [
+                    "Source Provider Instances"
+                ],
+                "operationId": "deactivateSourceProviderInstance",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/InstanceIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider instance deactivated"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/provider-authorizations": {
+            "get": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "listProviderAuthorizations",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "name": "provider",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider authorization list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "createProviderAuthorization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateProviderAuthorizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Provider authorization created"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/provider-authorizations/{authorizationId}/resources": {
+            "get": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "listProviderAuthorizationResources",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorizationIdPath"
+                    },
+                    {
+                        "name": "provider",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider resources"
+                    },
+                    "401": {
+                        "description": "Provider authorization must be reconnected",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    },
+                    "502": {
+                        "description": "Provider is temporarily unavailable",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/provider-authorizations/{authorizationId}/dependencies": {
+            "get": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "showProviderAuthorizationDependencies",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorizationIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Provider authorization dependencies"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/provider-authorizations/{authorizationId}": {
+            "delete": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "deleteProviderAuthorization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorizationIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeleteProviderAuthorizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Provider authorization deleted"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "409": {
+                        "description": "Authorization has dependencies"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/provider-authorizations/{authorizationId}/reassign-delete": {
+            "post": {
+                "tags": [
+                    "Provider Authorizations"
+                ],
+                "operationId": "reassignDeleteProviderAuthorization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/AuthorizationIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DeleteProviderAuthorizationRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Provider authorization reassigned and deleted"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "409": {
+                        "description": "Authorization could not be deleted"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources": {
+            "get": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "listSources",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SearchQuery"
+                    },
+                    {
+                        "name": "provider",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "visibility",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Source list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "createSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/CreateSourceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "202": {
+                        "description": "Source creation queued"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}": {
+            "get": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "showSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Source details"
+                    },
+                    "404": {
+                        "description": "Source not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "deleteSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Source deletion queued"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "updateSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateSourceRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Source updated"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/sync": {
+            "post": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "syncSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Source sync queued"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/archive": {
+            "post": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "archiveSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Source archived"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/restore": {
+            "post": {
+                "tags": [
+                    "Sources"
+                ],
+                "operationId": "restoreSource",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Source restored"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/webhook/register": {
+            "post": {
+                "tags": [
+                    "Source Webhooks"
+                ],
+                "operationId": "registerSourceWebhook",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Webhook registration result"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/webhook/rotate-secret": {
+            "post": {
+                "tags": [
+                    "Source Webhooks"
+                ],
+                "operationId": "rotateSourceWebhookSecret",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Webhook secret rotated"
+                    },
+                    "403": {
+                        "description": "Manage sources permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/webhook-events": {
+            "get": {
+                "tags": [
+                    "Source Webhooks"
+                ],
+                "operationId": "listSourceWebhookEvents",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 100,
+                            "minimum": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Recent webhook deliveries"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    },
+                    "404": {
+                        "description": "Source not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/sources/{sourceId}/webhook-events/{deliveryId}/reprocess": {
+            "post": {
+                "tags": [
+                    "Source Webhooks"
+                ],
+                "operationId": "reprocessSourceWebhookEvent",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SourceIdPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/DeliveryIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Webhook delivery reprocess queued"
+                    },
+                    "403": {
+                        "description": "Manage webhooks permission required"
+                    },
+                    "404": {
+                        "description": "Webhook delivery not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/packages": {
+            "get": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "listPackages",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SearchQuery"
+                    },
+                    {
+                        "name": "visibility",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "source_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid"
+                        }
+                    },
+                    {
+                        "name": "source_type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Package list"
+                    },
+                    "403": {
+                        "description": "Access denied"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/packages/{vendor}/{package}": {
+            "get": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "showPackage",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Package details"
+                    },
+                    "404": {
+                        "description": "Package not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Packages"
+                ],
+                "operationId": "deletePackage",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Package deleted"
+                    },
+                    "403": {
+                        "description": "Manage packages permission required"
+                    },
+                    "404": {
+                        "description": "Package not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/packages/{vendor}/{package}/releases": {
+            "get": {
+                "tags": [
+                    "Releases"
+                ],
+                "operationId": "listPackageReleases",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    },
+                    {
+                        "name": "include_inactive",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Release list"
+                    },
+                    "404": {
+                        "description": "Package not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Releases"
+                ],
+                "operationId": "deletePackageReleases",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Package releases deleted"
+                    },
+                    "403": {
+                        "description": "Manage packages permission required"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/packages/{vendor}/{package}/releases/by-version": {
+            "get": {
+                "tags": [
+                    "Releases"
+                ],
+                "operationId": "showPackageReleaseByVersion",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    },
+                    {
+                        "name": "version",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Release details"
+                    },
+                    "404": {
+                        "description": "Release not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/organizations/{organization}/packages/{vendor}/{package}/releases/by-version/activity": {
+            "post": {
+                "tags": [
+                    "Releases"
+                ],
+                "operationId": "updatePackageReleaseActivity",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/VendorPath"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PackagePath"
+                    },
+                    {
+                        "name": "version",
+                        "in": "query",
+                        "required": true,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/ReleaseActivityRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Release activity updated"
+                    },
+                    "403": {
+                        "description": "Manage packages permission required"
+                    },
+                    "404": {
+                        "description": "Release not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/jobs": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "listAdminJobs",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PageQuery"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPageQuery"
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "type",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin job list"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/jobs/{jobId}": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "showAdminJob",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/JobIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin job details"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "404": {
+                        "description": "Job not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/jobs/{jobId}/restart": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "restartAdminJob",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/JobIdPath"
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Admin job restart queued"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "description": "Returns 20 users by default, at most 100 per page. Search matches case-insensitive substrings in email or display name; wildcard characters are literal. Results use PostgreSQL database-collation email ascending, then UUID ascending order. Clients must traverse pages to enumerate users.",
+                "operationId": "listAdminUsers",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/PageQuery"
+                    },
+                    {
+                        "$ref": "#/components/parameters/PerPageQuery"
+                    },
+                    {
+                        "$ref": "#/components/parameters/SearchQuery"
+                    },
+                    {
+                        "$ref": "#/components/parameters/UserStatusQuery"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Paginated admin user list.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/AdminUserPaginatedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{userId}": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "showAdminUser",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/UserIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin user details"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "updateAdminUser",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/UserIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminUserUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Admin user updated"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/users/{userId}/verify": {
+            "post": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "verifyAdminUserEmail",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/UserIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "User email verified"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "404": {
+                        "description": "User not found"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/organizations": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "listAdminOrganizations",
+                "responses": {
+                    "200": {
+                        "description": "Admin organization list"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/organizations/{organizationId}": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "showAdminOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationIdPath"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Admin organization details"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "404": {
+                        "description": "Organization not found"
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "deleteAdminOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationIdPath"
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Admin organization deleted"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "404": {
+                        "description": "Organization not found"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "updateAdminOrganization",
+                "parameters": [
+                    {
+                        "$ref": "#/components/parameters/OrganizationIdPath"
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminOrganizationUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Admin organization updated"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/packages": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "listAdminPackages",
+                "responses": {
+                    "200": {
+                        "description": "Admin package list"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/sources": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "listAdminSources",
+                "responses": {
+                    "200": {
+                        "description": "Admin source list"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            }
+        },
+        "/api/v1/admin/settings": {
+            "get": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "showAdminSettings",
+                "responses": {
+                    "200": {
+                        "description": "Project settings"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    }
+                }
+            },
+            "patch": {
+                "tags": [
+                    "Admin"
+                ],
+                "operationId": "updateAdminSettings",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AdminSettingsUpdateRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Project settings updated"
+                    },
+                    "403": {
+                        "description": "Admin role and admin scope required"
+                    },
+                    "422": {
+                        "description": "Invalid request"
+                    }
+                }
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "ErrorResponse": {
+                "required": [
+                    "error"
+                ],
+                "properties": {
+                    "error": {
+                        "required": [
+                            "code",
+                            "message"
+                        ],
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "not_found"
+                            },
+                            "message": {
+                                "type": "string",
+                                "example": "Resource not found."
+                            },
+                            "details": {
+                                "type": [
+                                    "object",
+                                    "null"
+                                ]
+                            }
+                        },
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "PaginationMeta": {
+                "required": [
+                    "total",
+                    "current_page",
+                    "per_page",
+                    "last_page",
+                    "from",
+                    "to"
+                ],
+                "properties": {
+                    "total": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "current_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "per_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "last_page": {
+                        "type": "integer",
+                        "minimum": 1
+                    },
+                    "from": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "to": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "PaginationLinks": {
+                "required": [
+                    "first",
+                    "prev",
+                    "next",
+                    "last"
+                ],
+                "properties": {
+                    "first": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "prev": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "next": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "last": {
+                        "type": "string",
+                        "format": "uri"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminUserPaginatedResponse": {
+                "required": [
+                    "data",
+                    "meta",
+                    "links"
+                ],
+                "properties": {
+                    "data": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/components/schemas/UserResource"
+                        }
+                    },
+                    "meta": {
+                        "$ref": "#/components/schemas/PaginationMeta"
+                    },
+                    "links": {
+                        "$ref": "#/components/schemas/PaginationLinks"
+                    }
+                },
+                "type": "object"
+            },
+            "UserResource": {
+                "required": [
+                    "id",
+                    "email",
+                    "display_name",
+                    "roles",
+                    "created_at",
+                    "has_password",
+                    "is_email_verified",
+                    "is_banned"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "has_password": {
+                        "type": "boolean"
+                    },
+                    "is_email_verified": {
+                        "type": "boolean"
+                    },
+                    "is_banned": {
+                        "type": "boolean"
+                    },
+                    "banned_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "ban_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "ApiAccessTokenResource": {
+                "required": [
+                    "id",
+                    "name",
+                    "token_prefix",
+                    "scopes",
+                    "created_at",
+                    "revoked"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "token_prefix": {
+                        "type": "string"
+                    },
+                    "scopes": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "revoked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "revoked": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "OrganizationResource": {
+                "required": [
+                    "id",
+                    "slug",
+                    "name",
+                    "anonymous_access",
+                    "active",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "anonymous_access": {
+                        "type": "boolean"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "OrganizationMemberResource": {
+                "required": [
+                    "id",
+                    "organization_id",
+                    "user_id",
+                    "role"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "owner"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "OrganizationInvitationResource": {
+                "required": [
+                    "id",
+                    "organization_id",
+                    "invited_by_user_id",
+                    "role",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "invited_by_user_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "owner"
+                        ]
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "accepted_by_user_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "token": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "expires_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "accepted_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "revoked_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "RegistryTokenResource": {
+                "required": [
+                    "id",
+                    "name",
+                    "permissions",
+                    "created_at",
+                    "masked_token"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "last_used_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "masked_token": {
+                        "type": "string"
+                    }
+                },
+                "type": "object"
+            },
+            "SourceProviderResource": {
+                "required": [
+                    "key",
+                    "name",
+                    "description",
+                    "capabilities",
+                    "oauth_enabled",
+                    "oauth_available"
+                ],
+                "properties": {
+                    "key": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "capabilities": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
+                    "oauth_provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "oauth_enabled": {
+                        "type": "boolean"
+                    },
+                    "oauth_available": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "SourceProviderInstanceResource": {
+                "required": [
+                    "id",
+                    "organization_id",
+                    "provider_type",
+                    "label",
+                    "base_url",
+                    "auth_mode",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "provider_type": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "client_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "has_client_secret": {
+                        "type": "boolean"
+                    },
+                    "auth_mode": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "metadata": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "ProviderAuthorizationResource": {
+                "required": [
+                    "id",
+                    "organization_id",
+                    "provider",
+                    "auth_strategy",
+                    "status",
+                    "configured"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "auth_strategy": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "account_name": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "configured": {
+                        "type": "boolean"
+                    },
+                    "masked_value": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "source_oauth_account_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "provider_instance_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "auth_health": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "auth_failure_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_token_refresh_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "ProviderResourceResource": {
+                "required": [
+                    "id",
+                    "provider",
+                    "name",
+                    "canonical_url",
+                    "private"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "canonical_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "default_ref": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "private": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "SourceResource": {
+                "required": [
+                    "id",
+                    "provider",
+                    "type",
+                    "display_name",
+                    "canonical_url",
+                    "organization_id",
+                    "visibility",
+                    "active",
+                    "archived",
+                    "status"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "canonical_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "owner": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "repository": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "default_ref": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "visibility": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "last_sync_status": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "last_sync_error": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "archived": {
+                        "type": "boolean"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "provider_config": {
+                        "description": "Provider settings. The webhook_secret key is present only when the caller may manage the source (or is a site admin) and the token grants sources:write (e.g. write).",
+                        "type": "object"
+                    },
+                    "credentials_configured": {
+                        "type": "boolean"
+                    },
+                    "keep_last_releases": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "PackageResource": {
+                "required": [
+                    "name",
+                    "type",
+                    "visibility",
+                    "active",
+                    "organization_id"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "visibility": {
+                        "type": "string"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "source_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "source_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "source_url": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uri"
+                    },
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "readme_html": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "download_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "ReleaseResource": {
+                "required": [
+                    "organization_id",
+                    "package_name",
+                    "version",
+                    "reference",
+                    "active"
+                ],
+                "properties": {
+                    "organization_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "package_name": {
+                        "type": "string"
+                    },
+                    "version": {
+                        "type": "string"
+                    },
+                    "reference": {
+                        "type": "string"
+                    },
+                    "composer": {
+                        "type": "object"
+                    },
+                    "source": {
+                        "type": "object"
+                    },
+                    "dist": {
+                        "type": "object"
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "download_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "created_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "released_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "upstream_reference": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "reference_type": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "WebhookEventResource": {
+                "required": [
+                    "source_id",
+                    "provider",
+                    "delivery_id",
+                    "event",
+                    "status",
+                    "created_at",
+                    "reprocess_count"
+                ],
+                "properties": {
+                    "source_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "provider": {
+                        "type": "string"
+                    },
+                    "delivery_id": {
+                        "type": "string"
+                    },
+                    "event": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "processed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "scheduled_job_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "reprocess_count": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "WebhookResultResource": {
+                "required": [
+                    "status_code",
+                    "message"
+                ],
+                "properties": {
+                    "status_code": {
+                        "type": "integer"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "provider": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "JobResource": {
+                "required": [
+                    "id",
+                    "type",
+                    "status",
+                    "priority",
+                    "attempt_count",
+                    "max_attempts",
+                    "created_at",
+                    "can_retry"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "organization_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "type": {
+                        "type": "string"
+                    },
+                    "payload": {
+                        "type": "object"
+                    },
+                    "idempotency_key": {
+                        "type": "string"
+                    },
+                    "status": {
+                        "type": "string"
+                    },
+                    "priority": {
+                        "type": "integer"
+                    },
+                    "scheduled_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "completed_at": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "date-time"
+                    },
+                    "attempt_count": {
+                        "type": "integer"
+                    },
+                    "max_attempts": {
+                        "type": "integer"
+                    },
+                    "error_message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "error_details": {
+                        "type": [
+                            "object",
+                            "null"
+                        ]
+                    },
+                    "worker_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "duration_seconds": {
+                        "type": [
+                            "number",
+                            "null"
+                        ]
+                    },
+                    "warning_count": {
+                        "type": "integer"
+                    },
+                    "can_retry": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "JobLogResource": {
+                "required": [
+                    "id",
+                    "job_id",
+                    "level",
+                    "message",
+                    "context",
+                    "created_at"
+                ],
+                "properties": {
+                    "id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "job_id": {
+                        "type": "string",
+                        "format": "uuid"
+                    },
+                    "level": {
+                        "type": "string"
+                    },
+                    "message": {
+                        "type": "string"
+                    },
+                    "context": {
+                        "type": "object"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "WebhookRegistrationResultResource": {
+                "required": [
+                    "success",
+                    "already_exists"
+                ],
+                "properties": {
+                    "success": {
+                        "type": "boolean"
+                    },
+                    "external_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "message": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "already_exists": {
+                        "type": "boolean"
+                    },
+                    "auth_health": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "auth_failure_reason": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "CreateOrganizationRequest": {
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "example": "Acme",
+                        "minLength": 1
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateOrganizationRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "anonymous_access": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "CreateInvitationRequest": {
+                "required": [
+                    "role"
+                ],
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "owner"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateMemberRoleRequest": {
+                "required": [
+                    "role"
+                ],
+                "properties": {
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "member",
+                            "owner"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "CreateRegistryTokenRequest": {
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "permissions": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "CreateProviderAuthorizationRequest": {
+                "required": [
+                    "provider"
+                ],
+                "properties": {
+                    "provider": {
+                        "type": "string"
+                    },
+                    "auth_strategy": {
+                        "type": "string",
+                        "example": "token"
+                    },
+                    "payload": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "DeleteProviderAuthorizationRequest": {
+                "properties": {
+                    "new_authorization_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    }
+                },
+                "type": "object"
+            },
+            "SourceProviderInstanceRequest": {
+                "required": [
+                    "provider_type",
+                    "label",
+                    "base_url"
+                ],
+                "properties": {
+                    "provider_type": {
+                        "type": "string"
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "base_url": {
+                        "type": "string",
+                        "format": "uri"
+                    },
+                    "auth_mode": {
+                        "type": "string"
+                    },
+                    "client_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "client_secret": {
+                        "type": [
+                            "string",
+                            "null"
+                        ]
+                    },
+                    "metadata": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "CreateSourceRequest": {
+                "required": [
+                    "provider",
+                    "resource"
+                ],
+                "properties": {
+                    "provider": {
+                        "type": "string"
+                    },
+                    "resource": {
+                        "type": "string"
+                    },
+                    "default_ref": {
+                        "type": "string",
+                        "example": "main"
+                    },
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "public",
+                            "private"
+                        ]
+                    },
+                    "provider_authorization_id": {
+                        "type": [
+                            "string",
+                            "null"
+                        ],
+                        "format": "uuid"
+                    },
+                    "keep_last_releases": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "settings": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateSourceRequest": {
+                "properties": {
+                    "visibility": {
+                        "type": "string",
+                        "enum": [
+                            "public",
+                            "private"
+                        ]
+                    },
+                    "active": {
+                        "type": "boolean"
+                    },
+                    "keep_last_releases": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "ReleaseActivityRequest": {
+                "required": [
+                    "active"
+                ],
+                "properties": {
+                    "active": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminUserUpdateRequest": {
+                "properties": {
+                    "email": {
+                        "type": "string",
+                        "format": "email"
+                    },
+                    "display_name": {
+                        "type": "string"
+                    },
+                    "roles": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "user",
+                                "admin"
+                            ]
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "AdminOrganizationUpdateRequest": {
+                "properties": {
+                    "name": {
+                        "type": "string"
+                    },
+                    "slug": {
+                        "type": "string"
+                    },
+                    "anonymous_access": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "AdminSettingsUpdateRequest": {
+                "properties": {
+                    "settings": {
+                        "type": "object"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "parameters": {
+            "OrganizationPath": {
+                "name": "organization",
+                "in": "path",
+                "description": "Organization slug or UUID.",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "OrganizationIdPath": {
+                "name": "organizationId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "UserIdPath": {
+                "name": "userId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "MemberIdPath": {
+                "name": "memberId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "InvitationIdPath": {
+                "name": "invitationId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "TokenIdPath": {
+                "name": "tokenId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "AuthorizationIdPath": {
+                "name": "authorizationId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "InstanceIdPath": {
+                "name": "instanceId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "SourceIdPath": {
+                "name": "sourceId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "DeliveryIdPath": {
+                "name": "deliveryId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "JobIdPath": {
+                "name": "jobId",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string",
+                    "format": "uuid"
+                }
+            },
+            "VendorPath": {
+                "name": "vendor",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "PackagePath": {
+                "name": "package",
+                "in": "path",
+                "required": true,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "PageQuery": {
+                "name": "page",
+                "in": "query",
+                "required": false,
+                "schema": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "PerPageQuery": {
+                "name": "per_page",
+                "in": "query",
+                "required": false,
+                "schema": {
+                    "type": "integer",
+                    "maximum": 100,
+                    "minimum": 1
+                }
+            },
+            "SearchQuery": {
+                "name": "search",
+                "in": "query",
+                "required": false,
+                "schema": {
+                    "type": "string"
+                }
+            },
+            "UserStatusQuery": {
+                "name": "status",
+                "in": "query",
+                "description": "Filters users by account status.",
+                "required": false,
+                "schema": {
+                    "type": "string",
+                    "enum": [
+                        "active",
+                        "banned"
+                    ]
+                }
+            }
+        },
+        "securitySchemes": {
+            "BearerAuth": {
+                "type": "http",
+                "bearerFormat": "Packio API token",
+                "scheme": "bearer"
+            },
+            "ApiToken": {
+                "type": "apiKey",
+                "name": "X-API-TOKEN",
+                "in": "header"
+            }
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        },
+        {
+            "ApiToken": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "User API Tokens",
+            "description": "User API Tokens"
+        },
+        {
+            "name": "System",
+            "description": "System"
+        },
+        {
+            "name": "User",
+            "description": "User"
+        },
+        {
+            "name": "Organizations",
+            "description": "Organizations"
+        },
+        {
+            "name": "Organization Members",
+            "description": "Organization Members"
+        },
+        {
+            "name": "Organization Invitations",
+            "description": "Organization Invitations"
+        },
+        {
+            "name": "Registry Tokens",
+            "description": "Registry Tokens"
+        },
+        {
+            "name": "Registry",
+            "description": "Registry"
+        },
+        {
+            "name": "Source Providers",
+            "description": "Source Providers"
+        },
+        {
+            "name": "Source Provider Instances",
+            "description": "Source Provider Instances"
+        },
+        {
+            "name": "Provider Authorizations",
+            "description": "Provider Authorizations"
+        },
+        {
+            "name": "Sources",
+            "description": "Sources"
+        },
+        {
+            "name": "Source Webhooks",
+            "description": "Source Webhooks"
+        },
+        {
+            "name": "Packages",
+            "description": "Packages"
+        },
+        {
+            "name": "Releases",
+            "description": "Releases"
+        },
+        {
+            "name": "Admin",
+            "description": "Admin"
+        }
+    ]
+}

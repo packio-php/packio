@@ -1,0 +1,119 @@
+# Standalone production example; do not merge with compose.yaml.
+name: packio-prod
+
+x-service: &service
+  restart: unless-stopped
+  stop_grace_period: 90s
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+x-environment: &environment
+  APP_DEBUG: "false"
+  APP_PRODUCTION: "true"
+  APP_SECRET_ENCRYPTION_KEY: "${APP_SECRET_ENCRYPTION_KEY:?Set APP_SECRET_ENCRYPTION_KEY}"
+  APP_URL: "${APP_URL:?Set APP_URL}"
+  DEFAULT_DB_CONNECTION: postgres
+  DATABASE_HOST: postgres
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "${DATABASE_NAME:-packio}"
+  DATABASE_USER: "${DATABASE_USER:-packio}"
+  DATABASE_PASS: "${DATABASE_PASS:?Set DATABASE_PASS}"
+  LOG_CHANNEL: stderr
+  LOG_LEVEL: info
+  VITE_DEV_SERVER_URL: ""
+  RUN_MIGRATIONS: "false"
+
+services:
+  postgres:
+    <<: *service
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: "${DATABASE_NAME:-packio}"
+      POSTGRES_USER: "${DATABASE_USER:-packio}"
+      POSTGRES_PASSWORD: "${DATABASE_PASS:?Set DATABASE_PASS}"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", 'pg_isready -U "$${POSTGRES_USER}" -d "$${POSTGRES_DB}"']
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    <<: *service
+    image: packio-roadrunner:${PACKIO_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.roadrunner
+      target: prod
+    env_file: .env.prod.local
+    environment:
+      <<: *environment
+      RUN_MIGRATIONS: "true"
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: http://ssr:13714/render
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ssr:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${HTTP_PORT:-8080}:80"
+    volumes:
+      - sessions:/app/data/sessions
+      - rate-limits:/app/data/rate-limits
+      - package-archives:/app/data/package-archives
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/roadrunner-healthcheck.sh", "--ready"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 120s
+
+  workers:
+    <<: *service
+    image: packio-worker:${PACKIO_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.roadrunner
+      target: prod-worker
+    env_file: .env.prod.local
+    environment:
+      <<: *environment
+      PACKIO_WORKER_NUM: "${PACKIO_WORKER_NUM:-7}"
+      # Let worker:run generate a distinct hostname/PID-based ID per process.
+      WORKER_ID: ""
+    stop_grace_period: 120s
+    depends_on:
+      app:
+        condition: service_healthy
+    volumes:
+      - package-archives:/app/data/package-archives
+    healthcheck:
+      test: ["CMD", "php", "/app/bin/healthcheck-roadrunner-services.php"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  ssr:
+    <<: *service
+    image: packio-ssr:${PACKIO_IMAGE_TAG:-local}
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.roadrunner
+      target: prod-ssr
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/healthcheck-ssr.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres-data:
+  sessions:
+  rate-limits:
+  package-archives:

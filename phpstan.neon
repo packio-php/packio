@@ -1,0 +1,13 @@
+parameters:
+	level: 8
+	paths:
+		- src
+		- test
+		- bin/readiness-probe.php
+	scanFiles:
+		- data/db/cycle/migrations/20260907.183620_0_0_default_change_users_add_index_users_email_uuid_idx.php
+		- data/db/cycle/migrations/20260823.232000_0_0_default_backfill_source_deletion_run_ids.php
+		- data/db/cycle/migrations/20260823.232001_0_0_default_backfill_organization_deletion_run_ids.php
+		- data/db/cycle/migrations/20261024.223059_0_0_default_change_organization_invitations_add_index_organization_invitations_token_unique_add_index_organization_invitations_org.php
+		- data/db/cycle/migrations/20261110.204555_0_0_default_change_organization_invitations_add_token_hash_add_index_organization_invitations_token_hash_unique.php
+	ignoreErrors:

@@ -1,0 +1,20 @@
+services:
+  app:
+    build:
+      dockerfile: .docker/Dockerfile.roadrunner
+      target: app-base
+    environment:
+      # Goridge reserves PHP worker stdout for its protocol; application logs
+      # therefore go to stderr in the RoadRunner variant.
+      LOG_CHANNEL: stderr
+      RR_NUM_WORKERS: "${RR_NUM_WORKERS:-2}"
+      RR_MAX_JOBS: "${RR_MAX_JOBS:-500}"
+      RR_MAX_QUEUE_SIZE: "${RR_MAX_QUEUE_SIZE:-256}"
+      RR_MAX_WORKER_MEMORY_MB: "${RR_MAX_WORKER_MEMORY_MB:-256}"
+      RR_ALLOCATE_TIMEOUT: "${RR_ALLOCATE_TIMEOUT:-60s}"
+      RR_DESTROY_TIMEOUT: "${RR_DESTROY_TIMEOUT:-60s}"
+      RR_EXEC_TTL: "${RR_EXEC_TTL:-60s}"
+      RR_RELAY_TIMEOUT: "${RR_RELAY_TIMEOUT:-60s}"
+      RR_MAX_REQUEST_SIZE_MB: "${RR_MAX_REQUEST_SIZE_MB:-32}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/roadrunner-healthcheck.sh"]

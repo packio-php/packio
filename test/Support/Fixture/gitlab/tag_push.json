@@ -1,0 +1,10 @@
+{
+  "object_kind": "tag_push",
+  "project": {
+    "id": 123456,
+    "web_url": "https://gitlab.com/example/example"
+  },
+  "event_name": "tag_push",
+  "ref": "refs/tags/v1.2.3",
+  "checkout_sha": "0000000000000000000000000000000000000000"
+}

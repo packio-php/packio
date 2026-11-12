@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+{% set initialTheme = page.props.initial_theme|default({}) %}
+{% set initialThemeMode = initialTheme.mode|default('system') %}
+{% set initialResolvedTheme = initialTheme.resolved|default('') %}
+{% set lightPageBg = initialTheme.lightPageBg|default('#f3f4f7') %}
+{% set darkPageBg = initialTheme.darkPageBg|default('#1a1f2a') %}
+{% set initialPageBg = initialResolvedTheme == 'dark' ? darkPageBg : lightPageBg %}
+{% set themeStorageKey = page.props.branding.themeStorageKey|default('packio-theme') %}
+<html
+    lang="en"
+    data-theme-mode="{{ initialThemeMode|e('html_attr') }}"
+    data-theme-storage-key="{{ themeStorageKey|e('html_attr') }}"
+    data-theme-light-bg="{{ lightPageBg|e('html_attr') }}"
+    data-theme-dark-bg="{{ darkPageBg|e('html_attr') }}"
+    data-theme-booting
+    {% if initialResolvedTheme in ['dark', 'light'] %}data-theme="{{ initialResolvedTheme|e('html_attr') }}"{% endif %}
+>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    {% if initialResolvedTheme in ['dark', 'light'] %}
+        <meta name="theme-color" content="{{ initialPageBg }}">
+    {% else %}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ lightPageBg }}">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="{{ darkPageBg }}">
+    {% endif %}
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <style>
+        {% include 'partials/font-faces.twig' %}
+
+        :root {
+            --font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+            --font-display: "Plus Jakarta Sans", Georgia, serif;
+            --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+            --page-bg: {{ lightPageBg }};
+            --page-ink: rgba(37, 43, 54, 0.95);
+            --page-muted: #6d7d9c;
+            --surface: #ffffff;
+            --surface-muted: #f3f4f7;
+            --surface-strong: #ffffff;
+            --panel: rgba(255, 255, 255, 0.84);
+            --panel-strong: rgba(255, 255, 255, 0.92);
+            --panel-border: rgba(8, 10, 12, 0.09);
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --footer-bg: rgba(255, 255, 255, 0.92);
+            --accent: #5856d6;
+            --accent-soft: rgba(88, 86, 214, 0.14);
+            --accent-ink: #3d3bb4;
+            --button-primary-bg: #5856d6;
+            --button-primary-hover: #4946c6;
+            --button-primary-text: #ffffff;
+            --button-secondary-bg: #e7ebf6;
+            --button-secondary-border: #cfd7ee;
+            --button-secondary-hover: #dbe3fb;
+            --button-secondary-text: #2f3f74;
+            --button-danger-bg: #d64545;
+            --button-danger-hover: #bf3838;
+            --button-danger-text: #ffffff;
+            --button-danger-soft-bg: rgba(214, 69, 69, 0.12);
+            --button-danger-soft-border: rgba(214, 69, 69, 0.28);
+            --button-danger-soft-text: #a52626;
+            --gold: #f59e0b;
+            --gold-soft: rgba(245, 158, 11, 0.14);
+            --danger-soft: rgba(229, 83, 83, 0.12);
+            --shadow-card: 0 20px 55px rgba(50, 58, 73, 0.08);
+            --flash-success-bg: #ecfdf3;
+            --flash-success-border: #b7ebcb;
+            --flash-success-text: #166534;
+            --flash-error-bg: #fef2f2;
+            --flash-error-border: #fecaca;
+            --flash-error-text: #b91c1c;
+            background-color: var(--page-bg);
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --page-bg: {{ darkPageBg }};
+                --page-ink: rgba(255, 255, 255, 0.9);
+                --page-muted: #9ca9c5;
+                --surface: #242b38;
+                --surface-muted: #1f2530;
+                --surface-strong: #2c3442;
+                --panel: rgba(36, 43, 56, 0.86);
+                --panel-strong: rgba(44, 52, 66, 0.92);
+                --panel-border: rgba(255, 255, 255, 0.1);
+                --header-bg: rgba(33, 39, 52, 0.9);
+                --footer-bg: rgba(33, 39, 52, 0.92);
+                --accent: #7d7bf2;
+                --accent-soft: rgba(125, 123, 242, 0.22);
+                --accent-ink: #c6c5ff;
+                --button-primary-bg: #7d7bf2;
+                --button-primary-hover: #6d6be0;
+                --button-primary-text: #ffffff;
+                --button-secondary-bg: #313a4e;
+                --button-secondary-border: #4a5673;
+                --button-secondary-hover: #39455d;
+                --button-secondary-text: #e6ebff;
+                --button-danger-bg: #dc5a6a;
+                --button-danger-hover: #c94d5c;
+                --button-danger-text: #ffffff;
+                --button-danger-soft-bg: rgba(220, 90, 106, 0.18);
+                --button-danger-soft-border: rgba(220, 90, 106, 0.34);
+                --button-danger-soft-text: #ffb8c0;
+                --gold: #facc15;
+                --gold-soft: rgba(250, 204, 21, 0.18);
+                --danger-soft: rgba(251, 113, 133, 0.18);
+                --shadow-card: 0 20px 55px rgba(0, 0, 0, 0.28);
+                --flash-success-bg: rgba(22, 101, 52, 0.18);
+                --flash-success-border: rgba(74, 222, 128, 0.32);
+                --flash-success-text: #86efac;
+                --flash-error-bg: rgba(127, 29, 29, 0.22);
+                --flash-error-border: rgba(251, 113, 133, 0.32);
+                --flash-error-text: #fda4af;
+                --pre-inset-shadow: rgba(255, 255, 255, 0.06);
+                background-color: var(--page-bg);
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="light"] {
+            --page-bg: {{ lightPageBg }};
+            --page-ink: rgba(37, 43, 54, 0.95);
+            --page-muted: #6d7d9c;
+            --surface: #ffffff;
+            --surface-muted: #f3f4f7;
+            --surface-strong: #ffffff;
+            --panel: rgba(255, 255, 255, 0.84);
+            --panel-strong: rgba(255, 255, 255, 0.92);
+            --panel-border: rgba(8, 10, 12, 0.09);
+            --header-bg: rgba(255, 255, 255, 0.9);
+            --footer-bg: rgba(255, 255, 255, 0.92);
+            --accent: #5856d6;
+            --accent-soft: rgba(88, 86, 214, 0.14);
+            --accent-ink: #3d3bb4;
+            --button-primary-bg: #5856d6;
+            --button-primary-hover: #4946c6;
+            --button-primary-text: #ffffff;
+            --button-secondary-bg: #e7ebf6;
+            --button-secondary-border: #cfd7ee;
+            --button-secondary-hover: #dbe3fb;
+            --button-secondary-text: #2f3f74;
+            --button-danger-bg: #d64545;
+            --button-danger-hover: #bf3838;
+            --button-danger-text: #ffffff;
+            --button-danger-soft-bg: rgba(214, 69, 69, 0.12);
+            --button-danger-soft-border: rgba(214, 69, 69, 0.28);
+            --button-danger-soft-text: #a52626;
+            --gold: #f59e0b;
+            --gold-soft: rgba(245, 158, 11, 0.14);
+            --danger-soft: rgba(229, 83, 83, 0.12);
+            --shadow-card: 0 20px 55px rgba(50, 58, 73, 0.08);
+            --flash-success-bg: #ecfdf3;
+            --flash-success-border: #b7ebcb;
+            --flash-success-text: #166534;
+            --flash-error-bg: #fef2f2;
+            --flash-error-border: #fecaca;
+            --flash-error-text: #b91c1c;
+            background-color: var(--page-bg);
+            color-scheme: light;
+        }
+
+        :root[data-theme="dark"] {
+            --page-bg: {{ darkPageBg }};
+            --page-ink: rgba(255, 255, 255, 0.9);
+            --page-muted: #9ca9c5;
+            --surface: #242b38;
+            --surface-muted: #1f2530;
+            --surface-strong: #2c3442;
+            --panel: rgba(36, 43, 56, 0.86);
+            --panel-strong: rgba(44, 52, 66, 0.92);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --header-bg: rgba(33, 39, 52, 0.9);
+            --footer-bg: rgba(33, 39, 52, 0.92);
+            --accent: #7d7bf2;
+            --accent-soft: rgba(125, 123, 242, 0.22);
+            --accent-ink: #c6c5ff;
+            --button-primary-bg: #7d7bf2;
+            --button-primary-hover: #6d6be0;
+            --button-primary-text: #ffffff;
+            --button-secondary-bg: #313a4e;
+            --button-secondary-border: #4a5673;
+            --button-secondary-hover: #39455d;
+            --button-secondary-text: #e6ebff;
+            --button-danger-bg: #dc5a6a;
+            --button-danger-hover: #c94d5c;
+            --button-danger-text: #ffffff;
+            --button-danger-soft-bg: rgba(220, 90, 106, 0.18);
+            --button-danger-soft-border: rgba(220, 90, 106, 0.34);
+            --button-danger-soft-text: #ffb8c0;
+            --gold: #facc15;
+            --gold-soft: rgba(250, 204, 21, 0.18);
+            --danger-soft: rgba(251, 113, 133, 0.18);
+            --shadow-card: 0 20px 55px rgba(0, 0, 0, 0.28);
+            --flash-success-bg: rgba(22, 101, 52, 0.18);
+            --flash-success-border: rgba(74, 222, 128, 0.32);
+            --flash-success-text: #86efac;
+            --flash-error-bg: rgba(127, 29, 29, 0.22);
+            --flash-error-border: rgba(251, 113, 133, 0.32);
+            --flash-error-text: #fda4af;
+            --pre-inset-shadow: rgba(255, 255, 255, 0.06);
+            background-color: var(--page-bg);
+            color-scheme: dark;
+        }
+
+        html {
+            background-color: var(--page-bg);
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background:
+                radial-gradient(circle at top left, var(--accent-soft), transparent 34%),
+                radial-gradient(circle at right 12%, var(--gold-soft), transparent 30%),
+                linear-gradient(
+                    180deg,
+                    color-mix(in srgb, var(--surface) 80%, var(--page-bg)) 0%,
+                    var(--page-bg) 100%
+                );
+            color: var(--page-ink);
+            font-family: var(--font-body);
+        }
+
+        :root[data-theme-booting] *,
+        :root[data-theme-booting] body {
+            transition: none !important;
+        }
+    </style>
+    <script data-cfasync="false">
+        (function () {
+            const root = document.documentElement;
+            const storageKey = root.dataset.themeStorageKey || '{{ themeStorageKey|e('js') }}';
+            const cookieMode = root.dataset.themeMode || 'system';
+            const lightPageBg = root.dataset.themeLightBg || '{{ lightPageBg|e('js') }}';
+            const darkPageBg = root.dataset.themeDarkBg || '{{ darkPageBg|e('js') }}';
+            let saved = null;
+
+            try {
+                saved = window.localStorage.getItem(storageKey);
+            } catch (error) {
+                saved = null;
+            }
+
+            const mode = cookieMode === 'light' || cookieMode === 'dark'
+                ? cookieMode
+                : (saved === 'light' || saved === 'dark' ? saved : 'system');
+            const theme = mode === 'light' || mode === 'dark'
+                ? mode
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light');
+            const pageBg = theme === 'dark' ? darkPageBg : lightPageBg;
+
+            root.dataset.theme = theme;
+            root.dataset.themeMode = mode;
+            root.style.colorScheme = theme;
+            root.style.backgroundColor = pageBg;
+            document
+                .querySelectorAll('meta[name="theme-color"]')
+                .forEach((meta) => meta.setAttribute('content', pageBg));
+        })();
+    </script>
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="{{ page.props.branding.name|default('Packio') }}">
+    <title>{{ page.props.og_title|default(page.props.branding.name|default('Packio')) }}</title>
+    <meta name="description" content="{{ page.props.og_description|default(page.props.branding.tagline|default('Lightweight private package registry for Composer')) }}">
+    <meta property="og:title" content="{{ page.props.og_title|default(page.props.branding.name|default('Packio')) }}">
+    <meta property="og:description" content="{{ page.props.og_description|default(page.props.branding.tagline|default('Lightweight private package registry for Composer')) }}">
+    <meta property="og:image" content="{{ page.props.og_image|default(page.props.branding.appBaseUrl|default('') ~ '/og-image.png') }}">
+    <meta property="og:url" content="{{ page.props.current_url|default(page.props.branding.appBaseUrl|default('')) }}">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ page.props.branding.name|default('Packio') }}">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ page.props.og_title|default(page.props.branding.name|default('Packio')) }}">
+    <meta name="twitter:description" content="{{ page.props.og_description|default(page.props.branding.tagline|default('Lightweight private package registry for Composer')) }}">
+    <meta name="twitter:image" content="{{ page.props.og_image|default(page.props.branding.appBaseUrl|default('') ~ '/og-image.png') }}">
+    <link rel="canonical" href="{{ page.props.current_url|default(page.props.branding.appBaseUrl|default('')) }}">
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "{{ page.props.branding.name|default('Packio')|e('js') }}",
+      "description": "{{ page.props.branding.tagline|default('Lightweight private package registry for Composer')|e('js') }}",
+      "url": "{{ page.props.branding.appBaseUrl|default('')|e('js') }}",
+      "applicationCategory": "DeveloperApplication"
+    }
+    </script>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180">
+    <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png">
+    {% if ssr.head is defined %}
+        {% for head in ssr.head %}
+            {{ head|raw }}
+        {% endfor %}
+    {% endif %}
+    {{ vite_entry_link_tags('resources/js/app.ts') }}
+</head>
+<body>
+    {% if ssr.body|default('') is not empty %}
+        {{ ssr.body|raw }}
+    {% else %}
+        {{ inertia(page) }}
+    {% endif %}
+    {{ vite_entry_script_tags('resources/js/app.ts')|replace({'<script ': '<script data-cfasync="false" '})|raw }}
+</body>
+</html>

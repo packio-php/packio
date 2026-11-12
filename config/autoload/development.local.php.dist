@@ -1,0 +1,60 @@
+<?php
+
+declare(strict_types=1);
+
+// phpcs:disable PSR12.Files.FileHeader.IncorrectOrder
+
+/**
+ * Development-only configuration.
+ *
+ * Put settings you want enabled when under development mode in this file, and
+ * check it into your repository.
+ *
+ * Developers on your team will then automatically enable them by calling on
+ * `composer development-enable`.
+ */
+
+use Sirix\Mezzio\Router\Enum\CacheConfig;
+
+return [
+    'whoops'       => [
+        'json_exceptions' => [
+            'display'    => true,
+            'show_trace' => true,
+            'ajax_only'  => true,
+        ],
+    ],
+    'router' => [
+        'radix' => [
+            CacheConfig::Enabled->value => false,
+        ],
+    ],
+    'cycle' => [
+        'schema' => [
+            'property' => null,
+            'cache' => [
+                'enabled' => false,
+            ],
+        ],
+    ],
+    'routing_attributes' => [
+        'cache' => [
+            'enabled' => false,
+            'file' => null,
+        ],
+    ],
+    'vite' => [
+        'options' => [
+            'is_dev_mode' => true
+        ],
+    ],
+    'twig' => [
+        'cache_dir' => false,
+        'auto_reload' => true,
+    ],
+    'dependencies' => [
+        'lazy_services' => [
+            'write_proxy_files' => false,
+        ],
+    ],
+];

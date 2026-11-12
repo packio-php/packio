@@ -1,0 +1,16 @@
+/.idea/
+/.phpunit.cache
+/.env
+/.env.local
+/.env.*.local
+/phpunit.xml
+/vendor/
+/public/build/
+/node_modules/
+/test-results/
+/playwright-report/
+data/cache/object-mapper/
+.php-cs-fixer.cache
+.deptrac.cache
+
+/test/data/cache/

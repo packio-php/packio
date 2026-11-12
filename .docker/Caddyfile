@@ -1,0 +1,58 @@
+{
+        {$CADDY_GLOBAL_OPTIONS}
+
+        servers {
+            timeouts {
+                read_body   10s
+                read_header 5s
+                write       30s
+            }
+        }
+
+        frankenphp {
+                php_ini {
+                    expose_php off
+                    opcache.enable 1
+                    opcache.enable_cli 1
+                    opcache.memory_consumption 192
+                    opcache.interned_strings_buffer 16
+                    opcache.max_accelerated_files 20000
+                    opcache.validate_timestamps 0
+                    opcache.revalidate_freq 0
+                    opcache.save_comments 1
+                    opcache.jit_buffer_size 128M
+                    opcache.jit tracing
+                    session.save_handler files
+                    session.save_path /app/data/sessions
+                    session.gc_maxlifetime 7200
+                    session.gc_probability 1
+                    session.gc_divisor 100
+                }
+
+                {$FRANKENPHP_CONFIG}
+        }
+
+        order php_server before file_server
+        order php before file_server
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$SERVER_NAME:packio.localhost:80, *.packio.localhost:80, localhost:80, *.localhost:80} {
+        log {
+            output stderr
+            format console
+        }
+
+        root * public/
+        encode zstd br gzip
+
+        {$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+        php_server {
+            worker {
+                file /app/public/index-worker.php
+                match /*
+            }
+        }
+}

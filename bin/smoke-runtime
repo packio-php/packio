@@ -1,0 +1,515 @@
+#!/bin/sh
+set -eu
+
+# A transport-neutral HTTP smoke suite for either supported runtime. It keeps
+# response bodies, cookies and CSRF tokens in a private temporary directory
+# and never prints them. The multipart scenario sends a real uploaded file to
+# the existing CSRF-protected form without persisting an artificial fixture.
+
+runtime_name="${RUNTIME:-}"
+base_url="${BASE_URL:-}"
+registry_host="${REGISTRY_HOST:-}"
+trusted_forwarded_origin="${TRUSTED_FORWARDED_ORIGIN:-}"
+
+usage() {
+    echo "Usage: bin/smoke-runtime --runtime <frankenphp|roadrunner> --base-url <URL> [--registry-host <HOST>] [--trusted-forwarded-origin <URL>]" >&2
+    exit 64
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --runtime)
+            [ "$#" -ge 2 ] || usage
+            runtime_name="$2"
+            shift 2
+            ;;
+        --base-url)
+            [ "$#" -ge 2 ] || usage
+            base_url="$2"
+            shift 2
+            ;;
+        --registry-host)
+            [ "$#" -ge 2 ] || usage
+            registry_host="$2"
+            shift 2
+            ;;
+        --trusted-forwarded-origin)
+            [ "$#" -ge 2 ] || usage
+            trusted_forwarded_origin="$2"
+            shift 2
+            ;;
+        --help|-h)
+            usage
+            ;;
+        *)
+            usage
+            ;;
+    esac
+done
+
+[ -n "$runtime_name" ] && [ -n "$base_url" ] || usage
+
+case "$runtime_name" in
+    frankenphp|roadrunner) ;;
+    *)
+        echo "runtime must be frankenphp or roadrunner" >&2
+        exit 64
+        ;;
+esac
+
+case "$base_url" in
+    http://*|https://*) ;;
+    *)
+        echo "base URL must start with http:// or https://" >&2
+        exit 64
+        ;;
+esac
+
+case "$trusted_forwarded_origin" in
+    '') ;;
+    http://*|https://*) ;;
+    *)
+        echo "trusted forwarded origin must start with http:// or https://" >&2
+        exit 64
+        ;;
+esac
+
+base_url="${base_url%/}"
+temporary_directory="$(mktemp -d)"
+trap 'rm -rf "$temporary_directory"' EXIT HUP INT TERM
+
+scenario_count=0
+
+record_result() {
+    scenario="$1"
+    started_at="$2"
+    result="$3"
+    elapsed_seconds=$(( $(date +%s) - started_at ))
+    printf 'runtime=%s scenario=%s result=%s duration=%ss\n' "$runtime_name" "$scenario" "$result" "$elapsed_seconds"
+}
+
+fail() {
+    scenario="$1"
+    started_at="$2"
+    message="$3"
+    record_result "$scenario" "$started_at" fail
+    echo "runtime smoke assertion failed: scenario=$scenario $message" >&2
+    exit 1
+}
+
+request_status() {
+    request_method="$1"
+    request_path="$2"
+    output_file="$3"
+
+    curl --silent --show-error --max-time 15 --path-as-is \
+        --request "$request_method" \
+        --output "$output_file" \
+        --write-out '%{http_code}' \
+        "$base_url$request_path"
+}
+
+expect_status() {
+    scenario="$1"
+    expected_status="$2"
+    request_method="$3"
+    request_path="$4"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+
+    if status_code="$(request_status "$request_method" "$request_path" "$response_file")" \
+        && [ "$status_code" = "$expected_status" ]; then
+        record_result "$scenario" "$started_at" pass
+    else
+        fail "$scenario" "$started_at" "expected_status=$expected_status actual_status=${status_code:-transport_error}"
+    fi
+
+    scenario_count=$((scenario_count + 1))
+}
+
+expect_health_json() {
+    scenario="health"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+
+    if status_code="$(request_status GET /health "$response_file")" \
+        && [ "$status_code" = 200 ] \
+        && grep -Eq '"status"[[:space:]]*:[[:space:]]*"OK"' "$response_file"; then
+        record_result "$scenario" "$started_at" pass
+    else
+        fail "$scenario" "$started_at" "expected_status=200 actual_status=${status_code:-transport_error}"
+    fi
+
+    scenario_count=$((scenario_count + 1))
+}
+
+csrf_token_from() {
+    sed -n 's/.*"csrf":{"token":"\([^"]*\)"}.*/\1/p' "$1" | head -n 1
+}
+
+inertia_version_from() {
+    sed -n 's/^[Xx]-[Ii]nertia-[Vv]ersion:[[:space:]]*//p' "$1" | tr -d '\r' | head -n 1
+}
+
+session_cookie_from() {
+    awk '
+        BEGIN { FS = "\t" }
+        {
+            line = $0
+            sub(/^#HttpOnly_/, "", line)
+            fields = split(line, cookie_fields, FS)
+            if (fields >= 7 && cookie_fields[6] == "PACKIO_SESSID") {
+                print cookie_fields[6] "=" cookie_fields[7]
+                exit
+            }
+        }
+    ' "$1"
+}
+
+expect_inertia_session_and_csrf() {
+    scenario="inertia_query_session"
+    started_at="$(date +%s)"
+    first_cookie_jar="$temporary_directory/first.cookies"
+    first_response="$temporary_directory/first.response"
+    first_headers="$temporary_directory/first.headers"
+    first_initial_headers="$temporary_directory/first-initial.headers"
+    : > "$first_headers"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie-jar "$first_cookie_jar" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --dump-header "$first_initial_headers" \
+        --output "$first_response" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login?redirect_to=%2Forganizations")" || status_code="transport_error"
+
+    inertia_version=""
+    session_cookie="$(session_cookie_from "$first_cookie_jar")"
+    if [ "$status_code" = 409 ]; then
+        inertia_version="$(inertia_version_from "$first_initial_headers")"
+        if [ -z "$inertia_version" ]; then
+            fail "$scenario" "$started_at" 'received an Inertia version conflict without X-Inertia-Version'
+        fi
+
+        status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+            --cookie "$session_cookie" \
+            --cookie-jar "$first_cookie_jar" \
+            --header 'Accept: application/json' \
+            --header 'X-Inertia: true' \
+            --header "X-Inertia-Version: $inertia_version" \
+            --dump-header "$first_headers" \
+            --output "$first_response" \
+            --write-out '%{http_code}' \
+            "$base_url/auth/login?redirect_to=%2Forganizations")" || status_code="transport_error"
+    fi
+    csrf_token="$(csrf_token_from "$first_response")"
+    session_cookie="$(session_cookie_from "$first_cookie_jar")"
+
+    if [ "$status_code" != 200 ] \
+        || ! grep -Fq '"redirect_to":"\/organizations"' "$first_response" \
+        || ! grep -q 'PACKIO_SESSID' "$first_cookie_jar" \
+        || ! grep -Eiq '^set-cookie:[[:space:]]*PACKIO_SESSID=.*;[[:space:]]*secure([;[:space:]]|$)' "$first_initial_headers" "$first_headers" \
+        || [ -z "$session_cookie" ] \
+        || [ -z "$csrf_token" ]; then
+        fail "$scenario" "$started_at" "expected Inertia query, Secure session cookie, and CSRF token; actual_status=$status_code"
+    fi
+
+    second_cookie_jar="$temporary_directory/second.cookies"
+    second_response="$temporary_directory/second.response"
+    second_status="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie-jar "$second_cookie_jar" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --output "$second_response" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || second_status="transport_error"
+    second_csrf_token="$(csrf_token_from "$second_response")"
+
+    if [ "$second_status" != 200 ] \
+        || ! grep -q 'PACKIO_SESSID' "$second_cookie_jar" \
+        || [ -z "$second_csrf_token" ] \
+        || [ "$csrf_token" = "$second_csrf_token" ]; then
+        fail "$scenario" "$started_at" "sequential sessions did not remain isolated; actual_status=$second_status"
+    fi
+
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="post_only_route_method_not_allowed"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --request GET \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/logout")" || status_code="transport_error"
+    if [ "$status_code" != 405 ]; then
+        fail "$scenario" "$started_at" "expected_status=405 actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="csrf_rejection"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --header "Origin: $base_url" \
+        --data-urlencode 'email=runtime-smoke-invalid@example.test' \
+        --data-urlencode 'password=Not-A-Real-Password1!' \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    if [ "$status_code" != 419 ]; then
+        fail "$scenario" "$started_at" "expected_status=419 actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="csrf_body_redirect"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    headers_file="$temporary_directory/$scenario.headers"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --cookie-jar "$first_cookie_jar" \
+        --header "Origin: $base_url" \
+        --header "X-CSRF-Token: $csrf_token" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --data-urlencode 'email=runtime-smoke-invalid@example.test' \
+        --data-urlencode 'password=Not-A-Real-Password1!' \
+        --data-urlencode 'redirect_to=/organizations' \
+        --dump-header "$headers_file" \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    if [ "$status_code" -lt 300 ] 2>/dev/null || [ "$status_code" -ge 400 ] 2>/dev/null \
+        || ! grep -Eiq '^location: .*/auth/login' "$headers_file"; then
+        fail "$scenario" "$started_at" "expected redirect after CSRF-protected form body; actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="csrf_multipart_upload"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    headers_file="$temporary_directory/$scenario.headers"
+    upload_file="$temporary_directory/$scenario.txt"
+    printf 'runtime smoke multipart payload\n' > "$upload_file"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --cookie-jar "$first_cookie_jar" \
+        --header "Origin: $base_url" \
+        --header "X-CSRF-Token: $csrf_token" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --form 'email=runtime-smoke-invalid@example.test' \
+        --form 'password=Not-A-Real-Password1!' \
+        --form 'redirect_to=/organizations' \
+        --form "runtime_smoke_file=@$upload_file;type=text/plain" \
+        --dump-header "$headers_file" \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    if [ "$status_code" -lt 300 ] 2>/dev/null || [ "$status_code" -ge 400 ] 2>/dev/null \
+        || ! grep -Eiq '^location: .*/auth/login' "$headers_file"; then
+        fail "$scenario" "$started_at" "expected redirect after CSRF-protected multipart upload; actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+}
+
+expect_registry_host_routing() {
+    [ -n "$registry_host" ] || return 0
+
+    scenario="registry_host_redirect"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    headers_file="$temporary_directory/$scenario.headers"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --header "Host: $registry_host" \
+        --dump-header "$headers_file" \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+
+    if [ "$status_code" -lt 300 ] 2>/dev/null || [ "$status_code" -ge 400 ] 2>/dev/null \
+        || ! grep -Eiq '^location:' "$headers_file"; then
+        fail "$scenario" "$started_at" "expected a registry-subdomain redirect; actual_status=$status_code"
+    fi
+
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+}
+
+expect_trusted_forwarded_origin() {
+    [ -n "$trusted_forwarded_origin" ] || return 0
+
+    scenario="trusted_forwarded_origin"
+    started_at="$(date +%s)"
+    cookie_jar="$temporary_directory/forwarded.cookies"
+    response_file="$temporary_directory/forwarded.response"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie-jar "$cookie_jar" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    csrf_token="$(csrf_token_from "$response_file")"
+    session_cookie="$(session_cookie_from "$cookie_jar")"
+    if [ "$status_code" != 200 ] || [ -z "$session_cookie" ] || [ -z "$csrf_token" ]; then
+        fail "$scenario" "$started_at" "could not establish a CSRF session; actual_status=$status_code"
+    fi
+
+    forwarded_authority="${trusted_forwarded_origin#*://}"
+    forwarded_authority="${forwarded_authority%%/*}"
+    forwarded_scheme="${trusted_forwarded_origin%%://*}"
+    response_file="$temporary_directory/$scenario.response"
+    headers_file="$temporary_directory/$scenario.headers"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --header "Origin: $trusted_forwarded_origin" \
+        --header "X-Forwarded-Proto: $forwarded_scheme" \
+        --header "X-Forwarded-Host: $forwarded_authority" \
+        --header "X-CSRF-Token: $csrf_token" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --data-urlencode 'email=runtime-smoke-invalid@example.test' \
+        --data-urlencode 'password=Not-A-Real-Password1!' \
+        --data-urlencode 'redirect_to=/organizations' \
+        --request POST \
+        --dump-header "$headers_file" \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+
+    if [ "$status_code" -lt 300 ] 2>/dev/null || [ "$status_code" -ge 400 ] 2>/dev/null \
+        || ! grep -Eiq '^location: .*/auth/login' "$headers_file"; then
+        fail "$scenario" "$started_at" "expected CSRF-protected request with trusted forwarded origin to reach login handler; actual_status=$status_code"
+    fi
+
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="trusted_forwarded_origin_missing_headers"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --header "Origin: $trusted_forwarded_origin" \
+        --header "X-CSRF-Token: $csrf_token" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --data-urlencode 'email=runtime-smoke-invalid@example.test' \
+        --data-urlencode 'password=Not-A-Real-Password1!' \
+        --data-urlencode 'redirect_to=/organizations' \
+        --request POST \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    if [ "$status_code" != 419 ]; then
+        fail "$scenario" "$started_at" "expected_status=419 actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+
+    scenario="trusted_forwarded_origin_mismatched_headers"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    mismatched_forwarded_authority="untrusted-$forwarded_authority"
+    status_code="$(curl --silent --show-error --max-time 15 --path-as-is \
+        --cookie "$session_cookie" \
+        --header "Origin: $trusted_forwarded_origin" \
+        --header "X-Forwarded-Proto: $forwarded_scheme" \
+        --header "X-Forwarded-Host: $mismatched_forwarded_authority" \
+        --header "X-CSRF-Token: $csrf_token" \
+        --header 'Accept: application/json' \
+        --header 'X-Inertia: true' \
+        --header "X-Inertia-Version: $inertia_version" \
+        --data-urlencode 'email=runtime-smoke-invalid@example.test' \
+        --data-urlencode 'password=Not-A-Real-Password1!' \
+        --data-urlencode 'redirect_to=/organizations' \
+        --request POST \
+        --output "$response_file" \
+        --write-out '%{http_code}' \
+        "$base_url/auth/login")" || status_code="transport_error"
+    if [ "$status_code" != 419 ]; then
+        fail "$scenario" "$started_at" "expected_status=419 actual_status=$status_code"
+    fi
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+}
+
+expect_parallel_health() {
+    scenario="parallel_health"
+    started_at="$(date +%s)"
+    failure_file="$temporary_directory/$scenario.failure"
+    request_number=1
+
+    while [ "$request_number" -le 8 ]; do
+        (
+            response_file="$temporary_directory/$scenario.$request_number.response"
+            status_code="$(request_status GET /health "$response_file")" || status_code="transport_error"
+            [ "$status_code" = 200 ] || : > "$failure_file"
+        ) &
+        request_number=$((request_number + 1))
+    done
+    wait
+
+    if [ -f "$failure_file" ]; then
+        fail "$scenario" "$started_at" 'one or more parallel requests did not return 200'
+    fi
+
+    record_result "$scenario" "$started_at" pass
+    scenario_count=$((scenario_count + 1))
+}
+
+expect_health_json
+expect_status inertia_login_page 200 GET /auth/login
+expect_status api_health 200 GET /api/v1/health
+expect_status api_not_found 404 GET /api/v1/not-found
+
+static_scenario="static_asset"
+static_started_at="$(date +%s)"
+static_response_file="$temporary_directory/$static_scenario.response"
+if static_status_code="$(request_status GET /favicon.ico "$static_response_file")" \
+    && [ "$static_status_code" = 200 ] \
+    && [ -s "$static_response_file" ]; then
+    record_result "$static_scenario" "$static_started_at" pass
+else
+    fail "$static_scenario" "$static_started_at" "expected_status=200 actual_status=${static_status_code:-transport_error}"
+fi
+scenario_count=$((scenario_count + 1))
+
+for sensitive_path in /index.php /.env /.git/config /../.env /config/autoload/global.php /vendor/autoload.php /public/index.php~ /public/index.php.bak; do
+    scenario="static_denial_$(printf '%s' "$sensitive_path" | tr '/.' '__' | tr -cd '[:alnum:]_')"
+    started_at="$(date +%s)"
+    response_file="$temporary_directory/$scenario.response"
+    status_code="$(request_status GET "$sensitive_path" "$response_file")" || status_code="transport_error"
+
+    case "$status_code" in
+        403|404)
+            record_result "$scenario" "$started_at" pass
+            ;;
+        *)
+            fail "$scenario" "$started_at" "expected_status=403_or_404 actual_status=$status_code"
+            ;;
+    esac
+
+    scenario_count=$((scenario_count + 1))
+done
+
+expect_inertia_session_and_csrf
+expect_registry_host_routing
+expect_trusted_forwarded_origin
+expect_parallel_health
+
+printf 'runtime=%s scenario=summary result=pass duration=0s checks=%s\n' "$runtime_name" "$scenario_count"

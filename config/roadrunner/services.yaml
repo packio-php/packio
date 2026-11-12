@@ -1,0 +1,52 @@
+version: "3"
+
+rpc:
+  listen: "tcp://127.0.0.1:6001"
+
+# Allow service processes to finish before RoadRunner itself is stopped.
+endure:
+  grace_period: 110s
+
+service:
+  worker:
+    command: "/usr/local/bin/run-worker.sh"
+    process_num: ${PACKIO_WORKER_NUM}
+    remain_after_exit: true
+    restart_sec: 2
+    timeout_stop_sec: 90
+    service_name_in_log: true
+  worker-cleanup:
+    command: "/usr/local/bin/entrypoint-worker-cleanup.sh"
+    process_num: 1
+    remain_after_exit: true
+    restart_sec: 2
+    timeout_stop_sec: 90
+    service_name_in_log: true
+  email-verification-cleanup:
+    command: "/usr/local/bin/entrypoint-email-verification-cleanup.sh"
+    process_num: 1
+    remain_after_exit: true
+    restart_sec: 2
+    timeout_stop_sec: 90
+    service_name_in_log: true
+  password-reset-cleanup:
+    command: "/usr/local/bin/entrypoint-password-reset-cleanup.sh"
+    process_num: 1
+    remain_after_exit: true
+    restart_sec: 2
+    timeout_stop_sec: 90
+    service_name_in_log: true
+  source-oauth-refresh:
+    command: "/usr/local/bin/entrypoint-source-oauth-refresh.sh"
+    process_num: 1
+    remain_after_exit: true
+    restart_sec: 2
+    timeout_stop_sec: 90
+    service_name_in_log: true
+
+logs:
+  mode: production
+  level: info
+  encoding: json
+  output: ["stderr"]
+  err_output: ["stderr"]

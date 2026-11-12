@@ -1,0 +1,14 @@
+app.fixture.test {
+	tls /run/fixture/server-cert.pem /run/fixture/server-key.pem
+	reverse_proxy app:80
+}
+
+*.registry.fixture.test {
+	tls /run/fixture/server-cert.pem /run/fixture/server-key.pem
+	reverse_proxy app:80
+}
+
+provider.fixture.test {
+	tls /run/fixture/server-cert.pem /run/fixture/server-key.pem
+	reverse_proxy provider:80
+}

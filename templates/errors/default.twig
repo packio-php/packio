@@ -1,0 +1,18 @@
+{% extends 'errors/base.twig' %}
+
+{% block title %}{{ status|default('Error') }} {{ reason|default('Request failed') }}{% endblock %}
+
+{% block content %}
+    <p class="error-code">{{ status|default('Error') }}</p>
+    <h1 class="error-title" id="error-title">{{ reason|default('Request failed') }}</h1>
+    <p class="error-message">{{ message|default('The request could not be completed.') }}</p>
+
+    {% if error is defined and error %}
+        <section class="error-debug">
+            <h2>Debug information</h2>
+            <p><strong>Message:</strong> {{ error.message|default('') }}</p>
+            <p><strong>File:</strong> {{ error.file|default('') }}:{{ error.line|default('') }}</p>
+            <pre>{{ error.traceAsString|default('') }}</pre>
+        </section>
+    {% endif %}
+{% endblock %}

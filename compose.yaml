@@ -1,0 +1,313 @@
+x-app-environment: &app-environment
+  APP_DEBUG: "${APP_DEBUG:-true}"
+  APP_PRODUCTION: "${APP_PRODUCTION:-false}"
+  SENTRY_DSN: "${SENTRY_DSN:-}"
+  SENTRY_ENVIRONMENT: "${SENTRY_ENVIRONMENT:-}"
+  SENTRY_RELEASE: "${SENTRY_RELEASE:-}"
+  SENTRY_SAMPLE_RATE: "${SENTRY_SAMPLE_RATE:-1.0}"
+  SENTRY_TRACES_SAMPLE_RATE: "${SENTRY_TRACES_SAMPLE_RATE:-0.0}"
+  SENTRY_FLUSH_ON_HTTP_ERROR: "${SENTRY_FLUSH_ON_HTTP_ERROR:-false}"
+  SENTRY_FLUSH_TIMEOUT: "${SENTRY_FLUSH_TIMEOUT:-2}"
+  SENTRY_CAPTURE_CONSOLE_INPUT: "${SENTRY_CAPTURE_CONSOLE_INPUT:-false}"
+  DEFAULT_DB_CONNECTION: postgres
+  DATABASE_HOST: postgres
+  DATABASE_PORT: 5432
+  DATABASE_NAME: "${DATABASE_NAME:-packio}"
+  DATABASE_USER: "${DATABASE_USER:-postgresql}"
+  DATABASE_PASS: "${DATABASE_PASS:-password}"
+  MAIL_HOST: mailpit
+  MAIL_PORT: 1025
+  MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@packio.dev}"
+  MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Packio}"
+
+x-worker-service: &worker-service
+  build:
+    context: .
+    dockerfile: .docker/Dockerfile.worker
+    target: worker
+    args:
+      APP_UID: "${PACKIO_DOCKER_UID:-1000}"
+      APP_GID: "${PACKIO_DOCKER_GID:-1000}"
+  user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+    setup-php:
+      condition: service_completed_successfully
+  volumes:
+    - .:/app
+  networks:
+    - packio-network
+
+services:
+  setup-php:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.worker
+      target: worker
+      args:
+        APP_UID: "${PACKIO_DOCKER_UID:-1000}"
+        APP_GID: "${PACKIO_DOCKER_GID:-1000}"
+    user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
+    restart: "no"
+    entrypoint: ["sh", "/app/.docker/setup-dev-php.sh"]
+    environment:
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /app
+      COMPOSER_HOME: /tmp/composer
+    volumes:
+      - .:/app
+    networks:
+      - packio-network
+
+  setup-node:
+    image: node:24.21.0-alpine
+    user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
+    restart: "no"
+    working_dir: /app
+    command: ["sh", "/app/.docker/setup-dev-node.sh"]
+    environment:
+      npm_config_cache: /tmp/npm-cache
+    volumes:
+      - .:/app
+    networks:
+      - packio-network
+
+  postgres:
+    image: postgres:17-alpine
+    container_name: packio-postgres-dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DATABASE_NAME:-packio}
+      POSTGRES_USER: ${DATABASE_USER:-postgresql}
+      POSTGRES_PASSWORD: ${DATABASE_PASS:-password}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "127.0.0.1:${DATABASE_PORT:-15432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER:-postgresql} -d ${DATABASE_NAME:-packio}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - packio-network
+
+  postgres-test:
+    image: postgres:17-alpine
+    container_name: packio-mezzio-postgres-test
+    profiles:
+      - test
+    environment:
+      POSTGRES_DB: ${PACKIO_TEST_DATABASE_NAME:-packio_test}
+      POSTGRES_USER: ${PACKIO_TEST_DATABASE_USER:-packio_test}
+      POSTGRES_PASSWORD: ${PACKIO_TEST_DATABASE_PASS:-packio_test}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    command: ["postgres", "-c", "fsync=off", "-c", "full_page_writes=off"]
+    ports:
+      - "127.0.0.1:${PACKIO_TEST_DATABASE_PORT:-15433}:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PACKIO_TEST_DATABASE_USER:-packio_test} -d ${PACKIO_TEST_DATABASE_NAME:-packio_test}"]
+      interval: 2s
+      timeout: 5s
+      retries: 30
+    networks:
+      - packio-test-network
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: packio-mezzio-mailpit
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8025:8025"
+      - "127.0.0.1:1025:1025"
+    environment:
+      MP_WEB_ROOT: /
+      MP_SMTP_AUTH_ACCEPT_ANY: "1"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "1"
+    networks:
+      - packio-network
+
+  vite:
+    image: node:24.21.0-alpine
+    container_name: packio-mezzio-vite
+    restart: unless-stopped
+    user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
+    working_dir: /app
+    command:
+      - sh
+      - -c
+      - npm run dev -- --host 0.0.0.0
+    ports:
+      - "127.0.0.1:5173:5173"
+    environment:
+      VITE_DEV_SERVER_URL: "${VITE_DEV_SERVER_URL:-http://localhost:5173}"
+      npm_config_cache: /tmp/npm-cache
+    depends_on:
+      setup-node:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:5173/@vite/client"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    networks:
+      - packio-network
+
+  app:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile
+      target: app-base
+    container_name: packio-mezzio-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+      vite:
+        condition: service_healthy
+      setup-php:
+        condition: service_completed_successfully
+    ports:
+      - "8080:80"
+    environment:
+      <<: *app-environment
+      TRUSTED_PROXIES: "${TRUSTED_PROXIES:-}"
+      APP_HEALTHCHECK_URL: "http://localhost:80/health"
+      APP_URL: "${APP_URL:-http://packio.localhost:8080}"
+      BRAND_DOMAIN: "${BRAND_DOMAIN:-packio.us}"
+      BRAND_REGISTRY_BASE_DOMAIN: "${BRAND_REGISTRY_BASE_DOMAIN:-packio.us}"
+      SERVER_NAME: "${SERVER_NAME:-packio.localhost:80, *.packio.localhost:80, localhost:80, *.localhost:80}"
+      CADDY_GLOBAL_OPTIONS: "auto_https off"
+      RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
+      MIGRATION_ATTEMPTS: "${MIGRATION_ATTEMPTS:-12}"
+      MIGRATION_RETRY_SECONDS: "${MIGRATION_RETRY_SECONDS:-5}"
+      VITE_DEV_SERVER_URL: "${VITE_DEV_SERVER_URL:-http://localhost:5173}"
+      INERTIA_SSR_ENABLED: "${INERTIA_SSR_ENABLED:-true}"
+      INERTIA_SSR_URL: "${INERTIA_SSR_URL:-http://ssr:13714/render}"
+    volumes:
+      - .:/app
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/app-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - packio-network
+
+  worker:
+    <<: *worker-service
+    container_name: packio-mezzio-worker
+    environment:
+      <<: *app-environment
+      WORKER_TIMEOUT: "${WORKER_TIMEOUT:-30}"
+      WORKER_MEMORY_LIMIT: "${WORKER_MEMORY_LIMIT:-512M}"
+      WORKER_MAX_JOBS: "${WORKER_MAX_JOBS:-100}"
+      WORKER_ID: "${WORKER_ID:-}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/worker-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  worker-cleanup:
+    <<: *worker-service
+    container_name: packio-mezzio-worker-cleanup
+    entrypoint:
+      - /usr/local/bin/worker-cleanup-entrypoint.sh
+    environment:
+      <<: *app-environment
+      WORKER_CLEANUP_INTERVAL_SECONDS: "${WORKER_CLEANUP_INTERVAL_SECONDS:-3600}"
+      WORKER_CLEANUP_RETENTION_DAYS: "${WORKER_CLEANUP_RETENTION_DAYS:-30}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/worker-cleanup-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  email-verification-cleanup:
+    <<: *worker-service
+    container_name: packio-mezzio-email-verification-cleanup
+    entrypoint:
+      - /usr/local/bin/email-verification-cleanup-entrypoint.sh
+    environment:
+      <<: *app-environment
+      EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS: "${EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS:-3600}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/email-verification-cleanup-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  password-reset-cleanup:
+    <<: *worker-service
+    container_name: packio-mezzio-password-reset-cleanup
+    entrypoint:
+      - /usr/local/bin/password-reset-cleanup-entrypoint.sh
+    environment:
+      <<: *app-environment
+      PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS: "${PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS:-3600}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/password-reset-cleanup-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  source-oauth-refresh:
+    <<: *worker-service
+    container_name: packio-mezzio-source-oauth-refresh
+    entrypoint:
+      - /usr/local/bin/source-oauth-refresh-entrypoint.sh
+    environment:
+      <<: *app-environment
+      SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS: "${SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS:-86400}"
+      SOURCE_OAUTH_REFRESH_LIMIT: "${SOURCE_OAUTH_REFRESH_LIMIT:-100}"
+      SOURCE_OAUTH_REFRESH_PROVIDER: "${SOURCE_OAUTH_REFRESH_PROVIDER:-}"
+      SOURCE_OAUTH_REFRESH_PROVIDER_INSTANCE: "${SOURCE_OAUTH_REFRESH_PROVIDER_INSTANCE:-}"
+      SOURCE_OAUTH_REFRESH_ORGANIZATION: "${SOURCE_OAUTH_REFRESH_ORGANIZATION:-}"
+      SOURCE_OAUTH_REFRESH_BEFORE: "${SOURCE_OAUTH_REFRESH_BEFORE:-}"
+      SOURCE_OAUTH_REFRESH_IDLE_BEFORE: "${SOURCE_OAUTH_REFRESH_IDLE_BEFORE:-}"
+      SOURCE_OAUTH_REFRESH_MINIMUM_INTERVAL: "${SOURCE_OAUTH_REFRESH_MINIMUM_INTERVAL:-}"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/source-oauth-refresh-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+  ssr:
+    build:
+      context: .
+      dockerfile: .docker/Dockerfile.ssr
+    container_name: packio-mezzio-ssr
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:13714:13714"
+    environment:
+      INERTIA_SSR_HOST: 0.0.0.0
+      INERTIA_SSR_PORT: 13714
+      INERTIA_SSR_BUNDLE: data/ssr/ssr.mjs
+    depends_on:
+      setup-node:
+        condition: service_completed_successfully
+    volumes:
+      - .:/app
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/ssr-healthcheck.sh"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    networks:
+      - packio-network
+
+volumes:
+  postgres-data:
+
+networks:
+  packio-network:
+    driver: bridge
+  packio-test-network:
+    driver: bridge

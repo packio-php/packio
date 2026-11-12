@@ -1,0 +1,35 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Packio\Rest\Attribute;
+
+use Attribute;
+use Packio\Rest\Infrastructure\Middleware\ApiAuditMiddleware;
+use Sirix\Mezzio\Routing\Contracts\AggregatingRouteAttributeModifierInterface;
+
+#[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
+final readonly class ApiAudited implements AggregatingRouteAttributeModifierInterface
+{
+    public function getMiddleware(): array
+    {
+        return [];
+    }
+
+    public function mergeDefaults(array $defaults): array
+    {
+        return $defaults;
+    }
+
+    public function getUniqueMiddleware(): array
+    {
+        return [
+            'packio.api.audit' => ApiAuditMiddleware::class,
+        ];
+    }
+
+    public function getDefaults(): array
+    {
+        return [];
+    }
+}

@@ -1,0 +1,36 @@
+# Host Caddy -> the application's published loopback HTTP port.
+# Supply a certificate covering the app host and *.registry base domain.
+# The high-port/bind inputs also permit an isolated local TLS regression.
+{
+	admin off
+	auto_https disable_redirects
+}
+
+{$PACKIO_APP_DOMAIN}:{$PACKIO_HTTPS_PORT:443}, *.{$PACKIO_REGISTRY_DOMAIN}:{$PACKIO_HTTPS_PORT:443} {
+	bind {$PACKIO_EDGE_BIND:0.0.0.0}
+	tls {$PACKIO_TLS_CERT} {$PACKIO_TLS_KEY}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		# Observe the existing inline theme/SSR scripts and Turnstile first.
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+
+	# Remove client values before reverse_proxy supplies trusted values.
+	request_header -Forwarded
+	request_header -X-Forwarded-*
+	request_header -CF-Connecting-IP
+	request_header -CF-Visitor
+	request_header -True-Client-IP
+	request_header -X-Real-IP
+
+	reverse_proxy {$PACKIO_HTTP_UPSTREAM:127.0.0.1:8080} {
+		header_up Host {hostport}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {hostport}
+		header_up X-Forwarded-Port {$PACKIO_HTTPS_PORT:443}
+	}
+}

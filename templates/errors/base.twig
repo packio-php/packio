@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+{% set requestCookies = request is defined ? request.getCookieParams() : {} %}
+{% set themeStorageKey = branding.themeStorageKey|default('packio-theme') %}
+{% set initialTheme = initial_theme|default({}) %}
+{% set initialThemeMode = initialTheme.mode|default(requestCookies[themeStorageKey]|default('system')) %}
+{% set initialResolvedTheme = initialTheme.resolved|default(initialThemeMode in ['dark', 'light'] ? initialThemeMode : '') %}
+{% set lightPageBg = initialTheme.lightPageBg|default('#f3f4f7') %}
+{% set darkPageBg = initialTheme.darkPageBg|default('#1a1f2a') %}
+{% set initialPageBg = initialResolvedTheme == 'dark' ? darkPageBg : lightPageBg %}
+<html
+    lang="en"
+    data-theme-mode="{{ initialThemeMode|e('html_attr') }}"
+    data-theme-storage-key="{{ themeStorageKey|e('html_attr') }}"
+    data-theme-light-bg="{{ lightPageBg|e('html_attr') }}"
+    data-theme-dark-bg="{{ darkPageBg|e('html_attr') }}"
+    {% if initialResolvedTheme in ['dark', 'light'] %}data-theme="{{ initialResolvedTheme|e('html_attr') }}"{% endif %}
+>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light dark">
+    {% if initialResolvedTheme in ['dark', 'light'] %}
+        <meta name="theme-color" content="{{ initialPageBg }}">
+    {% else %}
+        <meta name="theme-color" media="(prefers-color-scheme: light)" content="{{ lightPageBg }}">
+        <meta name="theme-color" media="(prefers-color-scheme: dark)" content="{{ darkPageBg }}">
+    {% endif %}
+    <link rel="preload" href="/fonts/plus-jakarta-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/jetbrains-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <title>{% block title %}Error{% endblock %}</title>
+    <style>
+        {% include 'partials/font-faces.twig' %}
+
+        :root {
+            --font-body: "Plus Jakarta Sans", "Segoe UI", sans-serif;
+            --font-display: "Plus Jakarta Sans", Georgia, serif;
+            --font-mono: "JetBrains Mono", "SFMono-Regular", monospace;
+            --page-bg: {{ lightPageBg }};
+            --page-ink: rgba(37, 43, 54, 0.95);
+            --page-muted: #6d7d9c;
+            --surface: #ffffff;
+            --panel: rgba(255, 255, 255, 0.84);
+            --panel-border: rgba(8, 10, 12, 0.09);
+            --button-primary-bg: #5856d6;
+            --button-primary-hover: #4946c6;
+            --button-primary-text: #ffffff;
+            --button-secondary-bg: #ffffff;
+            --accent: #5856d6;
+            --accent-soft: rgba(88, 86, 214, 0.14);
+            --accent-ink: #3d3bb4;
+            --gold-soft: rgba(245, 158, 11, 0.14);
+            --debug-bg: #f8f9fc;
+            --shadow-card: 0 20px 55px rgba(50, 58, 73, 0.08);
+            background-color: var(--page-bg);
+            color-scheme: light;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root:not([data-theme="light"]) {
+                --page-bg: {{ darkPageBg }};
+                --page-ink: rgba(255, 255, 255, 0.9);
+                --page-muted: #9ca9c5;
+                --surface: #242b38;
+                --panel: rgba(36, 43, 56, 0.86);
+                --panel-border: rgba(255, 255, 255, 0.1);
+                --button-primary-bg: #7d7bf2;
+                --button-primary-hover: #6d6be0;
+                --button-secondary-bg: #242b38;
+                --accent: #7d7bf2;
+                --accent-soft: rgba(125, 123, 242, 0.22);
+                --accent-ink: #c6c5ff;
+                --gold-soft: rgba(250, 204, 21, 0.18);
+                --debug-bg: #1f2530;
+                --shadow-card: 0 20px 55px rgba(0, 0, 0, 0.28);
+                background-color: var(--page-bg);
+                color-scheme: dark;
+            }
+        }
+
+        :root[data-theme="light"] {
+            --page-bg: {{ lightPageBg }};
+            --page-ink: rgba(37, 43, 54, 0.95);
+            --page-muted: #6d7d9c;
+            --surface: #ffffff;
+            --panel: rgba(255, 255, 255, 0.84);
+            --panel-border: rgba(8, 10, 12, 0.09);
+            --button-primary-bg: #5856d6;
+            --button-primary-hover: #4946c6;
+            --button-secondary-bg: #ffffff;
+            --accent: #5856d6;
+            --accent-soft: rgba(88, 86, 214, 0.14);
+            --accent-ink: #3d3bb4;
+            --gold-soft: rgba(245, 158, 11, 0.14);
+            --debug-bg: #f8f9fc;
+            --shadow-card: 0 20px 55px rgba(50, 58, 73, 0.08);
+            background-color: var(--page-bg);
+            color-scheme: light;
+        }
+
+        :root[data-theme="dark"] {
+            --page-bg: {{ darkPageBg }};
+            --page-ink: rgba(255, 255, 255, 0.9);
+            --page-muted: #9ca9c5;
+            --surface: #242b38;
+            --panel: rgba(36, 43, 56, 0.86);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --button-primary-bg: #7d7bf2;
+            --button-primary-hover: #6d6be0;
+            --button-secondary-bg: #242b38;
+            --accent: #7d7bf2;
+            --accent-soft: rgba(125, 123, 242, 0.22);
+            --accent-ink: #c6c5ff;
+            --gold-soft: rgba(250, 204, 21, 0.18);
+            --debug-bg: #1f2530;
+            --shadow-card: 0 20px 55px rgba(0, 0, 0, 0.28);
+            background-color: var(--page-bg);
+            color-scheme: dark;
+        }
+
+        * { box-sizing: border-box; }
+
+        html {
+            background-color: var(--page-bg);
+        }
+
+        body {
+            min-height: 100vh;
+            margin: 0;
+            background:
+                radial-gradient(circle at top left, var(--accent-soft), transparent 34%),
+                radial-gradient(circle at right 12%, var(--gold-soft), transparent 30%),
+                linear-gradient(180deg, color-mix(in srgb, var(--surface) 80%, var(--page-bg)) 0%, var(--page-bg) 100%);
+            color: var(--page-ink);
+            font-family: var(--font-body);
+        }
+
+        .error-page {
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+            padding: 32px 20px;
+        }
+
+        .error-panel {
+            width: min(100%, 680px);
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--panel);
+            box-shadow: var(--shadow-card);
+            padding: clamp(28px, 6vw, 48px);
+        }
+
+        .error-eyebrow {
+            margin: 0 0 18px;
+            color: var(--page-muted);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+        }
+
+        .error-code {
+            margin: 0 0 12px;
+            color: var(--accent-ink);
+            font-family: var(--font-display);
+            font-size: clamp(52px, 12vw, 96px);
+            font-weight: 800;
+            line-height: 0.95;
+        }
+
+        .error-title {
+            margin: 0;
+            max-width: 560px;
+            font-family: var(--font-display);
+            font-size: clamp(26px, 5vw, 40px);
+            font-weight: 800;
+            line-height: 1.1;
+        }
+
+        .error-message {
+            margin: 18px 0 0;
+            max-width: 560px;
+            color: var(--page-muted);
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .error-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 28px;
+        }
+
+        .error-home-link {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            background: var(--button-primary-bg);
+            color: var(--button-primary-text);
+            font-weight: 700;
+            padding: 0 18px;
+            text-decoration: none;
+            transition: background-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .error-home-link:hover {
+            background: var(--button-primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .error-back-button {
+            display: inline-flex;
+            min-height: 44px;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--button-secondary-bg);
+            color: var(--page-ink);
+            cursor: pointer;
+            font: inherit;
+            font-weight: 700;
+            padding: 0 18px;
+            transition: border-color 0.18s ease, transform 0.18s ease;
+        }
+
+        .error-back-button:hover {
+            border-color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        .error-debug {
+            margin-top: 20px;
+            padding: 14px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--debug-bg);
+        }
+
+        .error-debug pre {
+            margin: 10px 0 0;
+            padding: 12px;
+            border: 1px solid var(--panel-border);
+            border-radius: 8px;
+            background: var(--surface);
+            color: var(--page-ink);
+            white-space: pre-wrap;
+            word-break: break-word;
+            overflow: auto;
+            max-height: 260px;
+        }
+    </style>
+    <script>
+        (function () {
+            const root = document.documentElement;
+            const storageKey = root.dataset.themeStorageKey || '{{ themeStorageKey|e('js') }}';
+            const cookieMode = root.dataset.themeMode || 'system';
+            const lightPageBg = root.dataset.themeLightBg || '{{ lightPageBg|e('js') }}';
+            const darkPageBg = root.dataset.themeDarkBg || '{{ darkPageBg|e('js') }}';
+            let saved = null;
+
+            try {
+                saved = window.localStorage.getItem(storageKey);
+            } catch (error) {
+                saved = null;
+            }
+
+            const mode = cookieMode === 'light' || cookieMode === 'dark'
+                ? cookieMode
+                : (saved === 'light' || saved === 'dark' ? saved : 'system');
+            const theme = mode === 'light' || mode === 'dark'
+                ? mode
+                : (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+                    ? 'dark'
+                    : 'light');
+            const pageBg = theme === 'dark' ? darkPageBg : lightPageBg;
+
+            root.dataset.theme = theme;
+            root.dataset.themeMode = mode;
+            root.style.colorScheme = theme;
+            root.style.backgroundColor = pageBg;
+            document
+                .querySelectorAll('meta[name="theme-color"]')
+                .forEach((meta) => meta.setAttribute('content', pageBg));
+        })();
+    </script>
+</head>
+<body>
+<main class="error-page">
+    <section class="error-panel" aria-labelledby="error-title">
+        <p class="error-eyebrow">{{ branding.name|default('Packio') }} · {{ branding.domain|default('packio.us') }}</p>
+        {% block content %}{% endblock %}
+        <div class="error-actions">
+            <button class="error-back-button" type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.assign('/')">Go back</button>
+            <a class="error-home-link" href="/">Go to homepage</a>
+        </div>
+    </section>
+</main>
+</body>
+</html>

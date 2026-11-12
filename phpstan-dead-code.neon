@@ -1,0 +1,10 @@
+# Dead code report (shipmonk/dead-code-detector). Separate from `composer phpstan` until existing findings are cleared.
+includes:
+	- phpstan.neon
+	- tools/phpstan/vendor/shipmonk/dead-code-detector/rules.neon
+
+parameters:
+	shipmonkDeadCode:
+		usageExcluders:
+			tests:
+				enabled: true

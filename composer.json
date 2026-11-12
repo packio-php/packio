@@ -106,7 +106,7 @@
         "sentry/sentry": "^4.33",
         "symfony/event-dispatcher": "^8.1"
     },
-    "minimum-stability": "dev",
+    "minimum-stability": "stable",
     "prefer-stable": true,
     "autoload": {
         "psr-4": {

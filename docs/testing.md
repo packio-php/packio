@@ -478,7 +478,7 @@ The harness owns its non-root Firefox container and keeps browser traces, mail b
 
 The private installation must resolve `packio-fixture/private-package:1.0.0` from Packio, execute `Probe::value()` and compare the installed package files with the independently prepared fixture hashes. Direct authenticated metadata and archive downloads verify the same package and archive. A second fresh installation must succeed. Anonymous clients, tokens for another organization and revoked tokens must fail both metadata and archive requests with the existing registry status contract; fresh Composer installations must also fail. Separate controls revoke a token before installation and use the wrong auth hostname, so cached packages or direct upstream access cannot produce a passing result. Tokens, authorization headers and client output stay out of the public report.
 
-The public runtime job requires the complete E1–E3 product check against the same image IDs and candidate SHA verified earlier in the job. Its product step has no infrastructure skip or allowed failure; the early stdlib regression runs before Node/npm setup, and the browser parser self-check runs after actual browser prerequisites are available. The PHPUnit feature suite and Playwright Inertia protocol fixtures remain separate checks.
+The public runtime job requires the complete product check against the same image IDs and candidate SHA verified earlier in the job. Its product step has no infrastructure skip or allowed failure; the early stdlib regression runs before Node/npm setup, and the browser parser self-check runs after actual browser prerequisites are available. The PHPUnit feature suite and Playwright Inertia protocol fixtures remain separate checks.
 
 ## Distribution notices
 
@@ -703,7 +703,7 @@ Keep the complete corresponding-source snapshot available alongside distributed
 images. This is the source-material path; it does not create a written source
 offer or publish the images or source.
 
-For local R1 worktree verification, the image `--verify-only` and product
+For local worktree verification, the image `--verify-only` and product
 commands also accept the pair `--source-identity FILE --build-record FILE`.
 This explicit mode requires a frozen dirty snapshot bound to the base HEAD,
 full patch, runtime file hashes, three immutable image IDs and their provenance.

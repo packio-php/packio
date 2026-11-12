@@ -1,12 +1,12 @@
 # Frontend dependency advisory triage
 
-Status: all initial findings resolved and the complete S5 frontend/runtime checks passed on Node 24.18.0 (2026-10-11). This records working-tree verification, not release approval.
+Status: all initial findings resolved and the complete frontend/runtime checks of the 2026-10-11 verification passed on Node 24.18.0. This records working-tree verification, not release approval.
 
 ## Scope and method
 
 The baseline was the complete npm lockfile at source HEAD `bbda3c0295bdee690709632b10ebe05df93d6c3f`, inspected on 2026-10-11 with `npm ci`, `npm audit --json`, `npm ls --all`, and `npm explain`. It contained 13 affected packages (7 high, 6 moderate), covering 41 distinct advisories. Omitting devDependencies would hide this frontend graph: the Docker build installs it and produces both the browser assets and the SSR bundle.
 
-The supported target is Node 24.21.0 with its supplied npm. The S5 evidence below records the previous Node 24.18.0/npm 11.16.0 target; D2 verifies the updated runtime. Production and local SSR Docker stages, the Vite Compose service, `.nvmrc`, package engines, and the proxy browser runner use that exact Node version. The existing frontend workflow already selects it. Earlier Node 22.22.2/npm 10.9.7 graph-resolution failures are historical; their results do not verify this target.
+The supported target is Node 24.21.0 with its supplied npm. The evidence from the 2026-10-11 verification records the previous Node 24.18.0/npm 11.16.0 target; a later verification covers the updated runtime. Production and local SSR Docker stages, the Vite Compose service, `.nvmrc`, package engines, and the proxy browser runner use that exact Node version. The existing frontend workflow already selects it. Earlier Node 22.22.2/npm 10.9.7 graph-resolution failures are historical; their results do not verify this target.
 
 Compatible fixes retain the original major versions. The Vitest/coverage declarations now require at least 4.1.11 because automatic resolution with the old 4.1.9 minimum reselected the vulnerable peer pair. Both ranges remain within their previous `^4.1.9` bounds. The remaining patches were limited to affected packages and the matching Vitest family; the unrelated Chai version stays at 6.2.2.
 

@@ -1,10 +1,10 @@
 # Contributing to Packio
 
-Thanks for helping improve Packio. Before opening a pull request, check existing issues and keep changes focused. For a security vulnerability, follow [SECURITY.md](SECURITY.md) and do not open a public issue.
+Thanks for helping improve Packio. Before opening a pull request, check existing issues and keep changes focused. For a security vulnerability, follow [SECURITY.md](SECURITY.md) and do not open a public issue. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 
-Packio's current development and first-release target is Linux on amd64 with PHP 8.5.x, PostgreSQL 17, and Node 24.21.0. Use Composer 2 for development; Composer 2.8.x is the client target for release rehearsal. RoadRunner 2025.1.15 is the production HTTP and worker runtime. FrankenPHP remains a local development option. See the [support matrix](docs/support.md) for current limits and verification status; this does not announce a stable public release.
+Packio's current development and supported platform is Linux on amd64 with PHP 8.5.x, PostgreSQL 17, and Node 24.21.0. Use Composer 2 (2.8.x is the supported client). RoadRunner 2025.1.15 is the production HTTP and worker runtime. FrankenPHP remains a local development option. See the [support scope](docs/support.md) for current limits.
 
 From a clean clone you only need Docker:
 

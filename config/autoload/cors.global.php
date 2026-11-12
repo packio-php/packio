@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 use Mezzio\Cors\Configuration\ConfigurationInterface;
 
-$appUrl             = \rtrim((string) \env('APP_URL', 'https://packio.us'), '/');
+$appUrl             = \rtrim((string) \env('APP_URL', 'http://packio.localhost:8080'), '/');
 $allowedOrigins     = \env('CORS_ALLOWED_ORIGINS', [$appUrl], 'array');
 $credentialsAllowed = \env('CORS_CREDENTIALS_ALLOWED', false, 'bool');
 

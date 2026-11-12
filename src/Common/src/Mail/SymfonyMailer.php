@@ -11,7 +11,7 @@ use Throwable;
 
 final readonly class SymfonyMailer implements MailerInterface
 {
-    private const string DEFAULT_FROM = 'noreply@packio.us';
+    private const string DEFAULT_FROM = 'noreply@packio.localhost';
 
     /**
      * @param array<string, mixed> $mailConfig

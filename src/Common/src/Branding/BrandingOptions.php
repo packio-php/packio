@@ -9,7 +9,7 @@ final readonly class BrandingOptions
     public function __construct(
         public string $productName = 'Packio',
         public string $tagline = 'Lightweight private package registry for Composer',
-        public string $domain = 'packio.us',
+        public string $domain = 'packio.localhost',
         public ?string $registryBaseDomain = null,
         public string $shortName = 'packio',
         public string $composerRepositoryAlias = 'packio',
@@ -40,7 +40,7 @@ final readonly class BrandingOptions
         return new self(
             productName: $config['product_name'] ?? 'Packio',
             tagline: $config['tagline'] ?? 'Lightweight private package registry for Composer',
-            domain: $config['domain'] ?? 'packio.us',
+            domain: $config['domain'] ?? 'packio.localhost',
             registryBaseDomain: $config['registry_base_domain'] ?? null,
             shortName: $config['short_name'] ?? 'packio',
             composerRepositoryAlias: $config['composer_repository_alias'] ?? 'packio',

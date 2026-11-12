@@ -1,0 +1,29 @@
+name: Feature request
+description: Suggest an improvement to Packio
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not include secrets or private data. For a suspected security vulnerability, stop here and report it privately to [info@packio.us](mailto:info@packio.us); do not add vulnerability details to a public issue.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Describe what you are trying to do and what gets in the way, without credentials or personal data.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe the behavior you would like to see.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Other approaches or workarounds you tried or thought about.
+    validations:
+      required: false

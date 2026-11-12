@@ -6,7 +6,7 @@ To try Packio without installing it, register at [packio.us](https://packio.us),
 
 ## Supported deployment
 
-The first-release target is a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.5.x, Node 24.21.0 for the image build, and PostgreSQL 17. The standalone production Compose stack includes the application, queue and maintenance workers, Inertia SSR, and PostgreSQL. See [the support matrix](docs/support.md) for the full scope and current verification status.
+Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.5.x, Node 24.21.0 for the image build, and PostgreSQL 17. The standalone production Compose stack includes the application, queue and maintenance workers, Inertia SSR, and PostgreSQL. See [the support scope](docs/support.md) for the full list of supported, experimental and unsupported configurations.
 
 ## Try it locally
 

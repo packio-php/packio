@@ -18,7 +18,7 @@ use function in_array;
 use function str_starts_with;
 
 /**
- * Redirects UI requests on the registry subdomain (e.g., acme.packio.us) to the
+ * Redirects UI requests on the registry subdomain (e.g., acme.packio.example.com) to the
  * main application domain. Composer registry endpoints are allowed through.
  *
  * - Composer routes: /packages.json, /private/packages.json, /p2/*, /dist/* → allowed

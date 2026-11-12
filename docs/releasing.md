@@ -1,5 +1,7 @@
 # Preparing a release
 
+A Packio release is currently a source tag `vX.Y.Z`, which the maintainer creates with `composer create-release-tag`. Docker images are not published; the image bundle preparation described below is not used at the moment.
+
 Packio release preparation is a manual, read-only process. The verification workflow builds and tests the app, worker and SSR images once; the release workflow consumes that exact successful run, prepares a source archive and a local preview manifest, and requests a separate owner review. Neither workflow pushes images, creates tags or publishes a GitHub release.
 
 ## Before starting

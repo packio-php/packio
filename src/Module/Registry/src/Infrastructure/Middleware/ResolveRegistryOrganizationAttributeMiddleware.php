@@ -19,7 +19,7 @@ use function trim;
  * Resolves the organization slug from:
  * 1. An existing route attribute `organization` (e.g., from `/organization/:slug/...`).
  * 2. The path pattern `/organization/:slug/...`.
- * 3. The registry subdomain host (e.g., `acme.packio.us` -> `acme`).
+ * 3. The registry subdomain host (e.g., `acme.packio.example.com` -> `acme`).
  *
  * Sets the `organization` attribute on the request so that
  * ResolveCurrentOrganizationMiddleware can resolve the full OrganizationDto.

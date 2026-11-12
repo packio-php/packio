@@ -177,16 +177,16 @@ final readonly class OrganizationCommandService
             throw new OrganizationNotFoundException();
         }
 
-        $normalizedName = $this->normalizeAndValidateOrganizationName($name);
+        $normalizedName = $this->normalizeAndValidateOrganizationName($name, $organization);
         $normalizedSlug = trim($slug);
 
         if ('' === $normalizedSlug) {
             throw OrganizationSlugException::required();
         }
 
-        $this->assertOrganizationSlugAllowed($normalizedSlug);
-
         if ($normalizedSlug !== $organization->slug()) {
+            $this->assertOrganizationSlugAllowed($normalizedSlug);
+
             throw OrganizationSlugException::immutable();
         }
 
@@ -210,7 +210,7 @@ final readonly class OrganizationCommandService
 
         $this->renameOrganization(
             $organization,
-            $this->normalizeAndValidateOrganizationName($name),
+            $this->normalizeAndValidateOrganizationName($name, $organization),
         );
         $organization->updateAnonymousAccess($anonymousAccess);
 
@@ -373,7 +373,7 @@ final readonly class OrganizationCommandService
         }
     }
 
-    private function normalizeAndValidateOrganizationName(string $name): string
+    private function normalizeAndValidateOrganizationName(string $name, ?Organization $organization = null): string
     {
         $normalizedName = Organization::normalizeName($name);
 
@@ -385,7 +385,10 @@ final readonly class OrganizationCommandService
             throw OrganizationNameException::tooLong();
         }
 
-        $this->assertOrganizationNameAllowed($normalizedName);
+        // An unchanged name stays valid even if it became reserved after the organization was created.
+        if (! $organization instanceof Organization || Organization::normalizeNameForComparison($normalizedName) !== Organization::normalizeNameForComparison($organization->name())) {
+            $this->assertOrganizationNameAllowed($normalizedName);
+        }
 
         return $normalizedName;
     }

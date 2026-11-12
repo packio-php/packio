@@ -20,7 +20,7 @@ if ($productionMode && \in_array('*', \array_map(\trim(...), \explode(',', (stri
 }
 
 $sourceOAuthRedirectUrl = static fn (string $provider): string => \rtrim(
-    (string) \env('APP_URL', 'https://packio.us'),
+    (string) \env('APP_URL', 'http://packio.localhost:8080'),
     '/',
 ) . '/auth/oauth/' . $provider . '/source-callback';
 
@@ -38,15 +38,15 @@ return [
     'branding'      => [
         'product_name'              => \env('BRAND_PRODUCT_NAME', 'Packio'),
         'tagline'                   => \env('BRAND_TAGLINE', 'a lightweight private package registry for Composer'),
-        'domain'                    => \env('BRAND_DOMAIN', 'packio.us'),
-        'registry_base_domain'      => \env('BRAND_REGISTRY_BASE_DOMAIN', \env('BRAND_DOMAIN', 'packio.us')),
+        'domain'                    => \env('BRAND_DOMAIN', 'packio.localhost'),
+        'registry_base_domain'      => \env('BRAND_REGISTRY_BASE_DOMAIN', \env('BRAND_DOMAIN', 'packio.localhost')),
         'short_name'                => \env('BRAND_SHORT_NAME', 'packio'),
         'composer_repository_alias' => \env('BRAND_COMPOSER_REPOSITORY_ALIAS', 'packio'),
         'registry_token_prefix'     => \env('BRAND_REGISTRY_TOKEN_PREFIX', 'packio_rt_'),
         'registry_auth_realm'       => \env('BRAND_REGISTRY_AUTH_REALM', 'Packio'),
         'http_user_agent'           => \env('BRAND_HTTP_USER_AGENT', 'Packio/0.1'),
         'theme_storage_key'         => \env('BRAND_THEME_STORAGE_KEY', 'packio-theme'),
-        'app_url'                   => \env('APP_URL', 'https://packio.us'),
+        'app_url'                   => \env('APP_URL', 'http://packio.localhost:8080'),
     ],
 
     'mail'          => [
@@ -72,7 +72,7 @@ return [
         'from' => (static function(): string {
             $fromAddress = \trim((string) \env('MAIL_FROM', ''));
             if ('' === $fromAddress) {
-                $fromAddress = \trim((string) \env('MAIL_FROM_ADDRESS', 'noreply@packio.dev'));
+                $fromAddress = \trim((string) \env('MAIL_FROM_ADDRESS', 'noreply@packio.localhost'));
             }
             $fromName = \trim((string) \env('MAIL_FROM_NAME', ''));
 

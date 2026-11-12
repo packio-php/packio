@@ -1,6 +1,6 @@
 # Contributing to Packio
 
-Thanks for helping improve Packio. Before opening a pull request, check existing issues and keep changes focused. For a security vulnerability, follow [SECURITY.md](SECURITY.md) and do not open a public issue.
+Thanks for helping improve Packio. Before opening a pull request, check existing issues and keep changes focused. For a security vulnerability, follow [SECURITY.md](SECURITY.md) and do not open a public issue. Everyone taking part is expected to follow the [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ## Development setup
 

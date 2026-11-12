@@ -126,10 +126,9 @@ def main():
         worker_id = start_worker(env, 3)
         first = enqueue_and_verify(setup["organization"], setup["owner"],
                                    "https://git.example.test/cold/first.git")
-        logs = docker("logs", WORKER)
-        log = logs.stdout + logs.stderr
-        ids = set(re.findall(r"Worker \[([^]]+)\] started", log))
-        assert len(ids) >= 3, f"Expected distinct worker IDs, got {ids}; logs: {log[-3000:]}"
+        # Workers start one by one; the first job can finish before the last one logs its start.
+        wait_for(lambda: len(set(re.findall(r"Worker \[([^]]+)\] started",
+                 (lambda r: r.stdout + r.stderr)(docker("logs", WORKER))))) >= 3, "three distinct worker IDs")
         wait_for(lambda: ready() and "reached max jobs (1)" in (lambda r: r.stdout + r.stderr)(docker("logs", WORKER)),
                  "max-jobs recycling")
         docker("stop", "-t", "15", WORKER, timeout=30)

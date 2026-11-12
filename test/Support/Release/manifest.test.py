@@ -606,7 +606,7 @@ class ReleaseManifestTests(unittest.TestCase):
     def test_runtime_job_runs_only_for_manual_runs_and_release_tags(self):
         workflow = (ROOT / ".github/workflows/verify.yml").read_text(encoding="utf-8")
         triggers = workflow.split("\npermissions:", 1)[0]
-        self.assertIn("  push:\n    branches: [master]\n    tags: ['v*']\n", triggers)
+        self.assertIn("  push:\n    branches: [main]\n    tags: ['v*']\n", triggers)
         self.assertIn("  workflow_dispatch:\n", triggers)
         job = workflow.split("\n  runtime:\n", 1)[1].split("\n    steps:", 1)[0]
         self.assertIn("    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')\n", job)

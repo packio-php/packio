@@ -2,6 +2,8 @@
 
 Packio is a self-hosted private Composer package registry. It provides organization and package management, release publishing, private registry tokens, a REST API, and GitHub, GitLab, Bitbucket, and Codeberg source integrations.
 
+![Packio landing page](docs/assets/screenshot.png)
+
 To try Packio without installing it, register at [packio.us](https://packio.us), a live instance run by the maintainer. Registration is open.
 
 ## Supported deployment

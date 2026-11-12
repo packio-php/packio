@@ -29,7 +29,7 @@ Prebuilt images are not published. Build them from source by following [docker.m
 
 ## Backup and upgrades
 
-A backup must include the database, the private package archives and the original encryption key, together with your configuration. Follow the [backup and restore](operations/backup-restore.md) and [upgrade and rollback](operations/upgrade.md) runbooks. The upgrade baseline is the previous public release tag, starting with `v0.1.0`. Live key rotation, upgrades from arbitrary older versions, zero downtime and S3 recovery are not covered.
+A backup must include the database, the private package archives and the original encryption key, together with your configuration. Follow the [backup and restore](operations/backup-restore.md) and [upgrade and rollback](operations/upgrade.md) runbooks. The upgrade baseline is the previous public release tag, starting with `v0.1.0`. Live key rotation, upgrades from arbitrary older versions, zero downtime and S3 recovery are not covered. The runbooks describe how to rehearse a restore or an upgrade before relying on it.
 
 ## Where to get help
 

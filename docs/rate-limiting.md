@@ -243,7 +243,7 @@ files; their historical window cannot be inferred from timestamp arrays.
    both that maximum and the current effective maximum. Keep a record of that
    operator decision. If the historical maximum is unknown, **do not activate
    cleanup** until a conservative window chosen by the operator has elapsed with
-   all old writers stopped. An unknown historical TTL is not a verified G13 gate.
+   all old writers stopped. An unknown historical TTL is not a verified cleanup precondition.
 3. Start **all new writers** with consistent retention and the stable lock
    protocol before running cleanup. Use a private directory accessible only by
    the application/maintenance user; do not replace it, the stable lock or cursor

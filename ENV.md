@@ -34,7 +34,7 @@ Local development uses `compose.yaml` defaults: PostgreSQL is published on
 | `APP_NAME` | `BRAND_PRODUCT_NAME`, then `Packio` | Application name |
 | `APP_TIMEZONE` | `UTC` | Application timezone |
 | `IDENTITY_REGISTRATION_OPEN` | `true` | Allow new user registration |
-| `ORGANIZATION_RESERVED_SLUGS` | built-in list | Comma-separated organization slugs that cannot be used |
+| `ORGANIZATION_RESERVED_SLUGS` | built-in list | Comma-separated organization slugs that cannot be used; the value replaces the built-in list entirely |
 | `PASSWORD_RESET_TOKEN_TTL_SECONDS` | `3600` | Password reset token lifetime in seconds |
 | `API_DOCS_ENABLED` | `true` | Serve the API documentation |
 | `API_DOCS_PUBLIC` | `true` | Allow unauthenticated access to the API documentation |

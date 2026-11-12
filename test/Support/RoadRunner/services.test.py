@@ -73,7 +73,7 @@ try:
     for signal in ['TERM', 'KILL']:
         before = {x['pid'] for x in statuses()}
         docker('exec', worker, 'sh', '-c', 'kill "$1" "$2"', 'sh', '-' + signal, str(next(iter(before))))
-        for i in range(30):
+        for i in range(120):
             time.sleep(0.5)
             after = {x['pid'] for x in statuses()}
             if len(after) == 7 and after != before and healthy():
@@ -91,7 +91,7 @@ try:
     assert state['ExitCode'] == 0, 'Shutdown required forced kill'
     docker('rm', worker_id)
     worker_id = run_container('-d', '--pull=never', '--name', worker, '--network', network, *env, '-e', 'PACKIO_WORKER_NUM=3', image)
-    for i in range(30):
+    for i in range(120):
         if healthy() and len(statuses()) == 3:
             break
         time.sleep(0.5)

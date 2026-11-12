@@ -292,7 +292,7 @@
 <body>
 <main class="error-page">
     <section class="error-panel" aria-labelledby="error-title">
-        <p class="error-eyebrow">{{ branding.name|default('Packio') }} · {{ branding.domain|default('packio.us') }}</p>
+        <p class="error-eyebrow">{{ branding.name|default('Packio') }} · {{ branding.domain|default('packio.localhost') }}</p>
         {% block content %}{% endblock %}
         <div class="error-actions">
             <button class="error-back-button" type="button" onclick="window.history.length > 1 ? window.history.back() : window.location.assign('/')">Go back</button>

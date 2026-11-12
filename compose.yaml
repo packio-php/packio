@@ -17,7 +17,7 @@ x-app-environment: &app-environment
   DATABASE_PASS: "${DATABASE_PASS:-password}"
   MAIL_HOST: mailpit
   MAIL_PORT: 1025
-  MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@packio.dev}"
+  MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@packio.localhost}"
   MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Packio}"
 
 x-worker-service: &worker-service
@@ -184,8 +184,8 @@ services:
       TRUSTED_PROXIES: "${TRUSTED_PROXIES:-}"
       APP_HEALTHCHECK_URL: "http://localhost:80/health"
       APP_URL: "${APP_URL:-http://packio.localhost:8080}"
-      BRAND_DOMAIN: "${BRAND_DOMAIN:-packio.us}"
-      BRAND_REGISTRY_BASE_DOMAIN: "${BRAND_REGISTRY_BASE_DOMAIN:-packio.us}"
+      BRAND_DOMAIN: "${BRAND_DOMAIN:-packio.localhost}"
+      BRAND_REGISTRY_BASE_DOMAIN: "${BRAND_REGISTRY_BASE_DOMAIN:-packio.localhost}"
       SERVER_NAME: "${SERVER_NAME:-packio.localhost:80, *.packio.localhost:80, localhost:80, *.localhost:80}"
       CADDY_GLOBAL_OPTIONS: "auto_https off"
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"

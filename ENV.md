@@ -72,7 +72,7 @@ variables (`WORKER_*`, `RR_*`, `PACKIO_WORKER_NUM`, `HTTP_PORT`, `PACKIO_DOCKER_
 | `MAIL_USERNAME` | `""` | SMTP username |
 | `MAIL_PASSWORD` | `""` | SMTP password |
 | `MAIL_FROM` | `""` | Sender address; empty uses `MAIL_FROM_ADDRESS` |
-| `MAIL_FROM_ADDRESS` | `noreply@packio.dev` | Sender address used when `MAIL_FROM` is empty |
+| `MAIL_FROM_ADDRESS` | `noreply@packio.localhost` | Sender address used when `MAIL_FROM` is empty |
 | `MAIL_FROM_NAME` | `""` | Sender display name |
 
 ### Branding
@@ -81,7 +81,7 @@ variables (`WORKER_*`, `RR_*`, `PACKIO_WORKER_NUM`, `HTTP_PORT`, `PACKIO_DOCKER_
 |---|---|---|
 | `BRAND_PRODUCT_NAME` | `Packio` | Product name |
 | `BRAND_TAGLINE` | `a lightweight private package registry for Composer` | Product tagline |
-| `BRAND_DOMAIN` | `packio.us` | Product domain |
+| `BRAND_DOMAIN` | `packio.localhost` | Product domain |
 | `BRAND_REGISTRY_BASE_DOMAIN` | `BRAND_DOMAIN` | Base domain for organization registry hosts |
 | `BRAND_SHORT_NAME` | `packio` | Short name |
 | `BRAND_COMPOSER_REPOSITORY_ALIAS` | `packio` | Composer repository alias |
@@ -144,7 +144,7 @@ origins and CSRF contract tests; do not enable it by adding this header here.
 | Variable | Default | Description |
 |---|---|---|
 | `CORS_ENABLED` | `true` | Fallback value for the `http.cors.enabled` runtime setting |
-| `CORS_ALLOWED_ORIGINS` | `APP_URL` | Comma-separated allowed origins. Use explicit origins such as `https://packio.us` or `http://localhost:5173`; avoid `*` for authenticated browser clients |
+| `CORS_ALLOWED_ORIGINS` | `APP_URL` | Comma-separated allowed origins. Use explicit origins such as `https://packio.example.com` or `http://localhost:5173`; avoid `*` for authenticated browser clients |
 | `CORS_ALLOWED_HEADERS` | `Accept,Authorization,Content-Type,X-API-TOKEN,X-Inertia,X-Inertia-Version,X-Requested-With` | Comma-separated request headers allowed in browser preflight requests |
 | `CORS_EXPOSED_HEADERS` | `Content-Disposition,Location,Retry-After,WWW-Authenticate,X-Inertia,X-Inertia-Location,X-Inertia-Version` | Comma-separated response headers exposed to browser clients |
 | `CORS_ALLOWED_MAX_AGE` | `600` | Preflight cache lifetime in seconds |

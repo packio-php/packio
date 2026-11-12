@@ -121,7 +121,7 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
         foreach (['GET', 'HEAD'] as $method) {
             [$middleware, , $probeHandler] = $this->fixture('ready', '/ready');
             $response                      = $middleware->process(
-                new ServerRequest(uri: 'https://acme.packio.us/ready?source=probe', method: $method),
+                new ServerRequest(uri: 'https://acme.packio.localhost/ready?source=probe', method: $method),
                 new ProbeCapturingHandler(),
             );
 
@@ -132,7 +132,7 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
 
         [$middleware]    = $this->fixture('ready', '/ready');
         $inertiaResponse = $middleware->process(
-            new ServerRequest(uri: 'https://acme.packio.us/ready?source=probe', headers: [
+            new ServerRequest(uri: 'https://acme.packio.localhost/ready?source=probe', headers: [
                 'X-Inertia' => 'true',
             ]),
             new ProbeCapturingHandler(),
@@ -141,7 +141,7 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
         self::assertSame('http://localhost:8080/ready?source=probe', $inertiaResponse->getHeaderLine('X-Inertia-Location'));
 
         [$middleware]                  = $this->fixture('ready', '/ready');
-        $serverRequest                 = new ServerRequest(uri: 'https://acme.packio.us/ready', method: 'POST');
+        $serverRequest                 = new ServerRequest(uri: 'https://acme.packio.localhost/ready', method: 'POST');
         $probeCapturingHandler         = new ProbeCapturingHandler();
         $middleware->process($serverRequest, $probeCapturingHandler);
 

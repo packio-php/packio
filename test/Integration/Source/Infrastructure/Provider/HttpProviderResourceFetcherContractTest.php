@@ -84,6 +84,86 @@ final class HttpProviderResourceFetcherContractTest extends TestCase
     }
 
     #[Test]
+    public function githubFetcherSkipsOrganizationsWhenTheirEndpointsAreForbidden(): void
+    {
+        $personal = [
+            'status' => 200,
+            'body'   => [
+                [
+                    'full_name'      => 'user/repo-one',
+                    'html_url'       => 'https://github.com/user/repo-one',
+                    'default_branch' => 'main',
+                ],
+            ],
+        ];
+        $forbidden = [
+            'status' => 403,
+            'body'   => [
+                'message' => 'Forbidden',
+            ],
+        ];
+
+        // A token without read:org: the organization list itself is forbidden.
+        $withoutOrgList = new HttpGithubProviderResourceFetcher(
+            $this->brandingConfig(),
+            $this->providerApiRequestor([$personal, $forbidden]),
+        );
+        self::assertCount(1, $withoutOrgList->fetchResources('github-token'));
+
+        // An organization that refuses the token (for example SSO): only that organization is skipped.
+        $withForbiddenOrg = new HttpGithubProviderResourceFetcher(
+            $this->brandingConfig(),
+            $this->providerApiRequestor([
+                $personal,
+                [
+                    'status' => 200,
+                    'body'   => [
+                        [
+                            'login' => 'closed',
+                        ],
+                        [
+                            'login' => 'open',
+                        ],
+                    ],
+                ],
+                $forbidden,
+                [
+                    'status' => 200,
+                    'body'   => [
+                        [
+                            'full_name'      => 'open/repo-two',
+                            'html_url'       => 'https://github.com/open/repo-two',
+                            'default_branch' => 'main',
+                        ],
+                    ],
+                ],
+            ]),
+        );
+        self::assertCount(2, $withForbiddenOrg->fetchResources('github-token'));
+    }
+
+    #[Test]
+    public function githubFetcherStillFailsWhenTheUserRepositoryListIsForbidden(): void
+    {
+        $httpGithubProviderResourceFetcher = new HttpGithubProviderResourceFetcher(
+            $this->brandingConfig(),
+            $this->providerApiRequestor([
+                [
+                    'status' => 403,
+                    'body'   => [
+                        'message' => 'Forbidden',
+                    ],
+                ],
+            ]),
+        );
+
+        $this->expectException(ProviderCallException::class);
+        $this->expectExceptionMessage('provider_access_denied');
+
+        $httpGithubProviderResourceFetcher->fetchResources('github-token');
+    }
+
+    #[Test]
     public function gitlabFetcherUsesTokenAndExpectedEndpoint(): void
     {
         $history                           = [];

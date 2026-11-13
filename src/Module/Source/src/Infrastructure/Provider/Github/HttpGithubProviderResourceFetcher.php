@@ -7,6 +7,8 @@ namespace Packio\Source\Infrastructure\Provider\Github;
 use Common\Branding\BrandingConfig;
 use Common\Logging\SafeExceptionContext;
 use Packio\Source\Api\Exception\ProviderAuthenticationException;
+use Packio\Source\Api\Exception\ProviderCallException;
+use Packio\Source\Api\Exception\ProviderFailure;
 use Packio\Source\Domain\Dto\ProviderResourceData;
 use Packio\Source\Infrastructure\Provider\ProviderApiRequestor;
 use Psr\Log\LoggerInterface;
@@ -84,7 +86,7 @@ final readonly class HttpGithubProviderResourceFetcher implements GithubProvider
      */
     private function fetchOrgRepos(?string $token): array
     {
-        $orgs = $this->fetchUrl(
+        $orgs = $this->fetchUrlUnlessDenied(
             'https://api.github.com/user/orgs?per_page=100',
             $token,
         );
@@ -107,7 +109,7 @@ final readonly class HttpGithubProviderResourceFetcher implements GithubProvider
                 continue;
             }
 
-            $repos = $this->fetchUrl(
+            $repos = $this->fetchUrlUnlessDenied(
                 sprintf('https://api.github.com/orgs/%s/repos?per_page=100&sort=updated&type=all', $login),
                 $token,
             );
@@ -157,6 +159,25 @@ final readonly class HttpGithubProviderResourceFetcher implements GithubProvider
                 ),
             ),
         );
+    }
+
+    /**
+     * Organization endpoints can be forbidden (no `read:org` scope, SSO-protected organization)
+     * while the user's own repository list works, so a 403 here skips the organization.
+     */
+    private function fetchUrlUnlessDenied(string $url, ?string $token): mixed
+    {
+        try {
+            return $this->fetchUrl($url, $token);
+        } catch (ProviderCallException $providerCallException) {
+            if (ProviderFailure::AccessDenied !== $providerCallException->failure) {
+                throw $providerCallException;
+            }
+
+            $this->log('warning', sprintf('Access denied for URL %s, skipping organization repositories', $url));
+
+            return null;
+        }
     }
 
     private function fetchUrl(string $url, ?string $token): mixed

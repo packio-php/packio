@@ -9,7 +9,7 @@ use function preg_match;
 
 final class ApiAccessTokenScopes
 {
-    private const array GLOBAL = ['read', 'write', 'admin', '*', 'admin:*'];
+    private const array GLOBAL = ['read', 'write', 'admin', '*'];
 
     public static function isKnown(string $scope): bool
     {

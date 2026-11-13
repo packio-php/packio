@@ -218,6 +218,24 @@ final class AdminFeatureTest extends FeatureTestCase
     }
 
     #[Test]
+    public function itRejectsAnUnknownRoleInTheAdminUserForm(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $target  = $this->createUser('unknown-role');
+        $this->logIn($userDto->email);
+
+        $this->withCsrf()->post('/admin/users/' . $target->id, [
+            'email'        => $target->email,
+            'display_name' => 'Unknown Role',
+            'roles'        => ['user', 'superadmin'],
+        ])->assertRedirect('/admin/users/' . $target->id);
+
+        /** @var IdentityApiFacadeInterface $identity */
+        $identity = $this->getService(IdentityApiFacadeInterface::class);
+        self::assertSame($target->displayName, $identity->findUserById($target->id)?->displayName);
+    }
+
+    #[Test]
     public function itRejectsRemovingAdminRoleFromTheLastActiveAdmin(): void
     {
         $this->demoteAndExpect($this->createUser('only-admin', ['admin']), 'error', 'The last active administrator cannot lose the admin role.', true);

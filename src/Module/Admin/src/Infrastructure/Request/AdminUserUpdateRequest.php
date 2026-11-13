@@ -12,7 +12,6 @@ use Yiisoft\Validator\Rule\Length;
 use Yiisoft\Validator\Rule\Required;
 
 use function array_filter;
-use function array_intersect;
 use function array_map;
 use function array_unique;
 use function array_values;
@@ -43,7 +42,6 @@ final readonly class AdminUserUpdateRequest
         $roles = array_map(trim(...), $this->roles);
 
         $roles = array_values(array_unique(array_filter($roles, static fn (string $role): bool => '' !== $role)));
-        $roles = array_values(array_intersect($roles, ['user', 'admin']));
 
         return [] === $roles ? ['user'] : $roles;
     }

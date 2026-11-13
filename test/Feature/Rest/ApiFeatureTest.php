@@ -295,6 +295,77 @@ final class ApiFeatureTest extends FeatureTestCase
     }
 
     #[Test]
+    public function itRejectsTheUnusedAdminWildcardScopeAndNonStringLists(): void
+    {
+        $userDto = $this->createVerifiedUser();
+        $admin   = $this->identity()->updateUser($userDto->id, $userDto->email, $userDto->displayName, ['user', 'admin']);
+        self::assertInstanceOf(UserDto::class, $admin);
+        $organizationDto = $this->organization()->registerOrganization('List validation', $admin->id);
+        $headers         = [
+            'Accept'        => 'application/json',
+            'Authorization' => 'Bearer ' . $this->issueApiToken($admin, ['admin']),
+        ];
+
+        $this->postJson('/api/v1/user/api-tokens', [
+            'name'   => 'Wildcard',
+            'scopes' => ['admin:*'],
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.scopes.0', 'Unknown scope: admin:*.')
+        ;
+
+        $this->postJson('/api/v1/user/api-tokens', [
+            'name'   => 'Mixed',
+            'scopes' => ['read', 7],
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.scopes.0', 'Scopes must be a list of strings.')
+        ;
+
+        $this->postJson('/api/v1/organizations/' . $organizationDto->slug . '/registry-tokens', [
+            'name'        => 'Mixed',
+            'permissions' => 'packages:read:private',
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.permissions.0', 'Permissions must be a list of strings.')
+        ;
+
+        $this->request('PATCH', '/api/v1/admin/users/' . $admin->id, [
+            'roles' => ['admin', true],
+        ], $headers, true)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.roles.0', 'Roles must be a list of strings.')
+        ;
+    }
+
+    #[Test]
+    public function itRejectsASourceResourceTheProviderCannotParse(): void
+    {
+        $userDto         = $this->createVerifiedUser();
+        $organizationDto = $this->organization()->registerOrganization('Bad resource', $userDto->id);
+        $headers         = [
+            'Accept'        => 'application/json',
+            'Authorization' => 'Bearer ' . $this->issueApiToken($userDto, ['write']),
+        ];
+
+        $this->postJson('/api/v1/organizations/' . $organizationDto->slug . '/sources', [
+            'provider' => 'github',
+            'resource' => 'owner/repo',
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.source.0', 'Resource must be a repository URL supported by the selected provider.')
+        ;
+
+        $this->postJson('/api/v1/organizations/' . $organizationDto->slug . '/sources', [
+            'provider' => 'no_such_provider',
+            'resource' => 'https://example.test/owner/repo',
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('error.details.source.0', 'Source provider is not available.')
+        ;
+    }
+
+    #[Test]
     public function itImmediatelyBlocksAndRestoresAnExistingApiTokenWhenItsOwnerIsBannedAndUnbanned(): void
     {
         $identity                   = $this->identity();

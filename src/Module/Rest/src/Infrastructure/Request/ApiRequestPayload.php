@@ -7,6 +7,7 @@ namespace Packio\Rest\Infrastructure\Request;
 use const FILTER_NULL_ON_FAILURE;
 use const FILTER_VALIDATE_BOOL;
 
+use function array_all;
 use function array_any;
 use function array_key_exists;
 use function array_values;
@@ -69,6 +70,20 @@ final readonly class ApiRequestPayload
         }
 
         return [] !== $strings ? $strings : $default;
+    }
+
+    /**
+     * False when the key is present but is not a list of strings.
+     *
+     * @param array<string, mixed> $payload
+     */
+    public static function isStringListOrAbsent(array $payload, string $key): bool
+    {
+        if (! array_key_exists($key, $payload)) {
+            return true;
+        }
+
+        return is_array($payload[$key]) && array_all($payload[$key], static fn (mixed $item): bool => is_string($item));
     }
 
     /**

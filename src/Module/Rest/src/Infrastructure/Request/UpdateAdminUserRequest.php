@@ -47,6 +47,12 @@ final readonly class UpdateAdminUserRequest implements DataSetInterface, RulesPr
     /** @return array<string, list<RuleInterface>> */
     public function getRules(): iterable
     {
+        if (! ApiRequestPayload::isStringListOrAbsent($this->payload, 'roles')) {
+            return [
+                'roles' => [new Callback(static fn (): Result => new Result()->addError('Roles must be a list of strings.'))],
+            ];
+        }
+
         if (ApiRequestPayload::has($this->payload, 'roles')) {
             foreach (ApiRequestPayload::stringList($this->payload, 'roles', []) as $role) {
                 $role = trim($role);

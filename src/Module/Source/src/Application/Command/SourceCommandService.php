@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Source\Application\Command;
 
+use InvalidArgumentException;
 use Packio\Shared\Domain\Organization\ActorContext;
 use Packio\Source\Api\Exception\SourceInputException;
 use Packio\Source\Application\Dto\SourceOAuthAuthorizationData;
@@ -124,7 +125,12 @@ final readonly class SourceCommandService
             throw new SourceInputException('Organization is required to register sources.');
         }
         $providerName    = trim($registerSourceCommand->provider);
-        $provider        = $this->sourceProviderRegistry->provider($providerName);
+
+        try {
+            $provider = $this->sourceProviderRegistry->provider($providerName);
+        } catch (InvalidArgumentException) {
+            throw new SourceInputException('Source provider is not available.');
+        }
         $authorizationId = trim($registerSourceCommand->providerAuthorizationId);
         $authorization   = null;
 
@@ -180,13 +186,18 @@ final readonly class SourceCommandService
             composerJsonPath: trim((string) ($registerSourceCommand->settings['composer_json_path'] ?? 'composer.json')),
         );
 
-        $source = $provider->registerSource(
-            $organizationId,
-            $sourceRegistrationData,
-            $authorization instanceof ProviderAuthorization
-                ? $authorization
-                : null,
-        );
+        try {
+            $source = $provider->registerSource(
+                $organizationId,
+                $sourceRegistrationData,
+                $authorization instanceof ProviderAuthorization
+                    ? $authorization
+                    : null,
+            );
+        } catch (InvalidArgumentException) {
+            // The parser messages differ per provider; the public one stays fixed.
+            throw new SourceInputException('Resource must be a repository URL supported by the selected provider.');
+        }
         $source->replaceProviderConfig($this->sourceWebhookSecrets->encryptConfiguration($source->providerConfig()));
         $source->updateKeepLastReleases($registerSourceCommand->keepLastReleases);
         $existing = $this->sourceRepository->findByUrl(

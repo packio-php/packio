@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Admin actions are written to the audit log: user email and role changes, manual email verification, runtime setting changes, organization updates, and creating, revoking and deleting invitations.
+
 ### Fixed
 
 - GitHub repository listing no longer fails when the token cannot read organizations (no `read:org` scope, or an SSO-protected organization); those organizations are skipped.

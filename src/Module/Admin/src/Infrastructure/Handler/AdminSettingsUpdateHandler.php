@@ -10,6 +10,7 @@ use Packio\Admin\Api\ProjectSettingsApiFacadeInterface;
 use Packio\Admin\Infrastructure\Request\AdminSettingsRequest;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Shared\Api\Dto\UserDto;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -27,7 +28,8 @@ final readonly class AdminSettingsUpdateHandler implements RequestHandlerInterfa
 {
     public function __construct(
         private ProjectSettingsApiFacadeInterface $projectSettingsApiFacade,
-        private InertiaNotificationMessenger $inertiaNotificationMessenger
+        private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private AuditApiFacadeInterface $auditApiFacade,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -41,6 +43,16 @@ final readonly class AdminSettingsUpdateHandler implements RequestHandlerInterfa
 
         try {
             $this->projectSettingsApiFacade->updateOverrides($form->settings, $updatedByUserId);
+            // Values are on/off/inherit overrides, never secrets.
+            $this->auditApiFacade->record(
+                event: 'admin.runtime_settings.updated',
+                context: [
+                    'settings' => $form->settings,
+                ],
+                actorId: $updatedByUserId ?? '',
+                subjectType: 'project_settings',
+                subjectId: 'runtime',
+            );
             $this->inertiaNotificationMessenger->flash($request, 'success', 'Project settings updated.');
         } catch (InvalidArgumentException) {
             $this->inertiaNotificationMessenger->flash($request, 'error', 'Project settings contain an invalid value.');

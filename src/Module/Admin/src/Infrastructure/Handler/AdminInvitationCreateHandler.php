@@ -12,6 +12,7 @@ use Packio\Application\Infrastructure\Http\RouteAttributes;
 use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
 use Packio\Application\Routing\Attribute\ValidationNotify;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Packio\Shared\Api\Dto\UserDto;
 use Psr\Http\Message\ResponseInterface;
@@ -37,7 +38,8 @@ final readonly class AdminInvitationCreateHandler implements RequestHandlerInter
 {
     public function __construct(
         private OrganizationApiFacadeInterface $organizationApiFacade,
-        private InertiaNotificationMessenger $inertiaNotificationMessenger
+        private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private AuditApiFacadeInterface $auditApiFacade,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -57,12 +59,23 @@ final readonly class AdminInvitationCreateHandler implements RequestHandlerInter
         $form = $request->getAttribute(AdminInvitationCreateRequest::class);
 
         try {
-            $this->organizationApiFacade->createInvitation($organizationId, $user->id, $form->role);
+            $invitation = $this->organizationApiFacade->createInvitation($organizationId, $user->id, $form->role);
         } catch (RuntimeException) {
             $this->inertiaNotificationMessenger->flash($request, 'error', 'Unable to create invitation.');
 
             return new RedirectResponse('/admin/organizations/' . $organizationId);
         }
+
+        $this->auditApiFacade->record(
+            event: 'organization.invitation.created_by_admin',
+            context: [
+                'role' => $form->role,
+            ],
+            organizationId: $organizationId,
+            actorId: $user->id,
+            subjectType: 'organization_invitation',
+            subjectId: $invitation->id,
+        );
 
         $this->inertiaNotificationMessenger->flash($request, 'success', 'Invitation created.');
 

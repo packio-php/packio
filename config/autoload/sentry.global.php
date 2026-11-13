@@ -35,19 +35,21 @@ return [
     ],
 
     'sentry_psr' => [
-        'isolate_http_scope'           => true,
-        'isolate_console_scope'        => true,
-        'set_current_hub'              => true,
-        'default_integrations'         => false,
-        'flush_on_http_error'          => \env('SENTRY_FLUSH_ON_HTTP_ERROR', false, 'bool'),
-        'flush_on_console_terminate'   => true,
-        'flush_timeout'                => \env('SENTRY_FLUSH_TIMEOUT', 2, 'int'),
-        'capture_http_request_context' => true,
-        'capture_console_input'        => \env('SENTRY_CAPTURE_CONSOLE_INPUT', false, 'bool'),
-        'log_console_command_start'    => false,
+        'isolate_http_scope'              => true,
+        'isolate_console_scope'           => true,
+        'set_current_hub'                 => true,
+        'default_integrations'            => false,
+        'flush_on_http_error'             => \env('SENTRY_FLUSH_ON_HTTP_ERROR', false, 'bool'),
+        'flush_on_console_terminate'      => true,
+        'flush_timeout'                   => \env('SENTRY_FLUSH_TIMEOUT', 2, 'int'),
+        'capture_http_request_context'    => true,
+        'capture_console_input'           => \env('SENTRY_CAPTURE_CONSOLE_INPUT', false, 'bool'),
+        'log_console_command_start'       => false,
         // HttpErrorLoggingDelegator already logs uncaught HTTP errors redacted; the vendor record is unredacted.
-        'log_http_captured_exceptions' => false,
-        'exception_filter'             => [
+        'log_http_captured_exceptions'    => false,
+        // Same for console: ConsoleErrorLoggingDelegator logs failed commands redacted.
+        'log_console_captured_exceptions' => false,
+        'exception_filter'                => [
             'enabled'                 => true,
             'ignore_classes'          => [
                 AuthenticationException::class,
@@ -58,7 +60,7 @@ return [
             'ignore_message_patterns' => [],
             'inspect_previous'        => true,
         ],
-        'redaction'                    => [
+        'redaction'                       => [
             'replacement'             => '[Filtered]',
             'sensitive_key_pattern'   => '/password|passwd|secret|token|api[_-]?key|authorization|cookie/i',
             'max_depth'               => 8,
@@ -68,7 +70,7 @@ return [
             'rules'                   => [],
             'regex_rules'             => [],
         ],
-        'http_context'                 => [
+        'http_context'                    => [
             'enabled'               => true,
             'capture_headers'       => false,
             'capture_query_string'  => false,

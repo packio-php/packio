@@ -61,7 +61,7 @@ final readonly class OrganizationInviteAcceptSubmitHandler implements RequestHan
         if ('pending' !== $invitation->status) {
             $this->inertiaNotificationMessenger->flash($request, 'error', 'Invitation is ' . $invitation->status . '.');
 
-            return new RedirectResponse('/organization/invite/' . $token);
+            return new RedirectResponse($this->inviteTarget($token));
         }
 
         $userId = RequestContextAttributes::currentUserId($request) ?? '';
@@ -78,7 +78,7 @@ final readonly class OrganizationInviteAcceptSubmitHandler implements RequestHan
         if (! $accepted instanceof OrganizationInvitationDto || 'accepted' !== $accepted->status) {
             $this->inertiaNotificationMessenger->flash($request, 'error', 'Invitation could not be accepted.');
 
-            return new RedirectResponse('/organization/invite/' . $token);
+            return new RedirectResponse($this->inviteTarget($token));
         }
 
         $this->inertiaNotificationMessenger->flash($request, 'success', 'Invitation accepted.');

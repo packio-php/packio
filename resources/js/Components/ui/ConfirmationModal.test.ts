@@ -115,4 +115,27 @@ describe("ConfirmationModal", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("keeps Tab inside the dialog", async () => {
+    const outside = document.createElement("button");
+    document.body.append(outside);
+    render(ConfirmationModal, {
+      props: { open: true, confirmLabel: "Delete", cancelLabel: "Keep" },
+    });
+    await tick();
+
+    const close = screen.getByRole("button", { name: "Close confirmation" });
+    const confirm = screen.getByRole("button", { name: "Delete" });
+
+    confirm.focus();
+    await fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+
+    await fireEvent.keyDown(window, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(confirm);
+
+    outside.focus();
+    await fireEvent.keyDown(window, { key: "Tab" });
+    expect(document.activeElement).toBe(close);
+  });
 });

@@ -21,7 +21,7 @@ x-app-environment: &app-environment
   MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Packio}"
 
 x-worker-service: &worker-service
-  build:
+  build: &worker-build
     context: .
     dockerfile: .docker/Dockerfile.worker
     target: worker
@@ -42,13 +42,7 @@ x-worker-service: &worker-service
 
 services:
   setup-php:
-    build:
-      context: .
-      dockerfile: .docker/Dockerfile.worker
-      target: worker
-      args:
-        APP_UID: "${PACKIO_DOCKER_UID:-1000}"
-        APP_GID: "${PACKIO_DOCKER_GID:-1000}"
+    build: *worker-build
     user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
     restart: "no"
     entrypoint: ["sh", "/app/.docker/setup-dev-php.sh"]

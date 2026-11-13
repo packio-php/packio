@@ -23,6 +23,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GitHub repository listing no longer fails when the token cannot read organizations (no `read:org` scope, or an SSO-protected organization); those organizations are skipped.
 - Failed console commands are logged with secrets redacted; before, the raw exception message and trace were written to the log.
 - The webhook secret of a source is no longer passed along with release archive download data.
+- Worker: a worker that lost the race for a job could not take that job later if it returned to the queue; it retried against a stale copy until the dequeue timeout.
+- The 404 page for an unknown route shows the configured `BRAND_*` name and domain instead of the defaults.
+
+### Removed
+
+- The legacy job type `increment.install.count`. Before upgrading, make sure the queue has no such jobs: `SELECT COUNT(*) FROM jobs WHERE type = 'increment.install.count' AND status IN ('pending', 'running');` must return 0. A job of this type left in the queue fails after the upgrade.
 
 ## [0.1.0] - 2026-11-13
 

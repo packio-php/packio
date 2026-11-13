@@ -14,7 +14,7 @@ Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.
 
 Try Packio on your own machine with the development stack. It serves plain HTTP on `localhost` and is not a production setup.
 
-1. Requirements: Linux on amd64 (macOS is not guaranteed), Git, curl, and Docker with Compose. Nothing else is installed on the host. Create a GitHub [classic personal access token](https://github.com/settings/tokens/new?scopes=public_repo&description=Packio%20trial) before you start, with the scope `public_repo` and a short expiry.
+1. Requirements: Linux on amd64 (macOS is not guaranteed), Git, curl, and Docker with Compose. Nothing else is installed on the host. Create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) before you start: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too.
 2. Clone the repository and start the stack:
 
    ```bash
@@ -33,7 +33,7 @@ Try Packio on your own machine with the development stack. It serves plain HTTP 
    One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start takes 2-3 minutes; later starts take a few seconds. The workers can restart for up to a minute while `app` runs migrations; they recover on their own.
 3. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
 4. Create an organization, for example `acme`.
-5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your classic GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. If the token cannot create webhooks, Packio only shows a warning; synchronization still works. The source synchronizes in the background; its page shows the sync status and the packages found.
+5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
 6. Open Tokens (`/organization/acme/tokens`), enter a name, and click Issue token. Copy the token.
 7. The Registry Setup page (`/organization/acme/registry/setup`) shows the registry host and repository URL; for `acme` the host is `acme.packio.localhost:8080`. In an empty project folder, run Composer in Docker (Linux; `--network host` lets the container reach the host's port 8080). Any local Composer 2 works too.
 

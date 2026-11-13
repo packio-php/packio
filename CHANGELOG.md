@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Audit log retention: `audit:log:prune` deletes entries older than `AUDIT_LOG_RETENTION_DAYS` (default 180 days). The Docker `worker-cleanup` service runs it; other installations need a cron entry, see `docs/commands.md`.
 - Admin actions are written to the audit log: user email and role changes, manual email verification, runtime setting changes, organization updates, and creating, revoking and deleting invitations.
 
 ### Fixed

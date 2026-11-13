@@ -7,6 +7,7 @@ use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Audit\Application\Command\AuditCommandService;
 use Packio\Audit\Application\Query\AuditQueryService;
 use Packio\Audit\Domain\Repository\AuditRepositoryInterface;
+use Packio\Audit\Infrastructure\Cli\AuditLogPruneCommand;
 use Packio\Audit\Infrastructure\Facade\AuditApiFacade;
 use Packio\Audit\Infrastructure\Persistence\Cycle\AuditRepository;
 use Sirix\Cycle\Factory\RepositoryFactory;
@@ -19,22 +20,27 @@ return [
             AuditApiFacadeInterface::class  => AuditApiFacade::class,
         ],
         'factories'  => [
-            AuditApiFacade::class      => ConfigAbstractFactory::class,
-            AuditCommandService::class => ConfigAbstractFactory::class,
-            AuditQueryService::class   => ConfigAbstractFactory::class,
-            AuditRepository::class     => RepositoryFactory::class,
+            AuditApiFacade::class       => ConfigAbstractFactory::class,
+            AuditCommandService::class  => ConfigAbstractFactory::class,
+            AuditLogPruneCommand::class => ConfigAbstractFactory::class,
+            AuditQueryService::class    => ConfigAbstractFactory::class,
+            AuditRepository::class      => RepositoryFactory::class,
         ],
     ],
     ConfigAbstractFactory::class => [
-        AuditApiFacade::class      => [
+        AuditApiFacade::class       => [
             AuditCommandService::class,
             AuditQueryService::class,
             ObjectMapperInterface::class,
         ],
-        AuditCommandService::class => [
+        AuditCommandService::class  => [
             AuditRepositoryInterface::class,
         ],
-        AuditQueryService::class   => [
+        AuditLogPruneCommand::class => [
+            AuditRepositoryInterface::class,
+            'config',
+        ],
+        AuditQueryService::class    => [
             AuditRepositoryInterface::class,
         ],
     ],

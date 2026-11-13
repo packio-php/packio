@@ -35,6 +35,10 @@ return [
         ],
     ],
 
+    'audit'         => [
+        'retention_days' => \env('AUDIT_LOG_RETENTION_DAYS', '180'),
+    ],
+
     'branding'      => [
         'product_name'              => \env('BRAND_PRODUCT_NAME', 'Packio'),
         'tagline'                   => \env('BRAND_TAGLINE', 'a lightweight private package registry for Composer'),

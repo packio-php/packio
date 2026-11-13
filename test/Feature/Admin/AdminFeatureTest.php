@@ -190,6 +190,31 @@ final class AdminFeatureTest extends FeatureTestCase
         self::assertSame($newEmail, $updated->email);
         self::assertSame('Edited User', $updated->displayName);
         self::assertSame(['user', 'admin'], $updated->roles);
+
+        $auditEntryDto = $this->latestSubjectAuditEntry('user', $target->id, 'identity.user.updated_by_admin');
+        self::assertSame($userDto->id, $auditEntryDto->actorId);
+        self::assertSame($target->email, $auditEntryDto->context['email_before'] ?? null);
+        self::assertSame($newEmail, $auditEntryDto->context['email_after'] ?? null);
+        self::assertSame(['user', 'admin'], $auditEntryDto->context['roles_after'] ?? null);
+    }
+
+    #[Test]
+    public function itUpdatesOrganizationByAdminAndAuditsTheAction(): void
+    {
+        $userDto         = $this->createUser('admin', ['admin']);
+        $organizationDto = $this->createOrganization($userDto);
+        $this->logIn($userDto->email);
+
+        $this->withCsrf()->post('/admin/organizations/' . $organizationDto->id, [
+            'name'             => 'Renamed Organization',
+            'slug'             => $organizationDto->slug,
+            'anonymous_access' => '1',
+        ])->assertRedirect('/admin/organizations/' . $organizationDto->id);
+
+        $auditEntryDto = $this->latestSubjectAuditEntry('organization', $organizationDto->id, 'organization.updated_by_admin');
+        self::assertSame($userDto->id, $auditEntryDto->actorId);
+        self::assertSame('Renamed Organization', $auditEntryDto->context['name'] ?? null);
+        self::assertTrue($auditEntryDto->context['anonymous_access'] ?? null);
     }
 
     #[Test]
@@ -441,8 +466,17 @@ final class AdminFeatureTest extends FeatureTestCase
         self::assertSame('Invitation deleted.', $this->adminOrganizationFlash($base, 'success'));
         self::assertCount(0, $organizations->invitations($organizationDto->id));
 
+        foreach (['created', 'revoked', 'deleted'] as $action) {
+            $auditEntryDto = $this->latestSubjectAuditEntry('organization_invitation', $invitationId, 'organization.invitation.' . $action . '_by_admin');
+            self::assertSame($userDto->id, $auditEntryDto->actorId);
+        }
+
         $this->withCsrf()->post($base . '/invitations/00000000-0000-4000-8000-000000000000/delete')->assertRedirect($base);
         self::assertSame('Only non-pending invitations can be deleted.', $this->adminOrganizationFlash($base, 'error'));
+
+        /** @var AuditApiFacadeInterface $audit */
+        $audit = $this->getService(AuditApiFacadeInterface::class);
+        self::assertSame([], $audit->recentBySubject('organization_invitation', '00000000-0000-4000-8000-000000000000'));
     }
 
     #[Test]
@@ -1643,6 +1677,13 @@ final class AdminFeatureTest extends FeatureTestCase
 
         self::assertSame(RuntimeSettingOverride::Inherit->value, $settings->overrideValue(ProjectSettingsApiFacadeInterface::REGISTRATION_OPEN));
         self::assertSame(RuntimeSettingOverride::Inherit->value, $settings->overrideValue(ProjectSettingsApiFacadeInterface::API_DOCS_PUBLIC));
+
+        $auditEntryDto = $this->latestSubjectAuditEntry('project_settings', 'runtime', 'admin.runtime_settings.updated');
+        self::assertSame($userDto->id, $auditEntryDto->actorId);
+        self::assertSame(
+            RuntimeSettingOverride::Inherit->value,
+            $auditEntryDto->context['settings'][ProjectSettingsApiFacadeInterface::REGISTRATION_OPEN] ?? null,
+        );
     }
 
     #[Test]
@@ -1687,6 +1728,9 @@ final class AdminFeatureTest extends FeatureTestCase
         $updated  = $identity->findUserById($target->id);
         self::assertNotNull($updated);
         self::assertTrue($updated->isEmailVerified);
+
+        $auditEntryDto = $this->latestSubjectAuditEntry('user', $target->id, 'identity.user.email_verified_by_admin');
+        self::assertSame($userDto->id, $auditEntryDto->actorId);
     }
 
     #[Test]
@@ -1982,6 +2026,20 @@ final class AdminFeatureTest extends FeatureTestCase
         }
 
         self::fail('Source row not found: ' . $sourceId);
+    }
+
+    private function latestSubjectAuditEntry(string $subjectType, string $subjectId, string $event): AuditEntryDto
+    {
+        /** @var AuditApiFacadeInterface $audit */
+        $audit = $this->getService(AuditApiFacadeInterface::class);
+
+        foreach ($audit->recentBySubject($subjectType, $subjectId, 20) as $auditEntryDto) {
+            if ($auditEntryDto->event === $event) {
+                return $auditEntryDto;
+            }
+        }
+
+        self::fail('Audit entry not found: ' . $event);
     }
 
     private function latestSourceAuditEntry(string $organizationId, string $sourceId, string $event): AuditEntryDto

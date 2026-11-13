@@ -6,7 +6,9 @@ namespace Packio\Admin\Infrastructure\Handler;
 
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Infrastructure\Http\RouteAttributes;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -24,7 +26,8 @@ final readonly class AdminInvitationDeleteHandler implements RequestHandlerInter
 {
     public function __construct(
         private OrganizationApiFacadeInterface $organizationApiFacade,
-        private InertiaNotificationMessenger $inertiaNotificationMessenger
+        private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private AuditApiFacadeInterface $auditApiFacade,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -43,6 +46,17 @@ final readonly class AdminInvitationDeleteHandler implements RequestHandlerInter
         $deleted          = '' !== $organizationUuid
             && '' !== $invitationId
             && $this->organizationApiFacade->deleteInvitation($organizationUuid, $invitationId);
+
+        if ($deleted) {
+            $this->auditApiFacade->record(
+                event: 'organization.invitation.deleted_by_admin',
+                context: [],
+                organizationId: $organizationUuid,
+                actorId: RequestContextAttributes::currentUserId($request) ?? '',
+                subjectType: 'organization_invitation',
+                subjectId: $invitationId,
+            );
+        }
 
         $this->inertiaNotificationMessenger->flash(
             $request,

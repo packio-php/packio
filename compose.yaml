@@ -227,6 +227,7 @@ services:
       <<: *app-environment
       WORKER_CLEANUP_INTERVAL_SECONDS: "${WORKER_CLEANUP_INTERVAL_SECONDS:-3600}"
       WORKER_CLEANUP_RETENTION_DAYS: "${WORKER_CLEANUP_RETENTION_DAYS:-30}"
+      AUDIT_LOG_RETENTION_DAYS: "${AUDIT_LOG_RETENTION_DAYS:-180}"
     healthcheck:
       test: ["CMD", "sh", "/usr/local/bin/worker-cleanup-healthcheck.sh"]
       interval: 10s

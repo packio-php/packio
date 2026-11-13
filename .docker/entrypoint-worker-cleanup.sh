@@ -12,5 +12,6 @@ RETENTION_DAYS="${WORKER_CLEANUP_RETENTION_DAYS:-30}"
 
 while true; do
   run_maintenance php vendor/bin/laminas worker:cleanup --days "$RETENTION_DAYS"
+  run_maintenance php vendor/bin/laminas audit:log:prune
   sleep_maintenance "$INTERVAL"
 done

@@ -29,6 +29,7 @@ HTTP runtime selection, the mutually exclusive Compose command matrix, RoadRunne
 | `source:webhook-secrets:encrypt`   | Encrypts Source webhook secrets still stored as plaintext. Safe to rerun; `--dry-run` only counts them. Run it during low traffic: it loads sources in batches without clearing the ORM heap, and an edit made to a source at the same moment can be lost. | `php vendor/bin/laminas source:webhook-secrets:encrypt --dry-run`                           |
 | `organization:invitations:encrypt` | Encrypts organization invitation tokens still stored as plaintext. Safe to rerun; `--dry-run` only counts them.                                                                                                                                            | `php vendor/bin/laminas organization:invitations:encrypt --dry-run`                         |
 | `webhook:events:prune`             | Deletes webhook delivery events older than `--older-than-days` (default 30), in batches. `--dry-run` only counts them.                                                                                                                                     | `php vendor/bin/laminas webhook:events:prune --older-than-days=30 --dry-run`                |
+| `audit:log:prune`                  | Deletes audit log entries older than `AUDIT_LOG_RETENTION_DAYS` (default 180), in batches. `--older-than-days` overrides it; `--dry-run` only counts them.                                                                                                 | `php vendor/bin/laminas audit:log:prune --dry-run`                                          |
 | `release:orphans:cleanup`          | Schedules archive cleanup for and deletes releases whose package no longer exists. `--dry-run` only counts them.                                                                                                                                           | `php vendor/bin/laminas release:orphans:cleanup --dry-run`                                  |
 | `worker:run`                       | Starts a background job worker.                                                                                                                                                                                                                            | `php vendor/bin/laminas worker:run`                                                         |
 | `worker:cleanup`                   | Deletes old jobs and job logs.                                                                                                                                                                                                                             | `php vendor/bin/laminas worker:cleanup --days=30`                                           |
@@ -41,6 +42,16 @@ Run it daily, for example from cron:
 
 ```cron
 17 3 * * * cd /path/to/packio && php vendor/bin/laminas webhook:events:prune --older-than-days=30
+```
+
+### `audit:log:prune` cron
+
+Audit log entries are kept for `AUDIT_LOG_RETENTION_DAYS` days (default 180). Nothing is archived: export the
+`audit_entries` table first if you need older entries. The Docker `worker-cleanup` service runs the command in its
+loop; without Docker, run it daily:
+
+```cron
+27 3 * * * cd /path/to/packio && php vendor/bin/laminas audit:log:prune
 ```
 
 ### `user:make-admin`

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Audit\Domain\Repository;
 
+use Cake\Chronos\Chronos;
 use Packio\Audit\Domain\Entity\AuditEntry;
 
 interface AuditRepositoryInterface
@@ -34,4 +35,9 @@ interface AuditRepositoryInterface
      * @return list<AuditEntry>
      */
     public function recentBySubjectAndEvents(string $subjectType, string $subjectId, array $events, int $limit = 10): array;
+
+    public function countOlderThan(Chronos $before): int;
+
+    /** Deletes in batches and returns the number of deleted entries. */
+    public function deleteOlderThan(Chronos $before, int $batchSize = 1000): int;
 }

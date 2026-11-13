@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Audit log retention: `audit:log:prune` deletes entries older than `AUDIT_LOG_RETENTION_DAYS` (default 180 days). The Docker `worker-cleanup` service runs it; other installations need a cron entry, see `docs/commands.md`.
+
 ### Fixed
 
 - GitHub repository listing no longer fails when the token cannot read organizations (no `read:org` scope, or an SSO-protected organization); those organizations are skipped.

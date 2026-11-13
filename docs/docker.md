@@ -279,6 +279,7 @@ In the development Compose, the `worker` container runs `worker:run`; the mainte
 | `WORKER_ID` | empty | Optional explicit job-worker identifier |
 | `WORKER_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Old job/log cleanup interval |
 | `WORKER_CLEANUP_RETENTION_DAYS` | `30` days | Retention for jobs and job logs |
+| `AUDIT_LOG_RETENTION_DAYS` | `180` days | Retention for audit log entries; `worker-cleanup` prunes them in the same loop |
 | `EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Expired verification-code cleanup interval |
 | `PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Password-reset cleanup interval |
 | `SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS` | `86400` seconds | Source OAuth maintenance interval |

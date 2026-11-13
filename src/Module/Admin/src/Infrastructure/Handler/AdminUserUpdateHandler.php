@@ -9,10 +9,12 @@ use InvalidArgumentException;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Admin\Infrastructure\Request\AdminUserUpdateRequest;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Infrastructure\Http\RouteAttributes;
 use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
 use Packio\Application\Routing\Attribute\ValidationNotify;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Identity\Api\IdentityApiFacadeInterface;
 use Packio\Shared\Api\Dto\UserDto;
 use Psr\Http\Message\ResponseInterface;
@@ -38,6 +40,7 @@ final readonly class AdminUserUpdateHandler implements RequestHandlerInterface
     public function __construct(
         private IdentityApiFacadeInterface $identityApiFacade,
         private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private AuditApiFacadeInterface $auditApiFacade,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -52,6 +55,8 @@ final readonly class AdminUserUpdateHandler implements RequestHandlerInterface
 
         /** @var AdminUserUpdateRequest $form */
         $form = $request->getAttribute(AdminUserUpdateRequest::class);
+
+        $before = $this->identityApiFacade->findUserById($userId);
 
         try {
             $updated = $this->identityApiFacade->updateUser(
@@ -75,6 +80,19 @@ final readonly class AdminUserUpdateHandler implements RequestHandlerInterface
 
             return new RedirectResponse('/admin/users');
         }
+
+        $this->auditApiFacade->record(
+            event: 'identity.user.updated_by_admin',
+            context: [
+                'email_before' => $before?->email,
+                'email_after'  => $updated->email,
+                'roles_before' => $before?->roles,
+                'roles_after'  => $updated->roles,
+            ],
+            actorId: RequestContextAttributes::currentUserId($request) ?? '',
+            subjectType: 'user',
+            subjectId: $userId,
+        );
 
         $this->inertiaNotificationMessenger->flash($request, 'success', 'User updated.');
 

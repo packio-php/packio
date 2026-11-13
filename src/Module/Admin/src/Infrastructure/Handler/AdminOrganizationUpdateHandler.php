@@ -7,10 +7,12 @@ namespace Packio\Admin\Infrastructure\Handler;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Admin\Infrastructure\Request\AdminOrganizationUpdateRequest;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Infrastructure\Http\RouteAttributes;
 use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
 use Packio\Application\Routing\Attribute\ValidationNotify;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Organization\Api\Exception\OrganizationExceptionInterface;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Psr\Http\Message\ResponseInterface;
@@ -35,7 +37,8 @@ final readonly class AdminOrganizationUpdateHandler implements RequestHandlerInt
 {
     public function __construct(
         private OrganizationApiFacadeInterface $organizationApiFacade,
-        private InertiaNotificationMessenger $inertiaNotificationMessenger
+        private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private AuditApiFacadeInterface $auditApiFacade,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -63,6 +66,19 @@ final readonly class AdminOrganizationUpdateHandler implements RequestHandlerInt
 
             return new RedirectResponse('/admin/organizations/' . $organizationId);
         }
+
+        $this->auditApiFacade->record(
+            event: 'organization.updated_by_admin',
+            context: [
+                'name'             => $form->name,
+                'slug'             => $form->slug,
+                'anonymous_access' => '1' === $form->anonymousAccess,
+            ],
+            organizationId: $organizationId,
+            actorId: RequestContextAttributes::currentUserId($request) ?? '',
+            subjectType: 'organization',
+            subjectId: $organizationId,
+        );
 
         $this->inertiaNotificationMessenger->flash($request, 'success', 'Organization updated.');
 

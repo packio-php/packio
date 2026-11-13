@@ -5,7 +5,9 @@ declare(strict_types=1);
 namespace Packio\Admin\Infrastructure\Handler;
 
 use Laminas\Diactoros\Response\JsonResponse;
+use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Infrastructure\Http\RouteAttributes;
+use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Identity\Api\IdentityApiFacadeInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -19,7 +21,10 @@ use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 #[Can('admin.access')]
 final readonly class AdminUserVerifyHandler implements RequestHandlerInterface
 {
-    public function __construct(private IdentityApiFacadeInterface $identityApiFacade) {}
+    public function __construct(
+        private IdentityApiFacadeInterface $identityApiFacade,
+        private AuditApiFacadeInterface $auditApiFacade,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -30,6 +35,14 @@ final readonly class AdminUserVerifyHandler implements RequestHandlerInterface
                 'error' => 'User not found',
             ], 404);
         }
+
+        $this->auditApiFacade->record(
+            event: 'identity.user.email_verified_by_admin',
+            context: [],
+            actorId: RequestContextAttributes::currentUserId($request) ?? '',
+            subjectType: 'user',
+            subjectId: $userUuid,
+        );
 
         return new JsonResponse([
             'success' => true,

@@ -160,6 +160,7 @@ return [
         AdminOrganizationUpdateHandler::class         => [
             OrganizationApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminOrganizationDeleteHandler::class         => [
             OrganizationApiFacadeInterface::class,
@@ -233,14 +234,17 @@ return [
         AdminInvitationCreateHandler::class           => [
             OrganizationApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminInvitationRevokeHandler::class           => [
             OrganizationApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminInvitationDeleteHandler::class           => [
             OrganizationApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminSettingsHandler::class                   => [
             ProjectSettingsApiFacadeInterface::class,
@@ -250,6 +254,7 @@ return [
         AdminSettingsUpdateHandler::class             => [
             ProjectSettingsApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminUsersHandler::class                      => [
             IdentityApiFacadeInterface::class,
@@ -272,9 +277,11 @@ return [
         AdminUserUpdateHandler::class                 => [
             IdentityApiFacadeInterface::class,
             InertiaNotificationMessenger::class,
+            AuditApiFacadeInterface::class,
         ],
         AdminUserVerifyHandler::class                 => [
             IdentityApiFacadeInterface::class,
+            AuditApiFacadeInterface::class,
         ],
     ],
 ];

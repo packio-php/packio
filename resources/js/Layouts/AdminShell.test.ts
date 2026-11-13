@@ -1,6 +1,11 @@
-import { render, screen, waitFor } from "@testing-library/svelte";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { page, setPageProps } from "@/test/inertia";
+import { page, setPageProps, setPageUrl } from "@/test/inertia";
 import AdminShellHarness from "@/test/AdminShellHarness.svelte";
 
 vi.mock("@/Components/ui/ScrollTopButton.svelte", async () => ({
@@ -98,5 +103,27 @@ describe("AdminShell", () => {
     } finally {
       delete (page as unknown as { flash?: unknown }).flash;
     }
+  });
+
+  it("closes the mobile menu when the URL changes", async () => {
+    render(AdminShellHarness, { props: { auth } });
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Open admin menu" }),
+    );
+    expect(
+      screen.getAllByRole("button", { name: "Close admin menu" }).length,
+    ).toBeGreaterThan(0);
+
+    setPageUrl("/admin/jobs");
+
+    await waitFor(() =>
+      expect(
+        screen.getByRole("button", { name: "Open admin menu" }),
+      ).toBeInTheDocument(),
+    );
+    expect(
+      screen.queryByRole("button", { name: "Close admin menu" }),
+    ).not.toBeInTheDocument();
   });
 });

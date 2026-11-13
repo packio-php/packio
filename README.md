@@ -14,7 +14,7 @@ Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.
 
 Try Packio on your own machine with the development stack. It serves plain HTTP on `localhost` and is not a production setup.
 
-1. Requirements: Linux on amd64 (macOS is not guaranteed), Git, curl, and Docker with Compose. Nothing else is installed on the host. Create a GitHub [classic personal access token](https://github.com/settings/tokens/new?scopes=public_repo,read:org&description=Packio%20trial) before you start, with the scopes `public_repo` and `read:org` (Packio lists your organizations, and GitHub refuses that without `read:org`) and a short expiry.
+1. Requirements: Linux on amd64 (macOS is not guaranteed), Git, curl, and Docker with Compose. Nothing else is installed on the host. Create a GitHub [classic personal access token](https://github.com/settings/tokens/new?scopes=public_repo&description=Packio%20trial) before you start, with the scope `public_repo` and a short expiry.
 2. Clone the repository and start the stack:
 
    ```bash

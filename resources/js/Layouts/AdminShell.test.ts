@@ -1,9 +1,4 @@
-import {
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from "@testing-library/svelte";
+import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { page, setPageProps, setPageUrl } from "@/test/inertia";
 import AdminShellHarness from "@/test/AdminShellHarness.svelte";

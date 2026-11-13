@@ -158,8 +158,6 @@ return [
         'job_handlers' => [
             'increment.download.count'    => IncrementDownloadCountJobHandler::class,
             PackageDeleteJobHandler::TYPE => PackageDeleteJobHandler::class,
-            // TODO: Remove this legacy alias after old job logs/queued records are cleaned up.
-            'increment.install.count'     => IncrementDownloadCountJobHandler::class,
         ],
     ],
 ];

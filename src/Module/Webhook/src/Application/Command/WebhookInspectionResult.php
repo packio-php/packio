@@ -6,6 +6,8 @@ namespace Packio\Webhook\Application\Command;
 
 final readonly class WebhookInspectionResult
 {
+    public const string REPOSITORY_MISMATCH = 'Webhook repository does not match the configured source.';
+
     public function __construct(
         public string $status,
         public string $message,

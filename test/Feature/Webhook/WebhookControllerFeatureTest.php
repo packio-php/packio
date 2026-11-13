@@ -595,6 +595,36 @@ final class WebhookControllerFeatureTest extends FeatureTestCase
         self::assertSame([], $webhooks->recentEvents($sourceDto->id));
     }
 
+    #[Test]
+    public function itAnswersConflictForAnotherRepositoryAndRepeatsItForTheSameDelivery(): void
+    {
+        $sourceDto = $this->createSource();
+        $payload   = $this->fixtureJson('github', 'push', [
+            'repository' => [
+                'html_url' => 'https://github.com/org/another-repository',
+            ],
+        ]);
+        $headers = $this->githubHeaders($payload, (string) $sourceDto->providerConfig['webhook_secret'], 'push');
+
+        // The second answer is rebuilt from the stored event.
+        foreach ([1, 2] as $attempt) {
+            $testResponse = $this->request('POST', '/webhooks/github/' . $sourceDto->id, $payload, $headers, true);
+            $testResponse->assertStatus(409);
+            self::assertSame('Webhook repository does not match the configured source.', $testResponse->json()['message'] ?? null, 'attempt ' . $attempt);
+        }
+    }
+
+    #[Test]
+    public function itAnswersNotFoundForAnUnknownProvider(): void
+    {
+        $sourceDto = $this->createSource();
+
+        $testResponse = $this->request('POST', '/webhooks/no_such_provider/' . $sourceDto->id, '{}', [], true);
+
+        $testResponse->assertStatus(404);
+        self::assertSame('Source not found.', $testResponse->json()['message'] ?? null);
+    }
+
     private function createSource(string $provider = 'github', ?string $url = null): SourceDto
     {
         $userDto         = $this->createVerifiedUser();

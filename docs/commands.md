@@ -44,6 +44,11 @@ Run it daily, for example from cron:
 17 3 * * * cd /path/to/packio && php vendor/bin/laminas webhook:events:prune --older-than-days=30
 ```
 
+A delivery is recognized as a duplicate by its delivery id, and only while its event is still stored. Two cases are
+processed again: a provider resending an old delivery after its event was pruned, and the same payload arriving under
+a new delivery id. Both need a valid signature and only schedule one more synchronization of the source, which
+changes nothing when the repository has not changed.
+
 ### `audit:log:prune` cron
 
 Audit log entries are kept for `AUDIT_LOG_RETENTION_DAYS` days (default 180). Nothing is archived: export the

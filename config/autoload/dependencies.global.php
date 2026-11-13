@@ -10,6 +10,7 @@ use Mezzio\Middleware\ErrorResponseGenerator;
 use Mezzio\Router\Middleware\DispatchMiddleware;
 use Mezzio\Template\TemplateRendererInterface;
 use Packio\Application\Error\AuthorizationExceptionResponseFactory;
+use Packio\Application\Error\ConsoleErrorLoggingDelegator;
 use Packio\Application\Error\HttpErrorLoggingDelegator;
 use Packio\Application\Error\InertiaErrorResponseGenerator;
 use Packio\Application\Middleware\OperationalProbeDispatchMiddleware;
@@ -25,6 +26,7 @@ use Psr\Http\Message\StreamFactoryInterface;
 use Sirix\InertiaPsr15\Service\InertiaFactoryInterface;
 use Sirix\InertiaPsr15\Service\InertiaVersionProviderInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
+use Symfony\Component\EventDispatcher\EventDispatcher;
 
 return [
     'dependencies'               => [
@@ -56,6 +58,9 @@ return [
             ],
             AuthManagerInterface::class   => [
                 CsrfAwareAuthManagerDelegator::class,
+            ],
+            EventDispatcher::class        => [
+                ConsoleErrorLoggingDelegator::class,
             ],
         ],
     ],

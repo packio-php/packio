@@ -10,6 +10,8 @@ use Packio\Source\Api\Dto\SourceDto;
 use Packio\Source\Api\SourceApiFacadeInterface;
 use Packio\Source\Api\SourceSecretResolverInterface;
 
+use function array_diff_key;
+
 final readonly class SourceApiFacadeAdapter implements SourceQueryPort
 {
     public function __construct(
@@ -39,7 +41,10 @@ final readonly class SourceApiFacadeAdapter implements SourceQueryPort
             repository: $sourceDto->repository,
             active: $sourceDto->active,
             visibility: $sourceDto->visibility,
-            providerConfig: $sourceDto->providerConfig,
+            // The registry only downloads archives; the webhook secret must not travel with the descriptor.
+            providerConfig: array_diff_key($sourceDto->providerConfig, [
+                'webhook_secret' => true,
+            ]),
             authType: $sourceDto->authType,
         );
     }

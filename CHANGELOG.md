@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - GitHub repository listing no longer fails when the token cannot read organizations (no `read:org` scope, or an SSO-protected organization); those organizations are skipped.
+- Failed console commands are logged with secrets redacted; before, the raw exception message and trace were written to the log.
+- The webhook secret of a source is no longer passed along with release archive download data.
 
 ## [0.1.0] - 2026-11-13
 

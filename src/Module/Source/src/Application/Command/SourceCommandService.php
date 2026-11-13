@@ -27,6 +27,7 @@ use Packio\Source\Domain\Repository\SourceProviderInstanceRepositoryInterface;
 use Packio\Source\Domain\Repository\SourceRepositoryInterface;
 use Packio\Source\Domain\Service\SourceAuthorizationStrategyResolver;
 use Packio\Source\Domain\Value\SourceDeletionInitiation;
+use Sirix\Cycle\Extension\Exception\RepositoryPersistException;
 
 use function array_any;
 use function count;
@@ -236,7 +237,12 @@ final readonly class SourceCommandService
             return $this->sourceRepository->save($existing);
         }
 
-        return $this->sourceRepository->save($source);
+        try {
+            return $this->sourceRepository->save($source);
+        } catch (RepositoryPersistException $exception) {
+            // A concurrent request added the same repository first (unique organization/URL index).
+            return $this->sourceRepository->findByUrl($source->canonicalUrl(), $organizationId) ?? throw $exception;
+        }
     }
 
     public function registerSourceInContext(ActorContext $actorContext, RegisterSourceCommand $registerSourceCommand): Source

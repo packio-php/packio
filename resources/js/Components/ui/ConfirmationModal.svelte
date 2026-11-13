@@ -37,8 +37,8 @@
   const confirmVariant = $derived(variant === "danger" ? "danger" : "primary");
 
   let actions: HTMLElement | undefined = $state();
+  let dialog: HTMLElement | undefined = $state();
 
-  // shortcut: no Tab trap, add one if dialogs get more interactive content
   $effect(() => {
     if (!open) {
       return;
@@ -67,11 +67,37 @@
   }
 
   function handleKeydown(event: KeyboardEvent): void {
-    if (!open || event.key !== "Escape") {
+    if (!open) {
       return;
     }
 
-    cancel();
+    if (event.key === "Escape") {
+      cancel();
+    } else if (event.key === "Tab") {
+      trapTab(event);
+    }
+  }
+
+  // Keeps Tab inside the dialog: the page behind it is not reachable while it is open.
+  function trapTab(event: KeyboardEvent): void {
+    const focusable = [
+      ...(dialog?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []),
+    ];
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) {
+      return;
+    }
+
+    const active = document.activeElement;
+    const leaving =
+      !dialog?.contains(active) || active === (event.shiftKey ? first : last);
+    if (leaving) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
   }
 </script>
 
@@ -84,6 +110,7 @@
     onclick={(event) => event.currentTarget === event.target && cancel()}
   >
     <div
+      bind:this={dialog}
       class="mx-auto flex min-h-full w-full max-w-lg items-start py-3 sm:items-center sm:py-4"
       aria-modal="true"
       aria-labelledby="confirmation-modal-title"

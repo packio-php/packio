@@ -290,6 +290,9 @@ final class JobRepository extends AbstractWriteRepository implements JobReposito
                     return $job;
                 } catch (RepositoryPersistException $e) {
                     if ($e->getPrevious() instanceof OptimisticLockException) {
+                        // Drop the stale copy, or the next select returns it again and never wins.
+                        $this->orm->getHeap()->detach($job);
+
                         continue;
                     }
 

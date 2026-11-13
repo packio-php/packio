@@ -225,7 +225,7 @@ final class SourceEntitySchema implements GeneratorInterface
         $registry->register($entity);
         $registry->linkTable($entity, 'default', 'sources');
         $table = $registry->getTableSchema($entity);
-        $table->index(['organization_id', 'canonical_url'])->setName('sources_organization_canonical_url_idx');
+        $table->index(['organization_id', 'canonical_url'])->unique(true)->setName('sources_organization_canonical_url_unique');
         $table->index(['provider_authorization_id'])->setName('sources_provider_authorization_id_idx');
 
         return $registry;

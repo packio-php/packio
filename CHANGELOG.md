@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Two simultaneous "add source" requests for the same repository can no longer create two sources: `sources (organization_id, canonical_url)` is now unique. The migration stops with an explanation if such duplicates already exist; delete the extra sources and run it again.
 - Webhooks: the 409 answer for a payload from another repository no longer depends on the wording of the message, and the receiving endpoint no longer keeps its own list of providers. An unknown provider in the webhook URL now answers `Source not found.` (still 404).
 - REST API: `POST /organizations/{organization}/sources` answers 422 instead of 500 when the provider is unknown or `resource` is not a repository URL the provider accepts.
 - REST API: `scopes`, `permissions` and `roles` that are not lists of strings are rejected with 422; before, the invalid items were dropped silently.

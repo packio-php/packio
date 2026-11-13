@@ -75,7 +75,7 @@ The API supports coarse scopes and resource scopes.
 - `write`: broad write access to non-admin API resources allowed by RBAC.
 - `admin`: required for `/api/v1/admin/*` in addition to the user's admin role.
 - Resource scopes include `tokens:read`, `tokens:write`, `sources:read`, `sources:write`, `packages:read`, `packages:write`, `releases:read`, `releases:write`, `webhooks:read`, `webhooks:write`, `members:read`, `members:write`, `organizations:read`, and `organizations:write`.
-- Wildcards: `<family>:*` covers both actions of one family, `*` grants every scope, and `admin:*` covers every `admin:` scope. The admin role is still required for admin endpoints.
+- Wildcards: `<family>:*` covers both actions of one family, and `*` grants every scope. The admin role is still required for admin endpoints.
 
 Source responses include `provider_config.webhook_secret` only when the caller may manage the source (or is a site admin) and the token grants `sources:write`. Otherwise the key is removed. Webhook secrets are encrypted at rest.
 

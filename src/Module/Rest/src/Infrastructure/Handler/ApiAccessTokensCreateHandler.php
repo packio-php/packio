@@ -55,9 +55,9 @@ use function str_starts_with;
             ),
             new OA\Property(
                 property: 'scopes',
-                description: 'Requested scopes. The admin scope is only granted to users with the admin role.',
+                description: 'Requested scopes: `read`, `write`, `admin`, `*`, or `<family>:<read|write|*>` where family is members, organizations, packages, releases, sources, tokens or webhooks. The admin scope is only granted to users with the admin role.',
                 type: 'array',
-                items: new OA\Items(type: 'string', enum: ['read', 'write', 'admin']),
+                items: new OA\Items(type: 'string', pattern: '^(read|write|admin|\*|(members|organizations|packages|releases|sources|tokens|webhooks):(read|write|\*))$'),
                 example: ['read', 'write'],
             ),
             new OA\Property(

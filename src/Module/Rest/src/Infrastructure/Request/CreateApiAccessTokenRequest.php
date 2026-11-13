@@ -6,6 +6,8 @@ namespace Packio\Rest\Infrastructure\Request;
 
 use CuyZ\Valinor\Mapper\Http\FromBody;
 use Yiisoft\Validator\DataSetInterface;
+use Yiisoft\Validator\Result;
+use Yiisoft\Validator\Rule\Callback;
 use Yiisoft\Validator\Rule\Required;
 use Yiisoft\Validator\RuleInterface;
 use Yiisoft\Validator\RulesProviderInterface;
@@ -38,6 +40,12 @@ final readonly class CreateApiAccessTokenRequest implements DataSetInterface, Ru
     /** @return array<string, list<RuleInterface>> */
     public function getRules(): iterable
     {
+        if (! ApiRequestPayload::isStringListOrAbsent($this->payload, 'scopes')) {
+            return [
+                'scopes' => [new Callback(static fn (): Result => new Result()->addError('Scopes must be a list of strings.'))],
+            ];
+        }
+
         return [
             'name' => [new Required(message: 'Name is required.')],
         ];

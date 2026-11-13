@@ -23,11 +23,11 @@ final class ApiAccessTokenScopesTest extends TestCase
     /** @return iterable<string, array{string, bool}> */
     public static function scopes(): iterable
     {
-        foreach (['read', 'write', 'admin', '*', 'admin:*', 'sources:read', 'sources:write', 'sources:*', 'webhooks:read'] as $scope) {
+        foreach (['read', 'write', 'admin', '*', 'sources:read', 'sources:write', 'sources:*', 'webhooks:read'] as $scope) {
             yield 'known ' . $scope => [$scope, true];
         }
 
-        foreach (['admni', 'sources:delete', 'foo:read', 'read ', ''] as $scope) {
+        foreach (['admni', 'admin:*', 'sources:delete', 'foo:read', 'read ', ''] as $scope) {
             yield 'unknown "' . $scope . '"' => [$scope, false];
         }
     }

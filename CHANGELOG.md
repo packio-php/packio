@@ -14,6 +14,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- REST API: `POST /organizations/{organization}/sources` answers 422 instead of 500 when the provider is unknown or `resource` is not a repository URL the provider accepts.
+- REST API: `scopes`, `permissions` and `roles` that are not lists of strings are rejected with 422; before, the invalid items were dropped silently.
+- REST API: the `admin:*` token scope is no longer accepted when a token is created. It never granted anything; use `admin`.
+- OpenAPI: token scopes are described by the full accepted pattern, and `DELETE` package documents the 503 response.
 - GitHub repository listing no longer fails when the token cannot read organizations (no `read:org` scope, or an SSO-protected organization); those organizations are skipped.
 - Failed console commands are logged with secrets redacted; before, the raw exception message and trace were written to the log.
 - The webhook secret of a source is no longer passed along with release archive download data.

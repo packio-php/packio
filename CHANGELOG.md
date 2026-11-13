@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The webhook secret of a source is no longer passed along with release archive download data.
 - Worker: a worker that lost the race for a job could not take that job later if it returned to the queue; it retried against a stale copy until the dequeue timeout.
 - The 404 page for an unknown route shows the configured `BRAND_*` name and domain instead of the defaults.
-- Docker: web sessions are stored in `data/sessions` and expire after 2 hours without activity, as intended. Before, the PHP defaults applied: sessions went to the container's temp directory, were lost when the container was recreated, and could expire after 24 minutes. Other installations: set `session.save_path` and `session.gc_maxlifetime` in `php.ini`.
+- Web sessions are stored in `data/sessions` and expire after 2 hours without activity, as intended. Before, with the config cache on (the default outside development), the PHP defaults applied: sessions went to the system temp directory, in Docker they were lost when the container was recreated, and they could expire after 24 minutes. These settings now override `session.save_path` and `session.gc_maxlifetime` from `php.ini` in every process.
 
 ### Removed
 

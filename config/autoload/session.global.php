@@ -2,13 +2,6 @@
 
 declare(strict_types=1);
 
-// PHP session settings (global)
-\ini_set('session.save_path', __DIR__ . '/../../data/sessions');
-\ini_set('session.save_handler', 'files');
-\ini_set('session.gc_maxlifetime', 7200);
-\ini_set('session.gc_probability', 1);
-\ini_set('session.gc_divisor', 100);
-
 return [
     'session' => [
         'persistence'     => [

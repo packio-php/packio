@@ -9,6 +9,7 @@ use Packio\Webhook\Api\Dto\WebhookEventDto;
 use Packio\Webhook\Api\Dto\WebhookResultDto;
 use Packio\Webhook\Api\WebhookApiFacadeInterface;
 use Packio\Webhook\Application\Command\WebhookCommandService;
+use Packio\Webhook\Application\Command\WebhookInspectionResult;
 use Packio\Webhook\Application\Dto\SourceData;
 use Packio\Webhook\Application\Port\SourcePort;
 use Packio\Webhook\Application\Query\WebhookQueryService;
@@ -21,7 +22,6 @@ use Throwable;
 
 use function array_map;
 use function sprintf;
-use function str_contains;
 
 final readonly class WebhookApiFacade implements WebhookApiFacadeInterface
 {
@@ -161,12 +161,8 @@ final readonly class WebhookApiFacade implements WebhookApiFacadeInterface
             'processed'            => 202,
             'ignored'              => 202,
             'sync_schedule_failed' => 500,
-            'rejected'             => match (true) {
-                str_contains($webhookEvent->message(), 'signature'),
-                str_contains($webhookEvent->message(), 'token')          => 401,
-                str_contains($webhookEvent->message(), 'does not match') => 409,
-                default                                                  => 400,
-            },
+            // Signature failures never get here: they are answered with 401 before an event is stored.
+            'rejected'             => WebhookInspectionResult::REPOSITORY_MISMATCH === $webhookEvent->message() ? 409 : 400,
             default                => 202,
         };
 

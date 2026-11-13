@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Webhooks: the 409 answer for a payload from another repository no longer depends on the wording of the message, and the receiving endpoint no longer keeps its own list of providers. An unknown provider in the webhook URL now answers `Source not found.` (still 404).
 - REST API: `POST /organizations/{organization}/sources` answers 422 instead of 500 when the provider is unknown or `resource` is not a repository URL the provider accepts.
 - REST API: `scopes`, `permissions` and `roles` that are not lists of strings are rejected with 422; before, the invalid items were dropped silently.
 - REST API: the `admin:*` token scope is no longer accepted when a token is created. It never granted anything; use `admin`.

@@ -17,11 +17,10 @@ use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 use function array_change_key_case;
 use function array_map;
 use function implode;
-use function in_array;
 use function strlen;
 
 /**
- * Public endpoint for receiving webhooks from GitHub/GitLab.
+ * Public endpoint for receiving provider webhooks. The provider must be the one the source was added with.
  * Matches routes like /webhooks/:provider/:sourceId.
  */
 #[Post('/webhooks/:provider/:sourceId', name: 'webhooks.handle')]
@@ -40,12 +39,6 @@ final readonly class ReceiveWebhookHandler implements RequestHandlerInterface
     {
         $sourceId = (string) ($request->getAttribute('sourceId') ?? '');
         $provider = (string) ($request->getAttribute('provider') ?? '');
-        if (! in_array($provider, ['github', 'gitlab', 'gitlab_self_hosted', 'bitbucket', 'codeberg'], true)) {
-            return new JsonResponse([
-                'message' => 'Webhook provider is not supported.',
-            ], 404);
-        }
-
         if ('' === $sourceId || strlen($sourceId) > 64) {
             return new JsonResponse([
                 'message' => 'Source ID is required.',

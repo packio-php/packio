@@ -72,7 +72,7 @@ final readonly class GithubWebhookProviderHandler implements WebhookProviderHand
         }
 
         if ($repositoryUrl !== $sourceData->url) {
-            return WebhookInspectionResult::rejected('Webhook repository does not match the configured source.');
+            return WebhookInspectionResult::rejected(WebhookInspectionResult::REPOSITORY_MISMATCH);
         }
 
         return WebhookInspectionResult::processed(sprintf('Sync scheduled for %s.', $repositoryUrl));

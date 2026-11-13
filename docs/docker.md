@@ -188,9 +188,9 @@ archives and PostgreSQL data use named volumes; caches stay within each containe
 Back up the database, package archives and encryption key. `down` preserves volumes;
 `down -v` deletes them.
 
-Packio does not change PHP session settings at runtime. The image sets them in
-`.docker/php/roadrunner.ini`: files in `/app/data/sessions`, removed after 2 hours
-without activity. When running Packio outside this image, set `session.save_path`
+Packio does not change PHP session settings at runtime. The images set them in
+`.docker/php/session.ini`: files in `/app/data/sessions`, removed after 2 hours
+without activity. When running Packio outside these images, set `session.save_path`
 to a directory used only by Packio and `session.gc_maxlifetime` to at least `7200`
 in `php.ini`; with the PHP default of `1440` a user can be signed out after
 24 minutes without activity.

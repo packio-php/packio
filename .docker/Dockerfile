@@ -19,6 +19,7 @@ RUN apk add --no-cache php-frankenphp-8.5-xmlwriter
 ARG USER=www-data
 
 COPY .docker/Caddyfile /etc/caddy/Caddyfile
+COPY .docker/php/session.ini /etc/php/conf.d/zz-session.ini
 COPY .docker/entrypoint.sh /usr/local/bin/app-entrypoint.sh
 COPY .docker/healthcheck-app.sh /usr/local/bin/app-healthcheck.sh
 COPY .docker/run-migrations.sh /usr/local/bin/run-migrations.sh

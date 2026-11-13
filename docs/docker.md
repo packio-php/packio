@@ -188,6 +188,13 @@ archives and PostgreSQL data use named volumes; caches stay within each containe
 Back up the database, package archives and encryption key. `down` preserves volumes;
 `down -v` deletes them.
 
+Packio does not change PHP session settings at runtime. The images set them in
+`.docker/php/session.ini`: files in `/app/data/sessions`, removed after 2 hours
+without activity. When running Packio outside these images, set `session.save_path`
+to a directory used only by Packio and `session.gc_maxlifetime` to at least `7200`
+in `php.ini`; with the PHP default of `1440` a user can be signed out after
+24 minutes without activity.
+
 When migrating from the previous production Compose, stop its old `worker`,
 `worker-cleanup`, `email-verification-cleanup`, `password-reset-cleanup` and
 `source-oauth-refresh` containers using the previous file before starting this

@@ -105,6 +105,7 @@ COPY .docker/entrypoint-roadrunner.sh /usr/local/bin/roadrunner-entrypoint.sh
 COPY .docker/healthcheck-roadrunner.sh /usr/local/bin/roadrunner-healthcheck.sh
 COPY .docker/run-migrations.sh /usr/local/bin/run-migrations.sh
 COPY .docker/php/roadrunner.ini /usr/local/etc/php/conf.d/zz-roadrunner.ini
+COPY .docker/php/session.ini /usr/local/etc/php/conf.d/zz-session.ini
 
 RUN chmod +x /usr/local/bin/roadrunner-entrypoint.sh /usr/local/bin/roadrunner-healthcheck.sh /usr/local/bin/run-migrations.sh
 

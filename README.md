@@ -30,7 +30,7 @@ Try Packio on your own machine with the development stack. It serves plain HTTP 
    until curl -fsS http://localhost:8080/health; do sleep 2; done
    ```
 
-   One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start takes 2-3 minutes; later starts take a few seconds. The workers can restart for up to a minute while `app` runs migrations; they recover on their own.
+   One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start takes 2-3 minutes; later starts take a few seconds. If the `until` loop does not finish, press Ctrl-C and check `docker compose logs app`. The workers can restart for up to a minute while `app` runs migrations; they recover on their own.
 3. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
 4. Create an organization, for example `acme`.
 5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
@@ -39,7 +39,7 @@ Try Packio on your own machine with the development stack. It serves plain HTTP 
 
    ```bash
    mkdir demo && cd demo
-   composer() { docker run --rm -it --user "$(id -u):$(id -g)" --network host -v "$PWD":/app -w /app composer:2.8 "$@"; }
+   composer() { docker run --rm $([ -t 0 ] && echo -it) --user "$(id -u):$(id -g)" --network host -v "$PWD":/app -w /app composer:2.8 "$@"; }
    composer init --no-interaction --name acme/demo
    composer config secure-http false   # only for this local trial: the registry is plain HTTP
    composer config --auth http-basic.acme.packio.localhost:8080 token '<registry-token>'

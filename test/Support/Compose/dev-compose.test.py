@@ -3,14 +3,15 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import subprocess
 import tempfile
 import time
 import unittest
 
 ROOT = Path(__file__).resolve().parents[3]
-DOCKER = subprocess.run(["docker", "compose", "version"], capture_output=True).returncode == 0 \
-    if subprocess.run(["which", "docker"], capture_output=True).returncode == 0 else False
+DOCKER = shutil.which("docker") is not None \
+    and subprocess.run(["docker", "compose", "version"], capture_output=True).returncode == 0
 
 
 class ScriptTest(unittest.TestCase):
@@ -69,7 +70,7 @@ class ScriptTest(unittest.TestCase):
 
     def test_php_setup_reinstalls_when_lock_is_newer(self):
         self.php_up_to_date(lock_age=10, installed_age=100)
-        self.run_script("setup-dev-php.sh")
+        self.assertEqual(self.run_script("setup-dev-php.sh").returncode, 0)
         self.assertIn("install --no-interaction --no-progress", self.logged())
 
     def test_node_setup_installs_on_fresh_checkout(self):
@@ -89,7 +90,7 @@ class ScriptTest(unittest.TestCase):
         self.touch("package-lock.json", 10)
         self.touch("node_modules/.package-lock.json", 100)
         self.touch("data/ssr/ssr.mjs", 0)
-        self.run_script("setup-dev-node.sh")
+        self.assertEqual(self.run_script("setup-dev-node.sh").returncode, 0)
         self.assertIn("ci --no-audit --no-fund", self.logged())
         self.assertNotIn("build:ssr", self.logged())
 

@@ -9,13 +9,6 @@ use Laminas\ConfigAggregator\PhpFileProvider;
 
 require __DIR__ . '/env.php';
 
-// PHP session settings. They are set here and not in config/autoload: a file there is not executed when the merged config comes from its cache.
-\ini_set('session.save_path', __DIR__ . '/../data/sessions');
-\ini_set('session.save_handler', 'files');
-\ini_set('session.gc_maxlifetime', 7200);
-\ini_set('session.gc_probability', 1);
-\ini_set('session.gc_divisor', 100);
-
 // To enable or disable caching, set the `ConfigAggregator::ENABLE_CACHE` boolean in
 // `config/autoload/local.php`.
 $cacheConfig = [

@@ -142,6 +142,9 @@
         "sort-packages": true
     },
     "extra": {
+        "aws/aws-sdk-php": [
+            "S3"
+        ],
         "bamarni-bin": {
             "bin-links": false,
             "forward-command": true,
@@ -201,6 +204,7 @@
         ],
         "openapi-generate": "vendor/bin/openapi src/Module/Rest/src -o public/openapi.json --format json",
         "phpstan": "php tools/phpstan/vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=2G",
+        "prune-aws-sdk": "Aws\\Script\\Composer\\Composer::removeUnusedServices",
         "rector": "php tools/rector/vendor/bin/rector process --dry-run --memory-limit=2G",
         "rector-fix": "php tools/rector/vendor/bin/rector process --memory-limit=2G",
         "refresh-route-cache": "php bin/refresh-route-cache.php",

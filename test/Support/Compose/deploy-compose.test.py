@@ -66,6 +66,19 @@ class DeployComposeTest(unittest.TestCase):
             self.assertNotEqual(result.returncode, 0, name)
             self.assertIn(name, result.stderr)
 
+    def test_domain_is_required_even_when_app_url_is_set(self):
+        result = self.compose(SERVER, {**SERVER_ENV, "PACKIO_DOMAIN": "", "APP_URL": "https://x.example.com"}, "--quiet")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("PACKIO_DOMAIN", result.stderr)
+
+    def test_compose_file_is_read_from_dotenv(self):
+        shutil.copy(self.dir / ".env.local.example", self.dir / ".env")
+        env = {k: v for k, v in os.environ.items() if not k.startswith(("PACKIO_", "MAIL_", "COMPOSE_"))}
+        result = subprocess.run(["docker", "compose", "config", "--services"], cwd=self.dir, env=env,
+                                capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(set(result.stdout.split()), {"app", "workers", "postgres", "mailpit"})
+
     def test_ssr_is_off_by_default(self):
         services = self.model(SERVER, SERVER_ENV)
         self.assertEqual(services["app"]["environment"]["INERTIA_SSR_ENABLED"], "false")

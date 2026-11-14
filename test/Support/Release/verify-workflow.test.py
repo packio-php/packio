@@ -89,6 +89,7 @@ class VerifyWorkflowTests(unittest.TestCase):
         self.assertNotIn("imagetools inspect", job)
         self.assertIn("lookup failed (status $code); cannot tell whether it is published", job)
         self.assertIn("token request failed (status $code)", job)
+        self.assertIn("token response had no token; cannot tell whether $2 is published", job)
         self.assertNotIn("2>/dev/null", job, "lookup errors must stay visible")
         self.assertIn("concurrency:\n      group: publish-${{ github.ref }}\n      cancel-in-progress: false\n", job)
 

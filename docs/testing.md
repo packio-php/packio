@@ -445,7 +445,7 @@ Commit the root lock and all six `tools/*/composer.lock` files when preserving r
 
 `composer test:runner` includes the bootstrap regression and the PostgreSQL runner contract. The bootstrap selects the repository root even when invoked from another working directory. Integration configuration loads the actual ConfigAggregator inside its own temporary directory, preserving the application cache; per-test artifact paths and shutdown cleanup belong only to the test run. PHPUnit stores result caches under ignored `test/data/cache/phpunit`. Tests do not remove runtime `data/cache/config-cache.php`.
 
-`composer check` includes formatter coverage for `src`, `test`, `config`, `bin` and migrations, static and architecture checks, runner tests and the base suites. `composer test:concurrency` runs separately. `npm run check` executes the frontend unit/component suite once through `test:front:ci`, producing `data/coverage/vitest.junit.xml`, then SSR, browser, format and build checks. Run `python3 test/Support/Docs/links.test.py` to check local documentation destinations; it excludes anchors and external URLs. `python3 test/Support/Compose/dev-compose.test.py` checks the dev `compose.yaml` setup services; CI runs both after `composer check` and `composer openapi-check`.
+`composer check` includes formatter coverage for `src`, `test`, `config`, `bin` and migrations, static and architecture checks, runner tests and the base suites. `composer test:concurrency` runs separately. `npm run check` executes the frontend unit/component suite once through `test:front:ci`, producing `data/coverage/vitest.junit.xml`, then SSR, browser, format and build checks. Run `python3 test/Support/Docs/links.test.py` to check local documentation destinations; it excludes anchors and external URLs. `python3 test/Support/Compose/dev-compose.test.py` checks the dev `compose.yaml` setup services; `python3 test/Support/Release/verify-workflow.test.py` checks the runtime job of `verify.yml` (its trigger, image build labels and the notices and product steps); CI runs all three after `composer check` and `composer openapi-check`.
 
 ## Product fixture from final images
 
@@ -509,10 +509,11 @@ updating the supplement and the checker's version/hash-bound inventory together.
 
 `third-party-sources.json` lists the exact upstream source for PHP 8.5.11
 (including bundled libmbfl), for protobuf and for every installed operating-system
-source package, each with its size and SHA-256. The images do not ship these
-sources; the file is the pointer to them.
+source package, each with its URL, size and SHA-256. The images do not ship these
+sources; the file is the pointer to them. Each entry's `path` is the conventional
+file name of the artifact, not a shipped file.
 
-The PHP archive contains generated `configure`, all PHP/mbstring/libmbfl source
+The upstream PHP tarball listed in `third-party-sources.json` contains generated `configure`, all PHP/mbstring/libmbfl source
 and build definitions. To rebuild with a modified libmbfl, extract the archive
 and edit `ext/mbstring/libmbfl/`. Use the build dependencies, configure options,
 `make` and `make install` commands in the recipe's `php-build` stage. In a

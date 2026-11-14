@@ -229,7 +229,6 @@ def check_app(image, sha, *, dirty_snapshot=False):
     script = (
         "test \"$(id -u)\" != 0 && test -f vendor/autoload.php && test -f public/build/.vite/manifest.json "
         "&& test -f public/api-doc/assets/swagger-ui.css "
-        "&& test -f data/ssr/ssr.mjs "
         "&& test -f data/db/cycle/seeds/RuntimeSettingsCatalogSeed.php "
         "&& test -d data/db/cycle/migrations "
         "&& php -r 'require \"vendor/autoload.php\"; exit(class_exists(\"Packio\\\\Application\\\\Release\\\\AppReleaseVersion\") ? 0 : 1);' "
@@ -361,13 +360,8 @@ def capture_ssr_scripts(image):
 
 
 def check_ssr_parity(images):
-    trees = {name: capture_ssr_tree(image) for name, image in images.items()}
-    anchor = trees["app"]
-    for name in ("worker", "ssr"):
-        if trees[name] != anchor:
-            differing = sorted(path for path in set(anchor) | set(trees[name])
-                               if anchor.get(path) != trees[name].get(path))
-            raise AssertionError(f"SSR tree in {name} differs from clean app: {', '.join(differing[:10])}")
+    # Only the SSR image carries the bundle; FORBIDDEN_BY_TARGET keeps it out of app and worker.
+    trees = {"ssr": capture_ssr_tree(images["ssr"])}
 
     scripts = {name: capture_ssr_scripts(images[name]) for name in ("worker", "ssr")}
     if scripts["worker"] != scripts["ssr"]:
@@ -377,7 +371,7 @@ def check_ssr_parity(images):
     return {
         "result": "passed",
         "tree_sha256": manifest_digest(trees["ssr"]),
-        "tree_digests": {name: manifest_digest(tree) for name, tree in trees.items()},
+        "tree_digests": {"ssr": manifest_digest(trees["ssr"])},
         "script_sha256": manifest_digest(scripts["ssr"]),
         "script_digests": {name: manifest_digest(value) for name, value in scripts.items()},
     }

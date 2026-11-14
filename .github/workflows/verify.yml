@@ -326,6 +326,7 @@ jobs:
             echo "::group::$files"
             export COMPOSE_FILE="$files"
             if ! docker compose up -d --pull never --wait --wait-timeout 300; then
+              echo "::endgroup::"
               docker compose logs
               exit 1
             fi
@@ -343,7 +344,9 @@ jobs:
               *compose.ssr.yaml)
                 command grep -Eiq '<input\b[^>]*type="email"' login.html || { echo "login page was not server-rendered"; ok=false; } ;;
             esac
+            command grep -qi '^set-cookie: PACKIO_SESSID=' headers.txt || { echo "no session cookie was set"; ok=false; }
             if [ "$ok" != true ]; then
+              echo "::endgroup::"
               docker compose logs
               exit 1
             fi

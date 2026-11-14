@@ -71,7 +71,9 @@ RUN set -eux; \
     make install; \
     install -D -m 644 LICENSE /usr/local/lib/php/doc/protobuf/LICENSE; \
     install -D -m 644 third_party/utf8_range/LICENSE /usr/local/lib/php/doc/protobuf/third_party/utf8_range/LICENSE; \
-    echo "extension=protobuf" > "/usr/local/etc/php/conf.d/docker-php-ext-protobuf.ini"
+    echo "extension=protobuf" > "/usr/local/etc/php/conf.d/docker-php-ext-protobuf.ini"; \
+    strip --strip-all /usr/local/bin/php; \
+    find /usr/local/lib/php/extensions -name '*.so' -exec strip --strip-unneeded {} +
 
 FROM debian:bookworm-slim AS app-runtime
 
@@ -99,7 +101,10 @@ RUN set -eux; \
     mkdir -p /app/data/cache/proxies /app/data/rate-limits /app/data/sessions /app/data/db/cycle/migrations /app/data/db/cycle/seeds; \
     chown -R "${APP_USER}:${APP_USER}" /app
 
-COPY --from=php-build /usr/local /usr/local
+COPY --from=php-build /usr/local/bin/php /usr/local/bin/php
+COPY --from=php-build /usr/local/lib/php/extensions /usr/local/lib/php/extensions
+COPY --from=php-build /usr/local/lib/php/doc /usr/local/lib/php/doc
+COPY --from=php-build /usr/local/etc /usr/local/etc
 COPY --from=roadrunner /usr/bin/rr /usr/bin/rr
 COPY .docker/entrypoint-roadrunner.sh /usr/local/bin/roadrunner-entrypoint.sh
 COPY .docker/healthcheck-roadrunner.sh /usr/local/bin/roadrunner-healthcheck.sh
@@ -128,7 +133,10 @@ RUN set -eux; \
     apt-get update; \
     apt-get install -y --no-install-recommends git unzip; \
     rm -rf /var/lib/apt/lists/*; \
-    composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts --optimize-autoloader
+    composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts --optimize-autoloader; \
+    composer run-script prune-aws-sdk --no-interaction; \
+    test ! -d vendor/aws/aws-sdk-php/src/Ec2; \
+    composer dump-autoload --no-dev --optimize --no-scripts
 
 FROM node:24.21.0-bookworm-slim AS frontend-build
 
@@ -157,7 +165,13 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/LICENSE /app/THI
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/vendor /app/vendor
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.json /app/composer.json
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.lock /app/composer.lock
-COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/bin /app/bin
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} \
+    /app/bin/clear-config-cache.php \
+    /app/bin/generate-release-metadata.php \
+    /app/bin/healthcheck-roadrunner-services.php \
+    /app/bin/readiness-probe.php \
+    /app/bin/refresh-route-cache.php \
+    /app/bin/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/config /app/config
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/src /app/src
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/templates /app/templates
@@ -171,7 +185,6 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/db/cycle/se
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/build/release.json /app/data/build/release.json
 COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/build /app/public/build
 COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/api-doc/assets /app/public/api-doc/assets
-COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/data/ssr /app/data/ssr
 
 RUN set -eux; \
     sed -i 's/opcache.validate_timestamps = 1/opcache.validate_timestamps = 0/' /usr/local/etc/php/conf.d/zz-roadrunner.ini; \
@@ -191,11 +204,14 @@ COPY --chmod=755 .docker/entrypoint-*.sh .docker/healthcheck-*.sh .docker/mainte
 USER ${APP_USER}
 ENTRYPOINT ["/usr/local/bin/entrypoint-roadrunner-services.sh"]
 
-FROM node:24.21.0-bookworm-slim AS prod-ssr
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS node-runtime
+
+FROM debian:bookworm-slim AS prod-ssr
 WORKDIR /app
-RUN apt-get update \
-    && apt-get install -y --no-install-recommends curl \
-    && rm -rf /var/lib/apt/lists/*
+RUN groupadd --gid 1000 node \
+    && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
+COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-runtime /usr/local/LICENSE /usr/local/LICENSE
 COPY --from=release-source --chown=node:node /app/LICENSE /app/THIRD_PARTY_NOTICES.md /app/third-party-sources.json /app/
 COPY --from=release-source --chown=node:node /app/public/fonts/LICENSE-JetBrainsMono.txt /app/public/fonts/LICENSE-PlusJakartaSans.txt /app/public/fonts/
 COPY --from=frontend-build --chown=node:node /app/public/api-doc/assets/LICENSE /app/public/api-doc/assets/NOTICE /app/public/api-doc/assets/THIRD_PARTY_NOTICES.md /app/public/api-doc/assets/

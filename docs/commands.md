@@ -214,6 +214,7 @@ PHPUnit Composer scripts provision and validate the isolated PostgreSQL test dat
 | `composer refresh-route-cache` | Rebuilds the route cache.                                                                            |
 | `composer clear-application-cache` | Clears config and route caches.                                                                  |
 | `composer mezzio`              | Runs Laminas CLI with ANSI output. Pass arguments after `--`, for example `composer mezzio -- list`. |
+| `composer prune-aws-sdk`       | Image build only: removes unused AWS SDK services from `vendor/`. Restore a development checkout with `composer install`. |
 
 ### Lifecycle hooks
 

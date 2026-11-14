@@ -358,7 +358,9 @@ python3 test/Support/Release/image.test.py --report /tmp/packio-images.json
 ```
 
 The local build mode uses unique tags and a disposable tracked-source context,
-inserts harmless canaries, checks every exported layer, verifies dependencies and
+inserts harmless canaries, checks every exported layer (each target has its own forbidden-path list and an
+uncompressed size ceiling, `MAX_LAYER_BYTES` in `test/Support/Release/image.test.py`;
+a ceiling is raised only deliberately, in a separate change), verifies dependencies and
 assets, and starts the final images without source mounts. Keep the reported
 immutable image IDs to verify the same artifacts again without building or pulling:
 
@@ -375,9 +377,9 @@ Set the three shell variables to the image IDs in the build report. Verification
 resolves supplied local refs before checking, rejects missing or mismatched app/worker
 release metadata and dirty builds, and reports layer/startup results. SSR source identity is verified against the BuildKit provenance in its exported OCI
 image index: the attestation subject must match the image manifest and its source
-revision must match the candidate SHA. The complete SSR asset tree must also match
-both clean app and worker copies, and the SSR startup/health scripts must match the
-clean worker copies. Dirty metadata anchors are rejected before these comparisons.
+revision must match the candidate SHA. The SSR bundle ships only in the SSR image,
+which reports its tree by digest; the app and worker images must not contain
+`/app/data/ssr/`. The SSR startup/health scripts must match the clean worker copies. Dirty metadata anchors are rejected before these comparisons.
 Missing or mismatched provenance or packaged SSR contents fails verification. Build with BuildKit and a Docker containerd image store that preserves
 attestations; prefetch `postgres:17-alpine` before verify-only startup checks.
 Missing Docker or Compose fails the check. Preserve the export and report together;

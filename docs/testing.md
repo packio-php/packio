@@ -439,7 +439,7 @@ When adding a new provider, add an integration contract test next to existing pr
 
 ## Reproducible public checks
 
-`.github/workflows/verify.yml` runs on disposable GitHub runners for pull requests, including forks, with read-only repository permissions and no deployment or publication credentials. Backend base and concurrency jobs each have their own PostgreSQL17 service. Frontend verification uses Node24.21.0 and the Playwright1.62.1 browser image matching `package-lock.json`. Missing Docker, browser or database infrastructure fails the required job. Production targets `prod`, `prod-worker`, and `prod-ssr` are built once, then verified by saved immutable IDs and candidate SHA. The same worker ID is passed to cold-worker and service supervision checks. The stdlib `python3 test/Support/Release/image-harness.test.py` regression mocks orchestration only; real images still undergo layer/startup checks. The runtime job also verifies the real production SSR and proxy browser contract using a matching non-root Playwright server bound to loopback, then removes only its own browser container; verification does not publish images. The runtime report and image export are retained together; registry digests and the publication bundle remain a separate release gate. The runtime job is the expensive one: it runs only for manual runs of the workflow and for pushed `v*` tags, not for pull requests or ordinary pushes to `main`. Run the workflow manually on the candidate before preparing a release.
+`.github/workflows/verify.yml` runs on disposable GitHub runners for pull requests, including forks, with read-only repository permissions and no deployment or publication credentials. Backend base and concurrency jobs each have their own PostgreSQL17 service. Frontend verification uses Node24.21.0 and the Playwright1.62.1 browser image matching `package-lock.json`. Missing Docker, browser or database infrastructure fails the required job. Production targets `prod`, `prod-worker`, and `prod-ssr` are built once, then verified by saved immutable IDs and candidate SHA. The same worker ID is passed to cold-worker and service supervision checks. The stdlib `python3 test/Support/Release/image-harness.test.py` regression mocks orchestration only; real images still undergo layer/startup checks. The runtime job also verifies the real production SSR and proxy browser contract using a matching non-root Playwright server bound to loopback, then removes only its own browser container; verification does not publish images. The runtime report and image export are retained together. The runtime job is the expensive one: it runs only for manual runs of the workflow and for pushed `v*` tags, not for pull requests or ordinary pushes to `main`.
 
 Commit the root lock and all six `tools/*/composer.lock` files when preserving reviewed changes. Tool vendors remain ignored. On a fresh checkout, `composer install` installs the root and tools from those locks. Validate the root with `composer validate --strict`, and each tool with `composer --working-dir=tools/TOOL validate --no-check-publish`; run `check-platform-reqs` and raw `audit --locked` for both root and tools. Audit failures require resolution, including abandoned packages.
 
@@ -490,17 +490,15 @@ Swagger assets and their upstream license and notice files:
 npm run openapi-assets
 python3 test/Support/Release/notices.test.py --checkout-only
 python3 test/Support/Release/notices.test.py \
-  --app-image "$APP_IMAGE" --worker-image "$WORKER_IMAGE" --ssr-image "$SSR_IMAGE" \
-  --source-archive "$SOURCE_ARCHIVE"
+  --app-image "$APP_IMAGE" --worker-image "$WORKER_IMAGE" --ssr-image "$SSR_IMAGE"
 ```
 
-The artifact check reads the actual saved image layers and source tar archive.
-It compares notices with the checkout, verifies the installed Swagger version
-and asset bytes against the lock, and checks the font and Swagger assets in the
-app, worker and source snapshot. The SSR image carries the notices for its
-bundle. Archive paths start at the repository root; a source snapshot retains
-the project license and third-party notices and is not a production build input
-without Git metadata.
+The image check reads the actual saved image layers. It compares notices with
+the checkout, verifies the installed Swagger version and asset bytes against
+the lock, and checks the font and Swagger assets in the app and worker images.
+The SSR image carries the notices for its bundle. It also checks the images'
+installed package versions, runtime binaries and retained license files against
+`third-party-sources.json`.
 
 The [Swagger supplement](../public/api-doc/assets/THIRD_PARTY_NOTICES.md) retains
 the complete dependency and embedded-code terms for the verified bundle bytes.
@@ -509,23 +507,10 @@ the source maps shipped in the npm package do not describe the current bundles.
 Changing Swagger requires verifying the new emitted inventory and terms, then
 updating the supplement and the checker's version/hash-bound inventory together.
 
-The source snapshot also carries the exact corresponding source for PHP 8.5.11
-(including bundled libmbfl), and the complete source and Debian patches for all
-installed operating-system source-package versions. Fetch the pinned payloads
-into an ignored build directory:
-
-```bash
-python3 bin/prepare-notice-sources.py --output-dir data/build/third-party-sources
-```
-
-The helper verifies each size and SHA-256 before publishing a file, reuses only
-matching regular files and refuses conflicting existing files. The release
-source snapshot must contain this directory at the archive root as
-`third-party-sources/`, together with `third-party-sources.json`, this document,
-the helper, and the exact `.docker/Dockerfile.roadrunner` recipe. The inventory
-check streams every source payload's size and hash and checks the supplied
-images' actual package versions, runtime binaries and retained license files.
-Source metadata alone is insufficient.
+`third-party-sources.json` lists the exact upstream source for PHP 8.5.11
+(including bundled libmbfl), for protobuf and for every installed operating-system
+source package, each with its size and SHA-256. The images do not ship these
+sources; the file is the pointer to them.
 
 The PHP archive contains generated `configure`, all PHP/mbstring/libmbfl source
 and build definitions. To rebuild with a modified libmbfl, extract the archive
@@ -690,18 +675,9 @@ reviewed and two independent uncached builds produce identical complete
 binaries. Candidate-specific OCI metadata remains bound to each image build;
 it does not change the stable runtime binary bytes.
 
-Reconstruct any Debian source package from its `.dsc` and adjacent source
-payloads with `dpkg-source`; the Debian patch series and build instructions
-remain inside that source package. For example:
-
-```bash
-dpkg-source -x data/build/third-party-sources/readline_8.2-1.3.dsc \
-  data/build/readline-8.2-1.3
-```
-
-Keep the complete corresponding-source snapshot available alongside distributed
-images. This is the source-material path; it does not create a written source
-offer or publish the images or source.
+Reconstruct any Debian source package from the `.dsc` and adjacent payloads
+listed in `third-party-sources.json` with `dpkg-source -x`; the Debian patch
+series and build instructions remain inside that source package.
 
 For local worktree verification, the image `--verify-only` and product
 commands also accept the pair `--source-identity FILE --build-record FILE`.

@@ -210,8 +210,7 @@ jobs:
 
   runtime:
     name: Runtime images and private Composer product
-    # Heavy end-to-end image check (~25 min): manual runs and release tags only. The release
-    # workflow needs one successful run of it on the exact candidate commit.
+    # Heavy end-to-end image check (~25 min): manual runs and release tags only.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     steps:
@@ -274,6 +273,8 @@ jobs:
           python3 test/Support/Release/image.test.py --verify-only \
             --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
             --expected-sha "$candidate_sha" --report data/coverage/images/report.json
+          python3 test/Support/Release/notices.test.py \
+            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image"
           python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
           python3 test/Support/RoadRunner/services.test.py "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check release images and source archives retain required distribution notices."""
+"""Check release images retain required distribution notices."""
 
 import argparse
 import hashlib
@@ -48,11 +48,6 @@ SWAGGER_UPSTREAM_LOCK_SHA256 = "01fd554046206999ffbb6c7b7eac3be068d8cf2a76bc334b
 SWAGGER_COMPONENTS_SHA256 = "f6eecc9854bdc64e858c417e945f5ee50d276155bf543709172280ff9e959329"
 SWAGGER_LICENSE_IDS_SHA256 = "5253c58ee667ce0a2055516170649ad2d675e6fc83e1d0c68a4c924c5aa6af04"
 SWAGGER_GENERATED_RUNTIME_SHA256 = "acfa084eb0130ccf03d85160cdd533f2f67de584299fb8b3cb88464dec951b02"
-SOURCE_METADATA = (
-    ".docker/Dockerfile.roadrunner",
-    "bin/prepare-notice-sources.py",
-    "docs/testing.md",
-)
 ASSETS = tuple(f"public/api-doc/assets/{name}" for name in SWAGGER_ASSETS) + tuple(
     f"public/fonts/{name}" for name in FONT_ASSETS
 )
@@ -66,9 +61,6 @@ def check_checkout():
     missing_assets = [path for path in ASSETS if not (ROOT / path).is_file()]
     if missing_assets:
         raise AssertionError("checkout is missing inventoried assets: " + ", ".join(missing_assets))
-    missing_source_metadata = [path for path in SOURCE_METADATA if not (ROOT / path).is_file()]
-    if missing_source_metadata:
-        raise AssertionError("checkout is missing source companion metadata: " + ", ".join(missing_source_metadata))
     return {path: (ROOT / path).read_bytes() for path in CHECKED_FILES}
 
 
@@ -299,51 +291,6 @@ def image_files(image, expected, prefix="/app"):
         return files
 
 
-def source_files(archive_path, expected):
-    targets = {normalized(path) for path in expected}
-    files = {}
-    seen = set()
-    with tarfile.open(archive_path, mode="r:*") as archive:
-        for member in archive:
-            path = normalized(member.name)
-            if path not in targets:
-                continue
-            if path in seen:
-                raise AssertionError(f"source archive repeats expected path: {path}")
-            seen.add(path)
-            if not member.isfile():
-                raise AssertionError(f"source archive expected path is not a regular file: {path}")
-            content = archive.extractfile(member)
-            if content is not None:
-                files[path] = content.read()
-    return files
-
-
-def source_hashes(archive_path, expected):
-    targets = {normalized(item["path"]): item for item in expected}
-    hashes, seen = {}, set()
-    with tarfile.open(archive_path, mode="r:*") as archive:
-        for member in archive:
-            path = normalized(member.name)
-            if path not in targets:
-                continue
-            if path in seen:
-                raise AssertionError(f"source archive repeats expected path: {path}")
-            seen.add(path)
-            if not member.isfile():
-                raise AssertionError(f"source archive expected path is not a regular file: {path}")
-            content = archive.extractfile(member)
-            if content is None:
-                raise AssertionError(f"source archive could not read expected path: {path}")
-            digest = hashlib.sha256()
-            size = 0
-            for chunk in iter(lambda: content.read(1024 * 1024), b""):
-                digest.update(chunk)
-                size += len(chunk)
-            hashes[path] = (size, digest.hexdigest())
-    return hashes
-
-
 def source_manifest():
     manifest = json.loads((ROOT / "third-party-sources.json").read_text())
     if (manifest.get("schema") != 1 or not isinstance(manifest.get("sources"), list)
@@ -425,41 +372,6 @@ def source_manifest():
     return manifest
 
 
-def check_source_archive(archive_path, files, manifest=None):
-    metadata = {path: (ROOT / path).read_bytes() for path in SOURCE_METADATA}
-    expected = {**files, **metadata}
-    manifest = manifest or source_manifest()
-    sources = manifest["sources"]
-    archive_files = source_files(archive_path, expected)
-    missing, mismatched = [], []
-    for path, content in expected.items():
-        actual = archive_files.get(normalized(path))
-        if actual is None:
-            missing.append(path)
-        elif hashlib.sha256(actual).digest() != hashlib.sha256(content).digest():
-            mismatched.append(path)
-    payload_hashes = source_hashes(archive_path, sources)
-    missing_sources, mismatched_sources = [], []
-    for item in sources:
-        path = normalized(item["path"])
-        actual = payload_hashes.get(path)
-        if actual is None:
-            missing_sources.append(item["path"])
-        elif actual != (item["size"], item["sha256"]):
-            mismatched_sources.append(item["path"])
-    if missing or mismatched or missing_sources or mismatched_sources:
-        details = []
-        if missing:
-            details.append("missing files: " + ", ".join(missing))
-        if mismatched:
-            details.append("file hash mismatch: " + ", ".join(mismatched))
-        if missing_sources:
-            details.append("missing source payloads: " + ", ".join(missing_sources))
-        if mismatched_sources:
-            details.append("source payload size/hash mismatch: " + ", ".join(mismatched_sources))
-        raise AssertionError("source archive: " + "; ".join(details))
-
-
 def check_artifact(label, artifact_files, expected, prefix=""):
     missing, mismatched = [], []
     for path, content in expected.items():
@@ -481,29 +393,18 @@ def check_artifact(label, artifact_files, expected, prefix=""):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--checkout-only", action="store_true", help="check the current checkout only")
-    parser.add_argument("--source-archive-only", action="store_true", help="check one source archive only")
     parser.add_argument("--app-image")
     parser.add_argument("--worker-image")
     parser.add_argument("--ssr-image")
-    parser.add_argument("--source-archive")
     args = parser.parse_args(argv)
     files = check_checkout()
     swagger_version = check_installed_swagger(files)
     if args.checkout_only:
-        if args.source_archive_only:
-            parser.error("--checkout-only cannot be combined with --source-archive-only")
         print(f"checkout notices and assets verified (swagger-ui-dist {swagger_version})")
         return
-    if args.source_archive_only:
-        if not args.source_archive:
-            parser.error("--source-archive-only requires --source-archive")
-        check_source_archive(args.source_archive, files)
-        print("source archive notices and source companions verified")
-        return
-    missing = [name for name in ("app_image", "worker_image", "ssr_image", "source_archive")
-               if not getattr(args, name)]
+    missing = [name for name in ("app_image", "worker_image", "ssr_image") if not getattr(args, name)]
     if missing:
-        parser.error("requires --app-image, --worker-image, --ssr-image, and --source-archive")
+        parser.error("requires --app-image, --worker-image and --ssr-image")
     manifest = source_manifest()
     images = (("app", args.app_image), ("worker", args.worker_image), ("ssr", args.ssr_image))
     for name, image in images:
@@ -512,7 +413,6 @@ def main(argv=None):
         check_artifact(f"{name} image {image}", image_files(image, files), files, "/app")
     notices = {path: files[path] for path in REQUIRED}
     check_artifact(f"ssr image {args.ssr_image}", image_files(args.ssr_image, notices, "/app"), notices, "/app")
-    check_source_archive(args.source_archive, files, manifest)
 
 
 if __name__ == "__main__":

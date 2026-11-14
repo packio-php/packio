@@ -42,8 +42,8 @@ FORBIDDEN_BY_TARGET = {
     "prod-ssr": ("/usr/local/lib/node_modules/", "/opt/"),
 }
 # Uncompressed layer bytes, all layers including the base image.
-MAX_LAYER_BYTES = {"prod": 430 * 1024 * 1024, "prod-worker": 530 * 1024 * 1024,
-                   "prod-ssr": 165 * 1024 * 1024}
+MAX_LAYER_BYTES = {"prod": 300 * 1024 * 1024, "prod-worker": 395 * 1024 * 1024,
+                   "prod-ssr": 220 * 1024 * 1024}
 
 
 def run(*args, cwd=None, output=None, binary=False):

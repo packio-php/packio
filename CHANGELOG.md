@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Verified production images are published to GitHub Container Registry on release tags.
+- `deploy/`: Compose files and `.env` examples that start Packio from the published images, with an optional Caddy overlay for automatic HTTPS and a local trial variant. See `docs/self-hosting.md`.
 
 ### Removed
 

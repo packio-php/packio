@@ -135,6 +135,7 @@ RUN set -eux; \
     rm -rf /var/lib/apt/lists/*; \
     composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts --optimize-autoloader; \
     composer run-script prune-aws-sdk --no-interaction; \
+    test ! -d vendor/aws/aws-sdk-php/src/Ec2; \
     composer dump-autoload --no-dev --optimize --no-scripts
 
 FROM node:24.21.0-bookworm-slim AS frontend-build

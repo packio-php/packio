@@ -25,5 +25,16 @@ expect refs/tags/v0.3 '' 1
 expect refs/tags/0.3.1 '' 1
 expect refs/heads/main '' 1
 expect '' '' 1
+expect refs/tags/v1.2.3.4 '' 1
+expect refs/tags/vfoo '' 1
+expect 'refs/tags/v1.2.3 ' '' 1
+expect refs/tags/v1.2.3x '' 1
+expect xrefs/tags/v1.2.3 '' 1
+expect 'refs/tags/v1.2.3
+publish=true' '' 1
+expect refs/tags/v01.2.3 '' 1
+expect refs/tags/v1.02.3 '' 1
+expect refs/tags/v1.2.03 '' 1
+expect -n '' 1
 
 echo 'image-tags: all expectations passed'

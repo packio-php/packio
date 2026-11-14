@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Regression tests for the runtime job of .github/workflows/verify.yml."""
+"""Regression tests for the runtime and publish jobs of .github/workflows/verify.yml."""
 import json
 import os
 from pathlib import Path
@@ -76,6 +76,17 @@ class VerifyWorkflowTests(unittest.TestCase):
             self.assertIn(f"ghcr.io/packio-php/{name}", job)
         self.assertIn(".github/scripts/image-tags.sh", job)
         self.assertIn("test/Support/Release/image-tags.test.sh", workflow)
+        self.assertNotIn("build-push-action", job)
+        self.assertNotRegex(job, r"docker/bake|buildx bake")
+        for run_body in re.findall(r"\n        run: \|\n((?:          .*\n|\n)+)", job):
+            self.assertNotIn("${{", run_body, "values reach scripts through env:")
+        steps = job.split("\n      - ")[1:]
+        self.assertEqual(5, len(steps))
+        for step in steps[2:]:
+            self.assertIn("if: steps.tags.outputs.publish == 'true'", step)
+        self.assertIn("already published with different content; refusing to replace it", job)
+        self.assertIn("org.opencontainers.image.version", job)
+        self.assertIn("concurrency:\n      group: publish-${{ github.ref }}\n      cancel-in-progress: false\n", job)
 
     def test_runtime_workflow_builds_all_images_with_native_candidate_labels(self):
         script = verify_workflow_step_run("Require Docker and verify production images, layers and startup")

@@ -319,6 +319,9 @@ jobs:
     needs: [secret-scan, backend, frontend, runtime]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: read
       packages: write
@@ -357,13 +360,30 @@ jobs:
         run: |
           set -eu
           docker load -i verified-images/release-images.tar
-          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
           version="${TAGS%% *}"
+          pairs="prod:ghcr.io/packio-php/packio prod-worker:ghcr.io/packio-php/packio-worker prod-ssr:ghcr.io/packio-php/packio-ssr"
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          # Check everything before pushing anything: a published version must never be replaced.
+          for pair in $pairs; do
+            id="$(cat "verified-images/${pair%%:*}.id")"
+            name="${pair#*:}"
+            label="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$id")"
+            if [ "$label" != "$version" ]; then
+              echo "::error::$name image is labeled version '$label', expected '$version'"
+              exit 1
+            fi
+            # An absent tag makes the lookup fail; that means "not published yet".
+            published="$(docker buildx imagetools inspect "$name:$version" --format '{{.Manifest.Digest}}' 2>/dev/null)" || published=''
+            if [ -n "$published" ] && [ "$published" != "$id" ]; then
+              echo "::error::$name:$version is already published with different content; refusing to replace it (published $published, local $id)"
+              exit 1
+            fi
+          done
           {
             echo '| Image | Tags | Digest |'
             echo '| --- | --- | --- |'
           } >> "$GITHUB_STEP_SUMMARY"
-          for pair in prod:ghcr.io/packio-php/packio prod-worker:ghcr.io/packio-php/packio-worker prod-ssr:ghcr.io/packio-php/packio-ssr; do
+          for pair in $pairs; do
             id="$(cat "verified-images/${pair%%:*}.id")"
             name="${pair#*:}"
             # Exact version first, latest last: an interrupted run never leaves latest ahead of its version tag.

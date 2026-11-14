@@ -17,6 +17,6 @@ Pre-release tags (for example `v1.0.0-rc.1`) are not published. Images exist sta
 ## Owner steps
 
 - After the first publication, make the three packages public in the organization's package settings. New packages start private.
-- To publish again, for example after a transient failure, re-run the workflow on the same tag. Do not move the tag.
+- To resume an interrupted publication, use **Re-run failed jobs** on that run, so `publish` reuses the verified images of that run. A fresh run of the same tag builds new images and is refused once the version is published: `publish` never replaces an existing `X.Y.Z`. Do not move the tag.
 
 The images carry the project license and third-party notices. `third-party-sources.json` lists the upstream source of every bundled third-party package; no source archive is published.

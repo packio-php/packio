@@ -4,6 +4,7 @@
 import io
 import argparse
 import base64
+import gzip
 import hashlib
 import importlib.util
 import json
@@ -28,7 +29,21 @@ FORBIDDEN = (
     "/app/config/development.config.php", "/app/config/autoload/local.php",
     "/app/config/autoload/development.local.php",
     "/app/node_modules/", "/app/test/", "/app/tools/",
+    "/usr/local/bin/php-cgi", "/usr/local/bin/phpdbg", "/usr/local/bin/phpize",
+    "/usr/local/bin/php-config", "/usr/local/bin/pear", "/usr/local/bin/peardev",
+    "/usr/local/bin/pecl", "/usr/local/include/",
+    "/app/bin/create-release-tag.php", "/app/bin/measure-step", "/app/bin/smoke-runtime",
+    "/app/bin/with-postgres-test", "/app/bin/prepare-release.py", "/app/bin/prepare-notice-sources.py",
 )
+FORBIDDEN_BY_TARGET = {
+    "prod": ("/app/data/ssr/",),
+    "prod-worker": ("/app/data/ssr/",),
+    # /opt/ holds only the yarn install (/opt/yarn-v1.22.22/), which the matcher cannot name by prefix.
+    "prod-ssr": ("/usr/local/lib/node_modules/", "/opt/"),
+}
+# Uncompressed layer bytes, all layers including the base image.
+MAX_LAYER_BYTES = {"prod": 430 * 1024 * 1024, "prod-worker": 530 * 1024 * 1024,
+                   "prod-ssr": 165 * 1024 * 1024}
 
 
 def run(*args, cwd=None, output=None, binary=False):
@@ -92,24 +107,31 @@ def make_context(destination):
     (destination / "node_modules" / "private.txt").write_bytes(MARKER)
 
 
-def check_layers(image, archive, provenance=None):
+def check_layers(image, archive, target, provenance=None):
+    forbidden_paths = FORBIDDEN + FORBIDDEN_BY_TARGET[target]
+    size = 0
     run("docker", "save", "-o", str(archive), image)
     with tarfile.open(archive) as exported:
         manifest = json.load(exported.extractfile("manifest.json"))[0]
         for layer_name in manifest["Layers"]:
             layer_bytes = exported.extractfile(layer_name).read()
+            if layer_bytes[:2] == b"\x1f\x8b":
+                layer_bytes = gzip.decompress(layer_bytes)
+            size += len(layer_bytes)
             with tarfile.open(fileobj=io.BytesIO(layer_bytes)) as layer:
                 for member in layer:
                     path = "/" + member.name.lstrip("./")
                     if path.startswith("/app/.env") or any(
                         path == forbidden or (forbidden.endswith("/") and path.startswith(forbidden))
-                        for forbidden in FORBIDDEN
+                        for forbidden in forbidden_paths
                     ):
                         raise AssertionError(f"{image}: forbidden path in {layer_name}: {path}")
                     if member.isfile():
                         content = layer.extractfile(member).read()
                         if MARKER in content:
                             raise AssertionError(f"{image}: canary in {layer_name}: {path}")
+    if size > MAX_LAYER_BYTES[target]:
+        raise AssertionError(f"{image}: {size} bytes exceeds ceiling {MAX_LAYER_BYTES[target]}")
     if provenance:
         return verify_provenance(archive, image, *provenance)
 
@@ -391,7 +413,7 @@ def verify_only(app_ref, worker_ref, ssr_ref, expected_sha, report, *, source_id
         targets = {"app": "prod", "worker": "prod-worker", "ssr": "prod-ssr"}
         for name, image in resolved.items():
             image["provenance"] = check_layers(
-                image["id"], temp / f"{name}.tar",
+                image["id"], temp / f"{name}.tar", targets[name],
                 (image["descriptor_digests"], image["platform"], expected_sha, targets[name]),
             )
             image["layers_checked"] = len(image["layers"])
@@ -511,7 +533,7 @@ def build_local(report=None):
                     "--target", target, "-t", image, ".", cwd=context, output=log)
             resolved_image = resolve_image(image)
             provenance[target] = check_layers(
-                resolved_image["id"], temp / f"{target}.tar",
+                resolved_image["id"], temp / f"{target}.tar", target,
                 (resolved_image["descriptor_digests"], resolved_image["platform"], sha, target),
             )
             if target != "prod-ssr":

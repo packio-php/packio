@@ -26,10 +26,11 @@ class FakeDocker:
     def __init__(self, metadata=None, canary=False, provenance_sha="0123456789abcdef0123456789abcdef01234567",
                  include_attestation=True, corrupt_provenance=False, provenance_target=None,
                  statement_subject_mismatch=False, manifest_subject_mismatch=False, fail_boot=False,
-                 ssr_tree_overrides=None, script_mismatch=False):
+                 ssr_tree_overrides=None, script_mismatch=False, layer_path="app/clean.txt"):
         self.calls = []
         self.metadata = metadata or {}
         self.canary = canary
+        self.layer_path = layer_path
         self.provenance_sha = provenance_sha
         self.include_attestation = include_attestation
         self.corrupt_provenance = corrupt_provenance
@@ -131,7 +132,7 @@ class FakeDocker:
             layer = io.BytesIO()
             with tarfile.open(fileobj=layer, mode="w") as contents:
                 payload = image.MARKER if self.canary else b"clean"
-                self.add_tar_file(contents, "app/clean.txt", payload)
+                self.add_tar_file(contents, self.layer_path, payload)
             self.add_tar_file(exported, "layer.tar", layer.getvalue())
             for path, data in blobs.items():
                 self.add_tar_file(exported, path, data)
@@ -381,7 +382,29 @@ class ImageHarnessTest(unittest.TestCase):
             fake_docker = FakeDocker(canary=True)
             with mock.patch.object(image.subprocess, "run", side_effect=fake_docker):
                 with self.assertRaises(AssertionError):
-                    image.check_layers("synthetic-id", Path(temporary) / "canary.tar")
+                    image.check_layers("synthetic-id", Path(temporary) / "canary.tar", "prod")
+
+    def test_layer_checker_applies_per_target_forbidden_paths_and_size_ceiling(self):
+        cases = (
+            ("usr/local/bin/php-cgi", "prod", True),
+            ("app/data/ssr/ssr.mjs", "prod-worker", True),
+            ("app/data/ssr/ssr.mjs", "prod-ssr", False),
+            ("opt/yarn-v1.22.22/bin/yarn", "prod-ssr", True),
+            ("opt/yarn-v1.22.22/bin/yarn", "prod", False),
+        )
+        for path, target, rejected in cases:
+            with self.subTest(path=path, target=target), tempfile.TemporaryDirectory(prefix="image-harness-test-") as temporary:
+                with mock.patch.object(image.subprocess, "run", side_effect=FakeDocker(layer_path=path)):
+                    if rejected:
+                        with self.assertRaisesRegex(AssertionError, "forbidden path"):
+                            image.check_layers("synthetic-id", Path(temporary) / "a.tar", target)
+                    else:
+                        image.check_layers("synthetic-id", Path(temporary) / "a.tar", target)
+        with tempfile.TemporaryDirectory(prefix="image-harness-test-") as temporary:
+            with mock.patch.object(image.subprocess, "run", side_effect=FakeDocker()), \
+                    mock.patch.dict(image.MAX_LAYER_BYTES, {"prod": 1}):
+                with self.assertRaisesRegex(AssertionError, "exceeds ceiling 1"):
+                    image.check_layers("synthetic-id", Path(temporary) / "a.tar", "prod")
 
     def test_provenance_is_required_and_digest_sha_and_target_must_match(self):
         expected = "0123456789abcdef0123456789abcdef01234567"

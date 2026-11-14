@@ -165,7 +165,7 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/LICENSE /app/THI
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/vendor /app/vendor
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.json /app/composer.json
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.lock /app/composer.lock
-COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/bin /app/bin
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/bin/clear-config-cache.php /app/bin/generate-release-metadata.php /app/bin/healthcheck-roadrunner-services.php /app/bin/readiness-probe.php /app/bin/refresh-route-cache.php /app/bin/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/config /app/config
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/src /app/src
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/templates /app/templates
@@ -179,7 +179,6 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/db/cycle/se
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/data/build/release.json /app/data/build/release.json
 COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/build /app/public/build
 COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/public/api-doc/assets /app/public/api-doc/assets
-COPY --from=frontend-build --chown=${APP_USER}:${APP_USER} /app/data/ssr /app/data/ssr
 
 RUN set -eux; \
     sed -i 's/opcache.validate_timestamps = 1/opcache.validate_timestamps = 0/' /usr/local/etc/php/conf.d/zz-roadrunner.ini; \

@@ -4147,9 +4147,7 @@
         "/usr/share/doc/zlib1g/copyright": "9e5b96d63773a5d177ba264254390f792be07e41748ebd94730981c6cac31cc6"
       },
       "binary_files": {
-        "/usr/local/bin/php": "dba73a73bbcc0d249c192386773c935f9e91b203413201967e2d333a2a207647",
-        "/usr/bin/rr": "6f01f41a54d07716d11ed2cd9259c221e2380a14db38e9eea18e93eef2eda7ba",
-        "/usr/local/lib/php/extensions/no-debug-non-zts-20250925/protobuf.so": "09ed3ee530633577721be01763494bb476a8cc40c24c8e543469fb69ade49309"
+        "/usr/bin/rr": "6f01f41a54d07716d11ed2cd9259c221e2380a14db38e9eea18e93eef2eda7ba"
       }
     },
     "worker": {
@@ -5206,9 +5204,7 @@
         "/usr/share/doc/zlib1g/copyright": "9e5b96d63773a5d177ba264254390f792be07e41748ebd94730981c6cac31cc6"
       },
       "binary_files": {
-        "/usr/local/bin/php": "dba73a73bbcc0d249c192386773c935f9e91b203413201967e2d333a2a207647",
-        "/usr/bin/rr": "6f01f41a54d07716d11ed2cd9259c221e2380a14db38e9eea18e93eef2eda7ba",
-        "/usr/local/lib/php/extensions/no-debug-non-zts-20250925/protobuf.so": "09ed3ee530633577721be01763494bb476a8cc40c24c8e543469fb69ade49309"
+        "/usr/bin/rr": "6f01f41a54d07716d11ed2cd9259c221e2380a14db38e9eea18e93eef2eda7ba"
       }
     },
     "ssr": {

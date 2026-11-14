@@ -117,7 +117,7 @@ and building the application from the archive without Git is not supported.
 
 The source snapshot also includes `third-party-sources/`: the complete official
 PHP 8.5.11 source (including bundled libmbfl and generated configure/build
-files), and the complete Debian source packages and patch sets for all 92
+files), and the complete Debian source packages and patch sets for all 91
 source-package/version pairs installed across the app, worker and SSR images.
 The conservative whole-package set includes permissively licensed files as
 well as copyleft components; per-file licenses remain in the source packages.

@@ -177,7 +177,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Compose/deploy-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 

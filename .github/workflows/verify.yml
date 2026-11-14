@@ -225,6 +225,12 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
+      # The notices check in the image step reads node_modules/swagger-ui-dist.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - name: Preserve image provenance in the disposable Docker store
         uses: docker/setup-docker-action@v5
         with:
@@ -278,11 +284,6 @@ jobs:
           python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
           python3 test/Support/RoadRunner/services.test.py "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci --no-audit --no-fund
       - name: Verify real production SSR and proxy browser contract
         run: |
           set -eu

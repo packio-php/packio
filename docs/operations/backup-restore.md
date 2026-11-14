@@ -38,7 +38,7 @@ file for every command. For the standalone example, after the proxy is closed:
 docker compose --env-file .env.prod.local -f compose.prod.yaml stop workers app
 ```
 
-For the `deploy/` setup, drop `--env-file .env.prod.local -f compose.prod.yaml` from this and the following commands and run them in the `deploy/` directory: `docker compose stop workers app`. The same applies to the restore commands below.
+For the self-hosting setup, drop `--env-file .env.prod.local -f compose.prod.yaml` from this and the following commands and run them in the directory with the deploy files (`packio` in the [self-hosting guide](../self-hosting.md)): `docker compose stop workers app`. The same applies to the restore commands below.
 
 Do not use `down -v`: it destroys database and archive volumes.
 

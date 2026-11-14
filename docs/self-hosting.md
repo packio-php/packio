@@ -2,7 +2,7 @@
 
 Run Packio on your own server from ready-made Docker images. You do not clone the repository, build anything, or need a GitHub token.
 
-The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr`. Compose downloads them for you.
+The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr`. Compose downloads them for you. The images are published starting with the first release after 0.2.0, so use the version you find on the releases page.
 
 ## Requirements
 
@@ -35,11 +35,11 @@ The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` a
    echo "base64:$(openssl rand -base64 32)"
    ```
 
-   Open `.env` in an editor and fill in four values:
+   Open `.env` in an editor. Set `PACKIO_VERSION=X.Y.Z` to the version you just downloaded, so the images match the files. Then fill in four values:
 
    - `PACKIO_DOMAIN`: your domain, without `https://`.
    - `DATABASE_PASS`: the output of the first command.
-   - `APP_SECRET_ENCRYPTION_KEY`: the output of the second command. Back it up. If you lose it, stored secrets cannot be read.
+   - `APP_SECRET_ENCRYPTION_KEY`: the output of the second command. If you lose it, stored secrets cannot be read, so back it up.
    - `MAIL_DSN`: your SMTP address, for example `smtps://user:password@smtp.example.com:465`.
 
 4. Choose how HTTPS is served. In `.env`, replace the line `COMPOSE_FILE=compose.yaml` with this one. It adds Caddy, a small web server that gets and renews HTTPS certificates for you:
@@ -61,7 +61,7 @@ The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` a
 
 6. Open `https://<your domain>` and register. Then make your account an admin, see [First account](#first-account).
 
-`PACKIO_VERSION=latest` in `.env` means "the newest release". Pin it to a number such as `0.3.0` so that updates happen only when you choose, see [Updating](#updating).
+`PACKIO_VERSION=latest` in `.env` means "the newest release". Pin it to the version you downloaded (`PACKIO_VERSION=X.Y.Z`) so that updates happen only when you choose, see [Updating](#updating).
 
 ## Using your own reverse proxy
 
@@ -71,8 +71,9 @@ The app listens only on `127.0.0.1:8080` of the server (change the port with `HT
 
 Your proxy must:
 
-- Serve HTTPS for the domain and for `*.<registry domain>` (the registry domain is `PACKIO_DOMAIN`).
+- Serve HTTPS for the domain and for `*.<registry domain>` (`PACKIO_DOMAIN` unless `BRAND_REGISTRY_BASE_DOMAIN` is set).
 - Forward requests to `127.0.0.1:8080` and keep the original `Host` header.
+- Pass the client's `Origin` header through unchanged; the app uses it for CSRF checks.
 - Overwrite the forwarding headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Port`, `Forwarded`) instead of passing the client's values.
 
 Set `TRUSTED_PROXIES` in `.env` to the address the app sees your proxy at. Without it, all visitors look like one client and share a single rate limit. Never use `*`. How to find that address is described in [Docker and runtime operations](docker.md#host-caddy-reverse-proxy).
@@ -107,9 +108,10 @@ Replace the address with the one you registered. Sign in, create an organization
 
 ## Updating
 
-1. Pin the version in `.env`, for example `PACKIO_VERSION=0.3.0`.
-2. Back up first, see [Backups](#backups).
-3. Download the new images and restart:
+1. Back up first, see [Backups](#backups).
+2. Download the new version's deploy files as in step 1 of the quick start, and compare them with yours (for example with `diff`), because a release can change the Compose files.
+3. Set `PACKIO_VERSION=X.Y.Z` in `.env` to the new version.
+4. Download the new images and restart:
 
    ```bash
    docker compose pull
@@ -120,11 +122,18 @@ The app applies database migrations on start. Read [Upgrade and rollback](operat
 
 ## Backups
 
-Back up the database, the package archives, `.env` (it holds the encryption key), and keep the key safe. The commands for the files in `deploy/` are in [Backup and restore](operations/backup-restore.md).
+Back up the database, the package archives, and `.env` (it holds the encryption key). The commands for the files in `deploy/` are in [Backup and restore](operations/backup-restore.md).
 
 ## External PostgreSQL and S3 archives
 
-PostgreSQL: `compose.yaml` runs its own PostgreSQL 17 and sets `DATABASE_HOST` to it, so `.env` cannot point the app at another database. To use your own server, copy `compose.yaml`, remove the `postgres` service, and set `DATABASE_HOST` and `DATABASE_PORT` in the shared `environment` block. Only PostgreSQL 17 is supported. See [Environment variables](../ENV.md#database).
+PostgreSQL: `compose.yaml` runs its own PostgreSQL 17 and fixes `DATABASE_HOST` to it, so `.env` cannot point the app at another database. To use your own server:
+
+1. Copy `compose.yaml` to `compose.external-db.yaml` (a copy survives the next download of the deploy files).
+2. In the copy, delete the `postgres` service, the `postgres` entry under `depends_on` of the `app` service, and `postgres-data` under `volumes`.
+3. In the copy, set `DATABASE_HOST` and `DATABASE_PORT` in the `x-environment` block to an address the containers can reach (not `localhost`).
+4. In `.env`, use `compose.external-db.yaml` instead of `compose.yaml` in the `COMPOSE_FILE` line.
+
+Only PostgreSQL 17 is supported. See [Environment variables](../ENV.md#database).
 
 S3 archives: package archives are stored in a Docker volume by default. S3-compatible storage is experimental. Its `PACKAGE_ARCHIVE_*` settings go into `.env`; the names are in [Environment variables](../ENV.md).
 

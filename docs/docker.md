@@ -310,7 +310,7 @@ curl -fsS http://127.0.0.1:8080/health
 docker compose --env-file .env.prod.local -f compose.prod.yaml ps
 ```
 
-Use `compose.prod.yaml` by itself. Its app entrypoint runs pending PostgreSQL migrations and the runtime-settings seed with `RUN_MIGRATIONS=true`; do not run migrations or seed commands manually alongside startup. Workers start after the app is healthy. They are required for queued authentication mail and source/package synchronization. See [Docker operations](docker.md) for the proxy configuration, upgrades, backups, and service details.
+Use `compose.prod.yaml` by itself. Its app entrypoint runs pending PostgreSQL migrations and the runtime-settings seed with `RUN_MIGRATIONS=true`; do not run migrations or seed commands manually alongside startup. Workers start after the app is healthy. They are required for queued authentication mail and source/package synchronization. See the sections below for the proxy configuration, upgrades, backups, and service details.
 
 ## Local command matrix
 

@@ -38,7 +38,7 @@ FORBIDDEN = (
 FORBIDDEN_BY_TARGET = {
     "prod": ("/app/data/ssr/",),
     "prod-worker": ("/app/data/ssr/",),
-    # /opt/ holds only the yarn install (/opt/yarn-v1.22.22/), which the matcher cannot name by prefix.
+    # reject any /opt content: a Node base image keeps yarn there in a versioned directory.
     "prod-ssr": ("/usr/local/lib/node_modules/", "/opt/"),
 }
 # Uncompressed layer bytes, all layers including the base image.

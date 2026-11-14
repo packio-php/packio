@@ -165,7 +165,13 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/LICENSE /app/THI
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/vendor /app/vendor
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.json /app/composer.json
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/composer.lock /app/composer.lock
-COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/bin/clear-config-cache.php /app/bin/generate-release-metadata.php /app/bin/healthcheck-roadrunner-services.php /app/bin/readiness-probe.php /app/bin/refresh-route-cache.php /app/bin/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} \
+    /app/bin/clear-config-cache.php \
+    /app/bin/generate-release-metadata.php \
+    /app/bin/healthcheck-roadrunner-services.php \
+    /app/bin/readiness-probe.php \
+    /app/bin/refresh-route-cache.php \
+    /app/bin/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/config /app/config
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/src /app/src
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/templates /app/templates

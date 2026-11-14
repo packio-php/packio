@@ -177,7 +177,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Release/verify-workflow.test.py
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 
@@ -312,3 +312,65 @@ jobs:
           path: data/coverage/images/
           compression-level: 0
           if-no-files-found: error
+
+  publish:
+    name: Publish verified images to GHCR
+    # Pushes the images the runtime job already verified; never rebuilds. Runs only if every other job passed.
+    needs: [secret-scan, backend, frontend, runtime]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compute image tags
+        id: tags
+        run: |
+          status=0
+          tags="$(sh .github/scripts/image-tags.sh "$GITHUB_REF")" || status=$?
+          case "$status" in
+            0) printf 'tags=%s\npublish=true\n' "$tags" >> "$GITHUB_OUTPUT" ;;
+            1) echo 'not a release tag, nothing to publish' ;;
+            *) exit "$status" ;;
+          esac
+      - name: Use the same Docker image store as the runtime job
+        if: steps.tags.outputs.publish == 'true'
+        uses: docker/setup-docker-action@v5
+        with:
+          version: v29.9.0
+          daemon-config: '{"features":{"containerd-snapshotter":true}}'
+      - name: Download the verified images
+        if: steps.tags.outputs.publish == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-runtime-images
+          path: verified-images
+      - name: Load, tag and push the verified images
+        if: steps.tags.outputs.publish == 'true'
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          docker load -i verified-images/release-images.tar
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          version="${TAGS%% *}"
+          {
+            echo '| Image | Tags | Digest |'
+            echo '| --- | --- | --- |'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for pair in prod:ghcr.io/packio-php/packio prod-worker:ghcr.io/packio-php/packio-worker prod-ssr:ghcr.io/packio-php/packio-ssr; do
+            id="$(cat "verified-images/${pair%%:*}.id")"
+            name="${pair#*:}"
+            # Exact version first, latest last: an interrupted run never leaves latest ahead of its version tag.
+            for tag in $TAGS; do
+              docker tag "$id" "$name:$tag"
+              docker push "$name:$tag"
+            done
+            digest="$(docker buildx imagetools inspect "$name:$version" --format '{{.Manifest.Digest}}')"
+            echo "| \`$name\` | \`$TAGS\` | \`$digest\` |" >> "$GITHUB_STEP_SUMMARY"
+          done

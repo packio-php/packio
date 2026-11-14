@@ -60,6 +60,23 @@ class VerifyWorkflowTests(unittest.TestCase):
         self.assertNotIn("\n    if: ", job.split("\n    if: ", 1)[1].split("\n", 1)[1],
                          "the runtime job has exactly one condition")
 
+    def test_publish_job_pushes_only_verified_images_after_every_other_job(self):
+        workflow = (ROOT / ".github/workflows/verify.yml").read_text(encoding="utf-8")
+        job = workflow.split("\n  publish:\n", 1)[1]
+        self.assertNotRegex(job, r"\n  [A-Za-z_][A-Za-z0-9_-]*:\n", "publish must be the last job")
+        self.assertIn("    needs: [secret-scan, backend, frontend, runtime]\n", job)
+        self.assertIn("    if: startsWith(github.ref, 'refs/tags/v')\n", job)
+        self.assertNotIn("always()", job)
+        self.assertNotIn("pull_request_target", workflow)
+        self.assertEqual(1, workflow.count("packages: write"))
+        self.assertIn("      packages: write\n", job)
+        self.assertNotRegex(job, r"docker (buildx )?build\b")
+        self.assertIn("name: verified-runtime-images", job)
+        for name in ("packio", "packio-worker", "packio-ssr"):
+            self.assertIn(f"ghcr.io/packio-php/{name}", job)
+        self.assertIn(".github/scripts/image-tags.sh", job)
+        self.assertIn("test/Support/Release/image-tags.test.sh", workflow)
+
     def test_runtime_workflow_builds_all_images_with_native_candidate_labels(self):
         script = verify_workflow_step_run("Require Docker and verify production images, layers and startup")
         with tempfile.TemporaryDirectory() as directory:

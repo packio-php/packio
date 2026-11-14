@@ -86,6 +86,10 @@ class VerifyWorkflowTests(unittest.TestCase):
             self.assertIn("if: steps.tags.outputs.publish == 'true'", step)
         self.assertIn("already published with different content; refusing to replace it", job)
         self.assertIn("org.opencontainers.image.version", job)
+        self.assertNotIn("imagetools inspect", job)
+        self.assertIn("lookup failed (status $code); cannot tell whether it is published", job)
+        self.assertIn("token request failed (status $code)", job)
+        self.assertNotIn("2>/dev/null", job, "lookup errors must stay visible")
         self.assertIn("concurrency:\n      group: publish-${{ github.ref }}\n      cancel-in-progress: false\n", job)
 
     def test_runtime_workflow_builds_all_images_with_native_candidate_labels(self):

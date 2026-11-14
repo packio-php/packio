@@ -363,6 +363,36 @@ jobs:
           version="${TAGS%% *}"
           pairs="prod:ghcr.io/packio-php/packio prod-worker:ghcr.io/packio-php/packio-worker prod-ssr:ghcr.io/packio-php/packio-ssr"
           printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          # Sets lookup_status (HTTP status of the manifest request, or "denied") and lookup_digest. Fails the job
+          # on anything inconclusive. 401/403 count as "not published": a package that does not exist yet answers
+          # "denied", and these are the credentials the push uses, so if access is really broken the push fails
+          # too and nothing is replaced.
+          lookup() {
+            repo="${1#ghcr.io/}"
+            lookup_digest=''
+            code="$(curl --silent --show-error --retry 3 ${REGISTRY_USER:+-u "$REGISTRY_USER:$REGISTRY_TOKEN"} \
+              --output "$RUNNER_TEMP/token.json" --write-out '%{http_code}' \
+              "https://ghcr.io/token?service=ghcr.io&scope=repository:$repo:pull")" || code=curl-error
+            case "$code" in
+              200) ;;
+              401|403) lookup_status=denied; echo "::notice::$repo: registry denied the pull token; treating $2 as not published"; return ;;
+              *) echo "::error::$repo: token request failed (status $code); cannot tell whether $2 is published"; exit 1 ;;
+            esac
+            token="$(jq -r .token "$RUNNER_TEMP/token.json")"
+            code="$(curl --silent --show-error --retry 3 --head --header "Authorization: Bearer $token" \
+              --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+              --dump-header "$RUNNER_TEMP/headers.txt" --output /dev/null --write-out '%{http_code}' \
+              "https://ghcr.io/v2/$repo/manifests/$2")" || code=curl-error
+            lookup_status="$code"
+            case "$code" in
+              200)
+                lookup_digest="$(awk 'tolower($1) == "docker-content-digest:" { print $2 }' "$RUNNER_TEMP/headers.txt" | tr -d '\r')"
+                [ -n "$lookup_digest" ] || { echo "::error::$repo:$2 exists but the registry sent no digest"; exit 1; } ;;
+              404) ;;
+              401|403) echo "::notice::$repo: registry denied the manifest request; treating $2 as not published" ;;
+              *) echo "::error::$repo:$2 lookup failed (status $code); cannot tell whether it is published"; exit 1 ;;
+            esac
+          }
           # Check everything before pushing anything: a published version must never be replaced.
           for pair in $pairs; do
             id="$(cat "verified-images/${pair%%:*}.id")"
@@ -372,10 +402,9 @@ jobs:
               echo "::error::$name image is labeled version '$label', expected '$version'"
               exit 1
             fi
-            # An absent tag makes the lookup fail; that means "not published yet".
-            published="$(docker buildx imagetools inspect "$name:$version" --format '{{.Manifest.Digest}}' 2>/dev/null)" || published=''
-            if [ -n "$published" ] && [ "$published" != "$id" ]; then
-              echo "::error::$name:$version is already published with different content; refusing to replace it (published $published, local $id)"
+            lookup "$name" "$version"
+            if [ -n "$lookup_digest" ] && [ "$lookup_digest" != "$id" ]; then
+              echo "::error::$name:$version is already published with different content; refusing to replace it (published $lookup_digest, local $id)"
               exit 1
             fi
           done
@@ -391,6 +420,8 @@ jobs:
               docker tag "$id" "$name:$tag"
               docker push "$name:$tag"
             done
-            digest="$(docker buildx imagetools inspect "$name:$version" --format '{{.Manifest.Digest}}')"
+            lookup "$name" "$version"
+            [ "$lookup_status" = 200 ] || { echo "::error::$name:$version was not found after the push"; exit 1; }
+            digest="$lookup_digest"
             echo "| \`$name\` | \`$TAGS\` | \`$digest\` |" >> "$GITHUB_STEP_SUMMARY"
           done

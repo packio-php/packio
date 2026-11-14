@@ -198,16 +198,14 @@ COPY --chmod=755 .docker/entrypoint-*.sh .docker/healthcheck-*.sh .docker/mainte
 USER ${APP_USER}
 ENTRYPOINT ["/usr/local/bin/entrypoint-roadrunner-services.sh"]
 
-FROM node:24.21.0-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS node-alpine
+FROM node:24.21.0-bookworm-slim@sha256:d6aa754f16b3197301076f047b5def2f02ea1dbbc2ca920407d46d7ec7f87b20 AS node-runtime
 
-# Alpine release matches the one node:24.21.0-alpine is built on, so libc and libstdc++ agree with the binary.
-FROM alpine:3.24.2@sha256:294b683cb724975bec92580e1e685676bd4b50bda910ddb8c51d4cabeaec77e6 AS prod-ssr
+FROM debian:bookworm-slim AS prod-ssr
 WORKDIR /app
-RUN apk add --no-cache libstdc++ libgcc \
-    && addgroup -g 1000 node \
-    && adduser -u 1000 -G node -s /bin/sh -D node
-COPY --from=node-alpine /usr/local/bin/node /usr/local/bin/node
-COPY --from=node-alpine /usr/local/LICENSE /usr/local/LICENSE
+RUN groupadd --gid 1000 node \
+    && useradd --uid 1000 --gid node --shell /bin/bash --create-home node
+COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
+COPY --from=node-runtime /usr/local/LICENSE /usr/local/LICENSE
 COPY --from=release-source --chown=node:node /app/LICENSE /app/THIRD_PARTY_NOTICES.md /app/third-party-sources.json /app/
 COPY --from=release-source --chown=node:node /app/public/fonts/LICENSE-JetBrainsMono.txt /app/public/fonts/LICENSE-PlusJakartaSans.txt /app/public/fonts/
 COPY --from=frontend-build --chown=node:node /app/public/api-doc/assets/LICENSE /app/public/api-doc/assets/NOTICE /app/public/api-doc/assets/THIRD_PARTY_NOTICES.md /app/public/api-doc/assets/

@@ -1,0 +1,53 @@
+{
+	# Compose sets this to "email <address>" when ACME_EMAIL is set; Caddy rejects an empty email.
+	{$ACME_EMAIL_OPTION:}
+	on_demand_tls {
+		ask http://127.0.0.1:9123
+	}
+}
+
+# Internal check, reachable only inside the Caddy container.
+# shortcut: any single-label subdomain may request a certificate, so a stranger can use up the weekly Let's Encrypt quota for new names; replace with an app endpoint that knows existing registries, or a DNS-issued wildcard, if that happens.
+http://127.0.0.1:9123 {
+	bind 127.0.0.1
+	@registry expression `{query.domain}.endsWith('.{$PACKIO_REGISTRY_DOMAIN}') && {query.domain}.substring(0, size({query.domain}) - size('.{$PACKIO_REGISTRY_DOMAIN}')).matches('^[a-z0-9]([a-z0-9-]*[a-z0-9])?$')`
+	respond @registry 200
+	respond 403
+}
+
+(app) {
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		# Observe the existing inline theme/SSR scripts and Turnstile first.
+		Content-Security-Policy-Report-Only "default-src 'self'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self'; connect-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+	}
+
+	# Remove client values before reverse_proxy supplies trusted values.
+	request_header -Forwarded
+	request_header -X-Forwarded-*
+	request_header -CF-Connecting-IP
+	request_header -CF-Visitor
+	request_header -True-Client-IP
+	request_header -X-Real-IP
+
+	reverse_proxy app:80 {
+		header_up Host {hostport}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+		header_up X-Forwarded-Host {hostport}
+		header_up X-Forwarded-Port {server_port}
+	}
+}
+
+{$PACKIO_DOMAIN} {
+	import app
+}
+
+*.{$PACKIO_REGISTRY_DOMAIN} {
+	tls {
+		on_demand
+	}
+	import app
+}

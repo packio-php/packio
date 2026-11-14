@@ -1,0 +1,43 @@
+# Bundled HTTPS proxy: Caddy obtains and renews certificates automatically.
+# Needs public DNS for PACKIO_DOMAIN and *.PACKIO_DOMAIN pointing at this server, and ports 80 and 443 open.
+services:
+  caddy:
+    image: caddy:2.11.2-alpine
+    restart: unless-stopped
+    environment:
+      PACKIO_DOMAIN: "${PACKIO_DOMAIN:?Set PACKIO_DOMAIN in .env}"
+      # The app serves registries from <org>.<registry base domain>, which is the main domain unless overridden.
+      PACKIO_REGISTRY_DOMAIN: "${BRAND_REGISTRY_BASE_DOMAIN:-${BRAND_DOMAIN:-${PACKIO_DOMAIN:?Set PACKIO_DOMAIN in .env}}}"
+      ACME_EMAIL_OPTION: "${ACME_EMAIL:+email }${ACME_EMAIL:-}"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    networks:
+      default:
+      edge:
+        ipv4_address: "${PACKIO_EDGE_PROXY_IP:-172.30.255.2}"
+
+  app:
+    environment:
+      # Only Caddy may set the client address headers.
+      TRUSTED_PROXIES: "${PACKIO_EDGE_PROXY_IP:-172.30.255.2}"
+    networks:
+      - default
+      - edge
+
+networks:
+  edge:
+    ipam:
+      config:
+        - subnet: "${PACKIO_EDGE_SUBNET:-172.30.255.0/29}"
+
+volumes:
+  caddy-data:
+  caddy-config:

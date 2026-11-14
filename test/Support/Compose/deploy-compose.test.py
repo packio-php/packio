@@ -139,6 +139,7 @@ class DeployComposeTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, f"{files}: {result.stderr}")
             services = self.model(files, SERVER_ENV)
             self.assertEqual(services["app"]["environment"]["TRUSTED_PROXIES"], "172.30.255.2")
+            self.assertEqual(set(services["caddy"]["networks"]), {"edge"})
             self.assertEqual(services["caddy"]["networks"]["edge"]["ipv4_address"], "172.30.255.2")
             self.assertEqual(services["caddy"]["environment"]["PACKIO_REGISTRY_DOMAIN"], "packio.example.com")
 
@@ -151,11 +152,12 @@ class DeployComposeTest(unittest.TestCase):
         self.assertEqual(env({}), "")
         self.assertEqual(env({"ACME_EMAIL": "ops@example.com"}), "email ops@example.com")
 
-    def test_caddyfile_is_valid_without_acme_email(self):
-        result = subprocess.run(["docker", "run", "--rm", *CADDY_ENV, "-v", f"{ROOT / 'deploy' / 'Caddyfile'}:/etc/caddy/Caddyfile:ro",
-                                 CADDY_IMAGE, "caddy", "validate", "--config", "/etc/caddy/Caddyfile"],
-                                capture_output=True, text=True)
-        self.assertEqual(result.returncode, 0, result.stderr)
+    def test_caddyfile_is_valid_with_and_without_acme_email(self):
+        for extra in ([], ["-e", "ACME_EMAIL_OPTION=email ops@example.test"]):
+            result = subprocess.run(["docker", "run", "--rm", *CADDY_ENV, *extra, "-v", f"{ROOT / 'deploy' / 'Caddyfile'}:/etc/caddy/Caddyfile:ro",
+                                     CADDY_IMAGE, "caddy", "validate", "--config", "/etc/caddy/Caddyfile"],
+                                    capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, f"{extra}: {result.stderr}")
 
     def test_caddy_issues_certificates_only_for_registry_subdomains(self):
         name = "packio-caddy-test-" + uuid.uuid4().hex[:8]

@@ -1,5 +1,5 @@
 # Bundled HTTPS proxy: Caddy obtains and renews certificates automatically.
-# Needs public DNS for PACKIO_DOMAIN and *.PACKIO_DOMAIN pointing at this server, and ports 80 and 443 open.
+# Needs public DNS for PACKIO_DOMAIN and *.<registry base domain> (PACKIO_DOMAIN unless overridden) pointing at this server, and ports 80 and 443 open.
 services:
   caddy:
     image: caddy:2.11.2-alpine
@@ -19,8 +19,8 @@ services:
       - caddy-config:/config
     depends_on:
       - app
+    # Edge only, so Caddy always reaches the app from the one address the app trusts.
     networks:
-      default:
       edge:
         ipv4_address: "${PACKIO_EDGE_PROXY_IP:-172.30.255.2}"
 

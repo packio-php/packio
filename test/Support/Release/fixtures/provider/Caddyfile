@@ -1,4 +1,5 @@
-:80 {
+provider.fixture.test {
+	tls /run/fixture/server-cert.pem /run/fixture/server-key.pem
 	root * /srv
-	file_server browse
+	file_server
 }

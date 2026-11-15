@@ -226,7 +226,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
-      # The proxy step mounts node_modules into its browser container.
+      # The product step mounts node_modules into its browser container.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -282,28 +282,10 @@ jobs:
           sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
           sh test/Support/RoadRunner/services.test.sh "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"
-      - name: Verify real production SSR and proxy browser contract
+      - name: Require private Composer install, tenant isolation and the documented edge on the same images
         run: |
-          set -eu
-          docker pull caddy:2.11.2-alpine
-          browser_id=$(docker run -d --user pwuser --network host --ipc=host \
-            --mount type=bind,src="$PWD/node_modules",dst=/work/node_modules,readonly \
-            --workdir /work mcr.microsoft.com/playwright:v1.62.1-noble \
-            node node_modules/playwright/cli.js run-server --host 127.0.0.1 --port 3000)
-          trap 'docker rm -f "$browser_id"' EXIT
-          PACKIO_PROXY_APP_IMAGE=$(cat data/coverage/images/prod.id) \
-          PACKIO_PROXY_SSR_IMAGE=$(cat data/coverage/images/prod-ssr.id) \
-          python3 test/Support/Release/proxy.test.py --node "$(command -v node)" --browser-endpoint ws://127.0.0.1:3000/
-      - name: Require private Composer install and tenant isolation on the same immutable images
-        run: |
-          set -eu
-          docker pull composer:2.8
-          docker pull axllent/mailpit
-          python3 test/Support/Release/product.test.py \
-            --app-image "$(cat data/coverage/images/prod.id)" \
-            --worker-image "$(cat data/coverage/images/prod-worker.id)" \
-            --ssr-image "$(cat data/coverage/images/prod-ssr.id)" \
-            --expected-sha "$PACKIO_CANDIDATE_SHA" --report data/coverage/images/product-report.json
+          sh test/Support/Release/product.test.sh "$(cat data/coverage/images/prod.id)" \
+            "$(cat data/coverage/images/prod-worker.id)" "$(cat data/coverage/images/prod-ssr.id)"
       - name: Start the deploy Compose files on the built images
         run: |
           set -eu

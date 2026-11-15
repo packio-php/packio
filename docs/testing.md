@@ -439,7 +439,7 @@ When adding a new provider, add an integration contract test next to existing pr
 
 ## Reproducible public checks
 
-`.github/workflows/verify.yml` runs on disposable GitHub runners for pull requests, including forks, with read-only repository permissions and no deployment or publication credentials. Backend base and concurrency jobs each have their own PostgreSQL17 service. Frontend verification uses Node24.21.0 and the Playwright1.62.1 browser image matching `package-lock.json`. Missing Docker, browser or database infrastructure fails the required job. Production targets `prod`, `prod-worker`, and `prod-ssr` are built once, then verified by saved immutable IDs and candidate SHA. The same worker ID is passed to cold-worker and service supervision checks. The runtime job also verifies the real production SSR and proxy browser contract using a matching non-root Playwright server bound to loopback, then removes only its own browser container; verification publishes nothing on pull requests and branch pushes; on a release tag the `publish` job pushes the already verified images after every other job has passed. The runtime report and image export are retained together. The runtime job is the expensive one: it runs only for manual runs of the workflow and for pushed `v*` tags, not for pull requests or ordinary pushes to `main`.
+`.github/workflows/verify.yml` runs on disposable GitHub runners for pull requests, including forks, with read-only repository permissions and no deployment or publication credentials. Backend base and concurrency jobs each have their own PostgreSQL17 service. Frontend verification uses Node24.21.0 and the Playwright1.62.1 browser image matching `package-lock.json`. Missing Docker, browser or database infrastructure fails the required job. Production targets `prod`, `prod-worker`, and `prod-ssr` are built once, then verified by saved immutable IDs and candidate SHA. The same worker ID is passed to cold-worker and service supervision checks. The runtime job then runs the product check described below on those images; verification publishes nothing on pull requests and branch pushes; on a release tag the `publish` job pushes the already verified images after every other job has passed. The runtime report and image export are retained together. The runtime job is the expensive one: it runs only for manual runs of the workflow and for pushed `v*` tags, not for pull requests or ordinary pushes to `main`.
 
 Commit the root lock and all six `tools/*/composer.lock` files when preserving reviewed changes. Tool vendors remain ignored. On a fresh checkout, `composer install` installs the root and tools from those locks. Validate the root with `composer validate --strict`, and each tool with `composer --working-dir=tools/TOOL validate --no-check-publish`; run `check-platform-reqs` and raw `audit --locked` for both root and tools. Audit failures require resolution, including abandoned packages.
 
@@ -447,32 +447,29 @@ Commit the root lock and all six `tools/*/composer.lock` files when preserving r
 
 `composer check` includes formatter coverage for `src`, `test`, `config`, `bin` and migrations, static and architecture checks, runner tests and the base suites. `composer test:concurrency` runs separately. `npm run check` executes the frontend unit/component suite once through `test:front:ci`, producing `data/coverage/vitest.junit.xml`, then SSR, browser, format and build checks. Run `sh test/Support/Release/image-tags.test.sh` to check the release tag to image tag mapping used by the `publish` job. Run `sh test/Support/Docs/links.test.sh` to check local documentation destinations; it excludes anchors and external URLs. `sh test/Support/Compose/dev-compose.test.sh` checks the dev `compose.yaml` setup services; CI runs these after `composer check` and `composer openapi-check`.
 
-## Product fixture from final images
+## Product check on final images
 
-`test/Support/Release/product.test.py` starts an isolated production Compose stack from three existing immutable image references. Supply the exact app, worker and SSR image IDs from the release image report and that report's candidate source SHA:
+`test/Support/Release/product.test.sh` starts an isolated production Compose stack from three existing images and checks the product through it:
 
 ```bash
-docker pull postgres:17-alpine
-docker pull caddy:2.11.2-alpine
-docker pull axllent/mailpit
-docker pull composer:2.8
-docker pull mcr.microsoft.com/playwright:v1.62.1-noble
-python3 test/Support/Release/product.test.py \
-  --app-image "$APP_IMAGE" --worker-image "$WORKER_IMAGE" --ssr-image "$SSR_IMAGE" \
-  --expected-sha "$CANDIDATE_SHA" --report data/coverage/product-report.json
+npm ci
+sh test/Support/Release/product.test.sh "$APP_IMAGE" "$WORKER_IMAGE" "$SSR_IMAGE"
 ```
 
-The product check verifies fresh database, cache and archive storage, migrations and runtime settings seed, the real worker and SSR, a disposable Generic Git HTTPS repository, and TLS trust for the app and registry hosts using a temporary test CA. It requires PostgreSQL 17, Mailpit, Caddy, a Composer 2.8 client, host Node 24.21.0 with the locked npm dependencies installed, and the matching Playwright 1.62.1 browser image. App and worker source metadata and SSR provenance must identify the supplied candidate. Fixture Git archives use UTC so their independently computed hashes are stable across host time zones. The harness never builds or retags candidate images. Application source bind mounts are rejected; only the disposable fixture, test configuration and CA may be mounted.
+It needs Docker, `git`, `openssl`, `jq` and Internet access (Docker pulls PostgreSQL 17, Mailpit, Caddy, Composer 2.8 and the Playwright 1.62.1 image when they are missing; the last step loads Cloudflare Turnstile). It never builds the candidate images. Each run uses its own Compose project and temporary directory with a disposable CA, random credentials and a tagged Git repository of `packio-fixture/private-package`, and removes them on exit. The run takes about five minutes.
 
-Each run has unique resource names and a 600 second deadline. Missing infrastructure and unavailable services fail with a safe report. Cleanup removes only that run's resources. Generated credentials, CA keys, cookies and mail contents stay in private temporary files and are excluded from the public report. The report contains candidate/image identities, fixture hashes, durations and scenario results.
+The script drives the stack and runs the scenarios in `test/Support/Release/product.spec.ts` one group at a time, in a Playwright container on the stack's network:
 
-The registration and source scenario uses the real SSR pages, hydrated forms and session/CSRF flow. A new user receives the verification code from a queued authentication mail job through Mailpit, verifies the address and signs in. Admin access is denied until the existing `user:make-admin` command grants the role. Organization and source creation use supported application flows; source synchronization must finish and persist the private `packio-fixture/private-package:1.0.0` archive. The check also verifies that a stopped worker prevents mail delivery, a failing provider produces a failed sync job, and a recreated worker with an empty mapper cache can complete another sync.
+1. With the worker stopped, a registration produces no authentication mail.
+2. With the worker running, a new user registers on the server-rendered pages, takes the code from Mailpit and verifies the address. The admin area is closed to that user until `user:make-admin` grants the role.
+3. The user creates an organization and two Generic Git sources. Synchronizing a missing repository must end as a failed job; the real one must store the archive of version `1.0.0`.
+4. After the worker container is recreated, a re-sync started from the source page must complete.
+5. Registry tokens are issued and revoked through the session and CSRF protected pages. Metadata and the archive are served to the organization's token, and refused to anonymous clients (401), a token of another organization (403) and a revoked token (401).
+6. Composer 2.8 installs the package with an empty cache; the installed files must equal the fixture and `Probe::value()` must run. Installs without a token, with another organization's token, with a revoked token and with the token stored under the wrong hostname must fail with the same statuses.
+7. The edge is [the documented Caddy example](examples/reverse-proxy/Caddyfile). Requests through it must carry the security headers and a `Secure` session cookie; forged `X-Forwarded-*`, `Forwarded`, `CF-Connecting-IP` and `X-Real-IP` values must not change registry URLs, pass the CSRF origin check or reset login throttling; a client that bypasses the edge must not pass as HTTPS.
+8. With Turnstile enabled on Cloudflare's public test keys, the login page must hydrate, load the real widget and navigate without violating the report-only Content Security Policy.
 
-The harness owns its non-root Firefox container and keeps browser traces, mail bodies, session cookies and credentials out of reports. The browser uses a disposable CA and signed SAN certificate with normal certificate validation. A native Firefox certificate policy is mounted read-only and selected through the matching Playwright image's `PLAYWRIGHT_FIREFOX_POLICIES_JSON` setting. Before registration, a separate browser without that trust must reject the fixture certificate; authenticated flows then use the trusted browser. `start_fixture`, `prepare_dataset`, `verify_private_install` and `stop_fixture` in `product_fixture.py` share the same bounded run and private context for later recovery rehearsal. Registry tokens are issued and revoked through the supported session and CSRF protected HTTP actions. Each Composer case uses a separate disposable Composer 2.8 container, empty cache and private home, a temporary CA, and a mode 0600 `auth.json` keyed by the exact registry hostname including its port.
-
-The private installation must resolve `packio-fixture/private-package:1.0.0` from Packio, execute `Probe::value()` and compare the installed package files with the independently prepared fixture hashes. Direct authenticated metadata and archive downloads verify the same package and archive. A second fresh installation must succeed. Anonymous clients, tokens for another organization and revoked tokens must fail both metadata and archive requests with the existing registry status contract; fresh Composer installations must also fail. Separate controls revoke a token before installation and use the wrong auth hostname, so cached packages or direct upstream access cannot produce a passing result. Tokens, authorization headers and client output stay out of the public report.
-
-The public runtime job requires the complete product check against the same image IDs and candidate SHA verified earlier in the job. Its product step has no infrastructure skip or allowed failure; the browser parser self-check runs after actual browser prerequisites are available. The PHPUnit feature suite and Playwright Inertia protocol fixtures remain separate checks.
+The runtime job runs this check on the image IDs it verified earlier in the job, with no skip or allowed failure. The PHPUnit feature suite and the Playwright Inertia protocol fixtures remain separate checks.
 
 ## Distribution notices
 
@@ -519,10 +516,3 @@ source. The resulting `mbstring.so` contains the rebuilt libmbfl and can be
 used in a derivative runtime in place of the original extension. The existing
 stage also supplies PHP's other enabled extension build configuration; no
 Packio application build or Git history is needed for this PHP rebuild.
-
-For local worktree verification, the image `--verify-only` and product
-commands also accept the pair `--source-identity FILE --build-record FILE`.
-This explicit mode requires a frozen dirty snapshot bound to the base HEAD,
-full patch, runtime file hashes, three immutable image IDs and their provenance.
-It preserves all image and product checks. The default commands require clean
-release metadata; worktree results do not certify a clean release candidate.

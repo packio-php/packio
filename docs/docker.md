@@ -210,22 +210,22 @@ storage. Failed migration/startup leaves traffic and consumers closed; binary
 rollback requires verified schema/job compatibility, otherwise restore the backup.
 Restoring after new writes loses those writes and needs an operator decision.
 
-To verify service supervision in isolation (Docker and Python 3 required):
+To verify service supervision in isolation (Docker required):
 
 ```bash
 docker build -f .docker/Dockerfile.roadrunner --target prod-worker -t packio-worker-service-check:local .
 worker_image=$(docker image inspect --format '{{.Id}}' packio-worker-service-check:local)
-python3 test/Support/RoadRunner/services.test.py "$worker_image"
+sh test/Support/RoadRunner/services.test.sh "$worker_image"
 ```
 
 The smoke test uses a temporary PostgreSQL container and internal network. It
 checks process counts, replacement after exit/crash, missing-service health,
 graceful shutdown and configurable worker count, then removes its containers/network.
 
-To verify a real job after cold startup and after worker recreation:
+To verify a real job after cold startup and after worker recreation (Docker and `jq` required):
 
 ```bash
-python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
+sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
 ```
 
 This test creates a separate temporary PostgreSQL container and internal network,
@@ -446,8 +446,8 @@ immutable image IDs to verify the same artifacts again without building or pulli
 python3 test/Support/Release/image.test.py --verify-only \
   --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
   --expected-sha "$(git rev-parse HEAD)" --report /tmp/packio-verification.json
-python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
-python3 test/Support/RoadRunner/services.test.py "$worker_image"
+sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
+sh test/Support/RoadRunner/services.test.sh "$worker_image"
 docker save -o /tmp/packio-release-images.tar "$app_image" "$worker_image" "$ssr_image"
 ```
 

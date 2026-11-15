@@ -106,37 +106,38 @@ license field is package metadata, not a list of license file paths. The
 `vjik/cycle-typecast` components; the applicable BSD-3-Clause text is included
 below because the package notice points to it without embedding it.
 
-## Distribution and source snapshots
+## Distribution and third-party sources
 
 Retain the root `LICENSE` and this notice, both font license files, and the
 Swagger `LICENSE`, `NOTICE`, and bundle-specific license notices in distributed
-images and source snapshots. The app and worker images retain the Composer
-package license files under `vendor/`. The source archive is an informational
-application source snapshot; production builds are made from a Git checkout,
-and building the application from the archive without Git is not supported.
+images. The app and worker images retain the Composer package license files
+under `vendor/`. Production builds are made from a Git checkout.
 
-The source snapshot also includes `third-party-sources/`: the complete official
-PHP 8.5.11 source (including bundled libmbfl and generated configure/build
-files), and the complete Debian source packages and patch sets for all 91
-source-package/version pairs installed across the app, worker and SSR images.
-The conservative whole-package set includes permissively licensed files as
-well as copyleft components; per-file licenses remain in the source packages.
-[third-party-sources.json](third-party-sources.json) lists the exact runtime
-packages, source versions, source payload URLs, sizes and SHA-256 values,
+Packio does not redistribute the source of third-party components. The
+repository and every image contain [third-party-sources.json](third-party-sources.json),
+which identifies, for each third-party component installed in the images, the
+exact upstream source artifact by URL, size and SHA-256: the official PHP and
+PECL tarballs (PHP 8.5.11 including bundled libmbfl, and protobuf), and the
+Debian source packages and patch sets for all 91 source-package/version pairs
+installed across the app, worker and SSR images, at the pinned versions. The
+Debian packages are unmodified. The whole-package set includes permissively
+licensed files as well as copyleft components; per-file licenses remain in the
+upstream source packages. The file also lists the exact runtime packages,
 retained copyright/license paths and hashes, and copied runtime binary hashes.
-No package source was modified by Packio's image recipe; PHP and protobuf
-were compiled with its stated build options, and RoadRunner/Node were copied.
+The `path` field of each source entry is the conventional file name of the
+artifact, not a file shipped with Packio. PHP and protobuf were compiled with
+the build options in the Docker recipe, and RoadRunner/Node were copied.
 
-Keep this corresponding source available alongside every distribution of the
-images; a notice or a download-only helper does not replace the actual source
-payloads. The inventory/package check rejects missing or altered payloads and
-runtime versions or legal files that differ from this manifest. The existing
-Docker recipe and [source reconstruction instructions](docs/testing.md#distribution-notices)
-are part of the source snapshot. PHP's source companion permits rebuilding
-mbstring and its statically included libmbfl with modified library source;
-Packio imposes no extra restriction on modification or reverse engineering to
-debug those modifications. This source material is independent of the Git
-metadata required to build the Packio application.
+The notice check (`test/Support/Release/notices.test.py`) validates the structure
+and bindings of that manifest and compares the installed package versions,
+runtime binary hashes and retained license files in the images with it. It does
+not download or check the upstream artifacts. The Docker recipe and the
+[source reconstruction instructions](docs/testing.md#distribution-notices)
+describe how to fetch the artifacts and rebuild. PHP's upstream source permits
+rebuilding mbstring and its statically included libmbfl with modified library
+source; Packio imposes no extra restriction on modification or reverse
+engineering to debug those modifications. This source material is independent
+of the Git metadata required to build the Packio application.
 
 Debian's per-package copyrights and complete common license texts remain under
 `/usr/share/doc/*/copyright` and `/usr/share/common-licenses/` in every image.
@@ -7362,8 +7363,8 @@ IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
 
 The original PHP and Zend license texts are retained below with their original
 acknowledgments. GNU Readline's GPL terms apply to the linked runtime.
-The corresponding-source payloads and reconstruction instructions accompany
-the source snapshot; see the distribution section above.
+The upstream sources and reconstruction instructions are described in the
+distribution section above.
 
 ### PHP License 3.01 (legacy source terms; §5 successor clause)
 

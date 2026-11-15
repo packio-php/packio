@@ -177,7 +177,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 
@@ -210,8 +210,7 @@ jobs:
 
   runtime:
     name: Runtime images and private Composer product
-    # Heavy end-to-end image check (~25 min): manual runs and release tags only. The release
-    # workflow needs one successful run of it on the exact candidate commit.
+    # Heavy end-to-end image check (~25 min): manual runs and release tags only.
     if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     steps:
@@ -226,6 +225,12 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
+      # The notices check in the image step reads node_modules/swagger-ui-dist.
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
       - name: Preserve image provenance in the disposable Docker store
         uses: docker/setup-docker-action@v5
         with:
@@ -274,14 +279,11 @@ jobs:
           python3 test/Support/Release/image.test.py --verify-only \
             --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
             --expected-sha "$candidate_sha" --report data/coverage/images/report.json
+          python3 test/Support/Release/notices.test.py \
+            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image"
           python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
           python3 test/Support/RoadRunner/services.test.py "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"
-      - uses: actions/setup-node@v4
-        with:
-          node-version-file: .nvmrc
-          cache: npm
-      - run: npm ci --no-audit --no-fund
       - name: Verify real production SSR and proxy browser contract
         run: |
           set -eu
@@ -311,3 +313,117 @@ jobs:
           path: data/coverage/images/
           compression-level: 0
           if-no-files-found: error
+
+  publish:
+    name: Publish verified images to GHCR
+    # Pushes the images the runtime job already verified; never rebuilds. Runs only if every other job passed.
+    needs: [secret-scan, backend, frontend, runtime]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: publish-${{ github.ref }}
+      cancel-in-progress: false
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Compute image tags
+        id: tags
+        run: |
+          status=0
+          tags="$(sh .github/scripts/image-tags.sh "$GITHUB_REF")" || status=$?
+          case "$status" in
+            0) printf 'tags=%s\npublish=true\n' "$tags" >> "$GITHUB_OUTPUT" ;;
+            1) echo 'not a release tag, nothing to publish' ;;
+            *) exit "$status" ;;
+          esac
+      - name: Use the same Docker image store as the runtime job
+        if: steps.tags.outputs.publish == 'true'
+        uses: docker/setup-docker-action@v5
+        with:
+          version: v29.9.0
+          daemon-config: '{"features":{"containerd-snapshotter":true}}'
+      - name: Download the verified images
+        if: steps.tags.outputs.publish == 'true'
+        uses: actions/download-artifact@v4
+        with:
+          name: verified-runtime-images
+          path: verified-images
+      - name: Load, tag and push the verified images
+        if: steps.tags.outputs.publish == 'true'
+        env:
+          TAGS: ${{ steps.tags.outputs.tags }}
+          REGISTRY_USER: ${{ github.actor }}
+          REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -eu
+          docker load -i verified-images/release-images.tar
+          version="${TAGS%% *}"
+          pairs="prod:ghcr.io/packio-php/packio prod-worker:ghcr.io/packio-php/packio-worker prod-ssr:ghcr.io/packio-php/packio-ssr"
+          printf '%s' "$REGISTRY_TOKEN" | docker login ghcr.io --username "$REGISTRY_USER" --password-stdin
+          # Sets lookup_status (HTTP status of the manifest request, or "denied") and lookup_digest. Fails the job
+          # on anything inconclusive. 401/403 count as "not published": a package that does not exist yet answers
+          # "denied", and these are the credentials the push uses, so if access is really broken the push fails
+          # too and nothing is replaced.
+          lookup() {
+            repo="${1#ghcr.io/}"
+            lookup_digest=''
+            code="$(curl --silent --show-error --retry 3 ${REGISTRY_USER:+-u "$REGISTRY_USER:$REGISTRY_TOKEN"} \
+              --output "$RUNNER_TEMP/token.json" --write-out '%{http_code}' \
+              "https://ghcr.io/token?service=ghcr.io&scope=repository:$repo:pull")" || code=curl-error
+            case "$code" in
+              200) ;;
+              401|403) lookup_status=denied; echo "::notice::$repo: registry denied the pull token; treating $2 as not published"; return ;;
+              *) echo "::error::$repo: token request failed (status $code); cannot tell whether $2 is published"; exit 1 ;;
+            esac
+            token="$(jq -r .token "$RUNNER_TEMP/token.json")"
+            [ -n "$token" ] && [ "$token" != null ] || { echo "::error::$repo: token response had no token; cannot tell whether $2 is published"; exit 1; }
+            code="$(curl --silent --show-error --retry 3 --head --header "Authorization: Bearer $token" \
+              --header 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+              --dump-header "$RUNNER_TEMP/headers.txt" --output /dev/null --write-out '%{http_code}' \
+              "https://ghcr.io/v2/$repo/manifests/$2")" || code=curl-error
+            lookup_status="$code"
+            case "$code" in
+              200)
+                lookup_digest="$(awk 'tolower($1) == "docker-content-digest:" { print $2 }' "$RUNNER_TEMP/headers.txt" | tr -d '\r')"
+                [ -n "$lookup_digest" ] || { echo "::error::$repo:$2 exists but the registry sent no digest"; exit 1; } ;;
+              404) ;;
+              401|403) echo "::notice::$repo: registry denied the manifest request; treating $2 as not published" ;;
+              *) echo "::error::$repo:$2 lookup failed (status $code); cannot tell whether it is published"; exit 1 ;;
+            esac
+          }
+          # Check everything before pushing anything: a published version must never be replaced.
+          for pair in $pairs; do
+            id="$(cat "verified-images/${pair%%:*}.id")"
+            name="${pair#*:}"
+            label="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$id")"
+            if [ "$label" != "$version" ]; then
+              echo "::error::$name image is labeled version '$label', expected '$version'"
+              exit 1
+            fi
+            lookup "$name" "$version"
+            if [ -n "$lookup_digest" ] && [ "$lookup_digest" != "$id" ]; then
+              echo "::error::$name:$version is already published with different content; refusing to replace it (published $lookup_digest, local $id)"
+              exit 1
+            fi
+          done
+          {
+            echo '| Image | Tags | Digest |'
+            echo '| --- | --- | --- |'
+          } >> "$GITHUB_STEP_SUMMARY"
+          for pair in $pairs; do
+            id="$(cat "verified-images/${pair%%:*}.id")"
+            name="${pair#*:}"
+            # Exact version first, latest last: an interrupted run never leaves latest ahead of its version tag.
+            for tag in $TAGS; do
+              docker tag "$id" "$name:$tag"
+              docker push "$name:$tag"
+            done
+            lookup "$name" "$version"
+            [ "$lookup_status" = 200 ] || { echo "::error::$name:$version was not found after the push"; exit 1; }
+            digest="$lookup_digest"
+            echo "| \`$name\` | \`$TAGS\` | \`$digest\` |" >> "$GITHUB_STEP_SUMMARY"
+          done

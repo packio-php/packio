@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Verified production images are published to GitHub Container Registry on release tags.
+
+### Removed
+
+- The manual release bundle workflow and its source archive of third-party packages. `third-party-sources.json` still lists the upstream sources.
+
 ## [0.2.0] - 2026-11-14
 
 ### Added

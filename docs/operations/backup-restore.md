@@ -3,9 +3,9 @@
 This procedure targets one Linux amd64 host, PostgreSQL 17 and local filesystem
 archives. A backup is recoverable only when its database, archives, original
 secret key, configuration and version identity belong to the same installation.
-The recovery rehearsal is a release gate; a successful `/health` response alone
-proves only that the HTTP process is alive. Until a complete recovery report for
-an exact candidate passes, treat restore and upgrade as unvalidated.
+A successful `/health` response alone proves only that the HTTP process is
+alive. Packio ships no automated recovery rehearsal: until a restore has been
+rehearsed on an isolated copy, treat restore and upgrade as unvalidated.
 
 ## Prepare and stop writes
 

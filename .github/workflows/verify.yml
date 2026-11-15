@@ -62,6 +62,7 @@ jobs:
           [[rules]]
           id = "generic-api-key"
 
+          # The next two files are deleted but remain in the scanned history.
           [[rules.allowlists]]
           condition = "AND"
           regexTarget = "secret"
@@ -177,7 +178,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Compose/deploy-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Compose/deploy-compose.test.py && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 
@@ -250,8 +251,6 @@ jobs:
           printf 'PACKIO_CANDIDATE_SHA=%s\nPACKIO_RELEASE_VERSION=%s\n' "$candidate_sha" "$release_version" >> "$GITHUB_ENV"
           docker info
           docker compose version
-          python3 test/Support/Release/image-harness.test.py
-          python3 test/Support/Release/product-harness.test.py
           docker pull postgres:17-alpine
           mkdir -p data/coverage/images
           docker_version="${release_version//+/-}"

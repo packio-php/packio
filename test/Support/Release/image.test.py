@@ -32,7 +32,7 @@ FORBIDDEN = (
     "/usr/local/bin/php-cgi", "/usr/local/bin/phpdbg", "/usr/local/bin/phpize",
     "/usr/local/bin/php-config", "/usr/local/bin/pear", "/usr/local/bin/peardev",
     "/usr/local/bin/pecl", "/usr/local/include/",
-    "/app/bin/create-release-tag.php", "/app/bin/measure-step", "/app/bin/smoke-runtime",
+    "/app/bin/create-release-tag.php",
     "/app/bin/with-postgres-test",
 )
 FORBIDDEN_BY_TARGET = {

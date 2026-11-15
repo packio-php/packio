@@ -2,7 +2,7 @@
 
 Run Packio on your own server from ready-made Docker images. You do not clone the repository or build anything.
 
-The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr`. Compose downloads them for you. The images are published starting with 0.3.0; use the version you find on the releases page.
+The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr`. Compose downloads them for you. The images are published starting with 0.3.0; use the version you find on the releases page. The downloads are about 85 MiB for the application image, 115 MiB for the worker image and 70 MiB for the SSR image.
 
 ## Requirements
 

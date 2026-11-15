@@ -1,13 +1,12 @@
-# Docker and HTTP runtimes
+# Docker and the HTTP runtime
 
-Packio has two HTTP runtimes. FrankenPHP is the local development default; the supported production Compose example uses RoadRunner. Both use the same Mezzio application, PostgreSQL-backed job queue, and companion services.
+Packio runs on RoadRunner, in development and in production. The HTTP entrypoint is `public/index-roadrunner.php`; a second RoadRunner process supervises the queue workers and maintenance loops.
 
-| Runtime | Compose files | HTTP entrypoint | Use |
-| --- | --- | --- | --- |
-| FrankenPHP | `compose.yaml` | `public/index-worker.php` | Local development default |
-| RoadRunner | `compose.yaml` + `compose.roadrunner.yaml` | `public/index-roadrunner.php` | Local alternative; used by standalone production example |
-
-Do not run both file sets in the same Compose project at once. They publish the same `8080:80` mapping and use the same `app` service name. When switching to or from RoadRunner, always include `--build`; this prevents reuse of an `app` container built for the other runtime.
+| Compose file | Use |
+| --- | --- |
+| `compose.yaml` | Local development: the checkout is bind-mounted, with Vite and Mailpit |
+| `compose.prod.yaml` | Production example built from source |
+| `deploy/` | Production from the published images, see [self-hosting.md](self-hosting.md) |
 
 ## Production example with RoadRunner
 
@@ -54,7 +53,7 @@ docker compose --env-file .env.prod.local -f compose.prod.yaml ps
 docker compose --env-file .env.prod.local -f compose.prod.yaml logs -f app workers
 ```
 
-Use only this Compose file, without `compose.yaml` or `compose.roadrunner.yaml`.
+Use only this Compose file, without `compose.yaml`.
 The app listens on container port `80`, published only on host loopback as
 `127.0.0.1:${HTTP_PORT:-8080}`. `HTTP_PORT` changes this published HTTP port; it
 does not change the HTTPS listener or Caddy's upstream automatically. PostgreSQL
@@ -210,22 +209,22 @@ storage. Failed migration/startup leaves traffic and consumers closed; binary
 rollback requires verified schema/job compatibility, otherwise restore the backup.
 Restoring after new writes loses those writes and needs an operator decision.
 
-To verify service supervision in isolation (Docker and Python 3 required):
+To verify service supervision in isolation (Docker required):
 
 ```bash
 docker build -f .docker/Dockerfile.roadrunner --target prod-worker -t packio-worker-service-check:local .
 worker_image=$(docker image inspect --format '{{.Id}}' packio-worker-service-check:local)
-python3 test/Support/RoadRunner/services.test.py "$worker_image"
+sh test/Support/RoadRunner/services.test.sh "$worker_image"
 ```
 
 The smoke test uses a temporary PostgreSQL container and internal network. It
 checks process counts, replacement after exit/crash, missing-service health,
 graceful shutdown and configurable worker count, then removes its containers/network.
 
-To verify a real job after cold startup and after worker recreation:
+To verify a real job after cold startup and after worker recreation (Docker and `jq` required):
 
 ```bash
-python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
+sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
 ```
 
 This test creates a separate temporary PostgreSQL container and internal network,
@@ -256,7 +255,7 @@ Try Packio from a source checkout with the development stack. Most users should 
    until curl -fsS http://localhost:8080/health; do sleep 2; done
    ```
 
-   One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start takes 2-3 minutes; later starts take a few seconds. If the `until` loop does not finish, press Ctrl-C and check `docker compose logs app`. The workers can restart for up to a minute while `app` runs migrations; they recover on their own.
+   One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start compiles PHP for the image and takes about 15 minutes; later starts take a few seconds. If the `until` loop does not finish, press Ctrl-C and check `docker compose logs app`. The workers start after `app` has run the migrations and is healthy.
 3. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
 4. Create an organization, for example `acme`.
 5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
@@ -314,24 +313,24 @@ Use `compose.prod.yaml` by itself. Its app entrypoint runs pending PostgreSQL mi
 
 ## Local command matrix
 
-Every RoadRunner command below uses both Compose files. The complete supported stack is `app`, `worker`, `worker-cleanup`, `email-verification-cleanup`, `password-reset-cleanup`, `source-oauth-refresh`, `ssr`, `postgres`, `mailpit`, and `vite` (plus the opt-in `postgres-test` profile). The one-shot `setup-php` and `setup-node` services install dependencies and exit; the other services wait for them to finish. RoadRunner does not replace or contain the Packio workers: they remain independently supervised services.
+The complete stack is `app`, `workers`, `ssr`, `postgres`, `mailpit`, and `vite` (plus the opt-in `postgres-test` profile). The one-shot `setup-php` and `setup-node` services install dependencies and exit; the other services wait for them to finish. `app`, `workers` and `setup-php` share one image, the `dev` target of `.docker/Dockerfile.roadrunner`.
 
-| Operation | FrankenPHP | RoadRunner |
-| --- | --- | --- |
-| Full stack | `docker compose -f compose.yaml up -d --build` | `docker compose -f compose.yaml -f compose.roadrunner.yaml up -d --build` |
-| Selective development stack | `docker compose -f compose.yaml up -d --build postgres mailpit vite app worker worker-cleanup email-verification-cleanup password-reset-cleanup source-oauth-refresh ssr` | `docker compose -f compose.yaml -f compose.roadrunner.yaml up -d --build postgres mailpit vite app worker worker-cleanup email-verification-cleanup password-reset-cleanup source-oauth-refresh ssr` |
-| Build app | `docker compose -f compose.yaml build app` | `docker compose -f compose.yaml -f compose.roadrunner.yaml build app` |
-| Follow app and worker logs | `docker compose -f compose.yaml logs -f app worker worker-cleanup email-verification-cleanup password-reset-cleanup source-oauth-refresh ssr` | `docker compose -f compose.yaml -f compose.roadrunner.yaml logs -f app worker worker-cleanup email-verification-cleanup password-reset-cleanup source-oauth-refresh ssr` |
-| Execute CLI command | `docker compose -f compose.yaml exec app php vendor/bin/laminas list` | `docker compose -f compose.yaml -f compose.roadrunner.yaml exec app php vendor/bin/laminas list` |
-| Reload HTTP workers | `docker compose -f compose.yaml restart app` | `docker compose -f compose.yaml -f compose.roadrunner.yaml exec app rr reset -c /app/config/roadrunner/.rr.yaml` |
-| Stop | `docker compose -f compose.yaml stop` | `docker compose -f compose.yaml -f compose.roadrunner.yaml stop` |
-| Remove containers/networks | `docker compose -f compose.yaml down` | `docker compose -f compose.yaml -f compose.roadrunner.yaml down` |
-| Remove local PostgreSQL data | `docker compose -f compose.yaml down -v` | `docker compose -f compose.yaml -f compose.roadrunner.yaml down -v` |
-| Smoke check | `curl -fsS http://localhost:8080/health` | `curl -fsS http://localhost:8080/health` |
+| Operation | Command |
+| --- | --- |
+| Full stack | `docker compose -f compose.yaml up -d --build` |
+| Build the PHP image | `docker compose -f compose.yaml build app` |
+| Follow app and worker logs | `docker compose -f compose.yaml logs -f app workers ssr` |
+| Execute CLI command | `docker compose -f compose.yaml exec app php vendor/bin/laminas list` |
+| Reload HTTP workers after a code change | `docker compose -f compose.yaml exec app rr reset -c /app/config/roadrunner/.rr.yaml` |
+| Reload queue workers after a code change | `docker compose -f compose.yaml restart workers` |
+| Stop | `docker compose -f compose.yaml stop` |
+| Remove containers/networks | `docker compose -f compose.yaml down` |
+| Remove local PostgreSQL data | `docker compose -f compose.yaml down -v` |
+| Smoke check | `curl -fsS http://localhost:8080/health` |
 
 The application is available at `http://localhost:8080/`; Mailpit is at `http://localhost:8025/`; SSR health is at `http://localhost:13714/health`.
 
-Use `docker compose ... ps` to verify that every shared companion service is healthy. `docker compose ... logs` writes application, job-worker, maintenance, SSR, and RoadRunner supervisor output to the terminal; do not expect a container-local log file.
+Use `docker compose ... ps` to verify that every service is healthy. `docker compose ... logs` writes application, job-worker, maintenance, SSR, and RoadRunner supervisor output to the terminal; do not expect a container-local log file.
 
 ## Vite and SSR development
 
@@ -350,18 +349,17 @@ docker compose -f compose.yaml restart ssr
 curl -fsS http://localhost:13714/health
 ```
 
-`ssr` bind-mounts the project in local Compose, so the rebuilt bundle is visible without rebuilding the image. The same SSR service is used by both HTTP runtime variants.
+`ssr` runs the stock Node image with the project bind-mounted, so the rebuilt bundle is visible after a restart.
 
 ## Packio worker services
 
-In the development Compose, the `worker` container runs `worker:run`; the maintenance containers run cleanup or Source OAuth refresh loops. They remain PHP CLI services and are unchanged by the RoadRunner override. Authentication emails are delivered by `worker`, so this service must be running even when no package synchronization is needed. The web and worker processes must share the same `APP_SECRET_ENCRYPTION_KEY` and mail configuration.
+In the development Compose, the `workers` container runs RoadRunner with `config/roadrunner/services.yaml`, as in production: `PACKIO_WORKER_NUM` queue workers (`worker:run`, default 2 in development) and one process for each cleanup or Source OAuth refresh loop. Authentication emails are delivered by the queue workers, so this service must be running even when no package synchronization is needed. The web and worker processes must share the same `APP_SECRET_ENCRYPTION_KEY` and mail configuration.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
 | `WORKER_TIMEOUT` | `30` seconds | Job queue polling timeout |
 | `WORKER_MEMORY_LIMIT` | `512M` | Restart threshold for peak job-worker memory |
 | `WORKER_MAX_JOBS` | `100` | Jobs before a job worker exits; `0` is unlimited |
-| `WORKER_ID` | empty | Optional explicit job-worker identifier |
 | `WORKER_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Old job/log cleanup interval |
 | `WORKER_CLEANUP_RETENTION_DAYS` | `30` days | Retention for jobs and job logs |
 | `AUDIT_LOG_RETENTION_DAYS` | `180` days | Retention for audit log entries; `worker-cleanup` prunes them in the same loop |
@@ -369,13 +367,13 @@ In the development Compose, the `worker` container runs `worker:run`; the mainte
 | `PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Password-reset cleanup interval |
 | `SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS` | `86400` seconds | Source OAuth maintenance interval |
 
-Local bind-mounted worker services run with `PACKIO_DOCKER_UID` and `PACKIO_DOCKER_GID` (both default to `1000`) so generated files belong to the host user. On Linux, set them to the local account IDs and rebuild a worker image when the build arguments change:
+The bind-mounted services run with `PACKIO_DOCKER_UID` and `PACKIO_DOCKER_GID` (both default to `1000`) so generated files belong to the host user. On Linux, set them to the local account IDs and rebuild the PHP image when the build arguments change:
 
 ```bash
-PACKIO_DOCKER_UID=$(id -u) PACKIO_DOCKER_GID=$(id -g) docker compose -f compose.yaml up -d --build worker
+PACKIO_DOCKER_UID=$(id -u) PACKIO_DOCKER_GID=$(id -g) docker compose -f compose.yaml up -d --build
 ```
 
-Run a one-off migration or application CLI command with the selected runtime's `app` service; migration startup already retries while PostgreSQL is becoming ready:
+Run a one-off migration or application CLI command with the `app` service; migration startup already retries while PostgreSQL is becoming ready:
 
 ```bash
 docker compose -f compose.yaml run --rm app php vendor/bin/laminas cycle:migration:run -n
@@ -384,7 +382,7 @@ docker compose -f compose.yaml run --rm app php vendor/bin/laminas list
 
 ## RoadRunner configuration and tuning
 
-The alternative image uses `.docker/Dockerfile.roadrunner`, `config/roadrunner/.rr.yaml`, and `.docker/entrypoint-roadrunner.sh`. RoadRunner listens only on container port `80`. Its RPC (`127.0.0.1:6001`) and status (`127.0.0.1:2114`) listeners are not published to the host.
+The images use `.docker/Dockerfile.roadrunner`, `config/roadrunner/.rr.yaml`, and `.docker/entrypoint-roadrunner.sh`. RoadRunner listens only on container port `80`. Its RPC (`127.0.0.1:6001`) and status (`127.0.0.1:2114`) listeners are not published to the host.
 
 | Variable | Default | Unit | Safe production starting point | Meaning |
 | --- | ---: | --- | --- | --- |
@@ -398,14 +396,14 @@ The alternative image uses `.docker/Dockerfile.roadrunner`, `config/roadrunner/.
 | `RR_RELAY_TIMEOUT` | `60s` | Go duration | `60s` | Goridge relay timeout |
 | `RR_MAX_REQUEST_SIZE_MB` | `32` | MiB | Match upload policy | Maximum accepted HTTP request size |
 
-`RR_*` controls only RoadRunner's HTTP pool. It is intentionally distinct from `WORKER_TIMEOUT`, `WORKER_MEMORY_LIMIT`, `WORKER_MAX_JOBS`, and `WORKER_ID`, which control Packio's PostgreSQL job consumer (`worker:run`). Do not tune one namespace expecting it to affect the other.
+`RR_*` controls only RoadRunner's HTTP pool. It is intentionally distinct from `WORKER_TIMEOUT`, `WORKER_MEMORY_LIMIT`, and `WORKER_MAX_JOBS`, which control Packio's PostgreSQL job consumer (`worker:run`). Do not tune one namespace expecting it to affect the other.
 
 RoadRunner PHP worker stdout is reserved for the Goridge protocol. PHP/application diagnostics must be written to stderr. Safe diagnostics are:
 
 ```bash
-docker compose -f compose.yaml -f compose.roadrunner.yaml exec app rr --version
-docker compose -f compose.yaml -f compose.roadrunner.yaml exec app curl -fsS http://127.0.0.1:2114/
-docker compose -f compose.yaml -f compose.roadrunner.yaml logs --tail=200 app
+docker compose -f compose.yaml exec app rr --version
+docker compose -f compose.yaml exec app curl -fsS http://127.0.0.1:2114/
+docker compose -f compose.yaml logs --tail=200 app
 curl -fsS http://localhost:8080/health
 ```
 
@@ -415,15 +413,15 @@ Do not use `printenv`, dump request payloads, cookies, authorization headers, se
 
 Packio retains CORS, CSRF, authentication, rate limiting, host/subdomain routing, and trusted-proxy policy in Mezzio. With RoadRunner behind a TLS-terminating reverse proxy, set `TRUSTED_PROXIES` to the explicit proxy addresses/ranges and forward the standard host, scheme, port, and client-address headers. Do not trust arbitrary client-supplied forwarded headers.
 
-RoadRunner serves only allowlisted browser asset extensions rooted at `/app/public` (`.css`, `.ico`, `.js`, `.json`, `.png`, `.svg`, and `.woff2`). Dotfiles, PHP/source files, backups, configuration files, and traversal targets are not static matches and fall through to Mezzio rather than being exposed as files. Terminate TLS at the external reverse proxy for RoadRunner. FrankenPHP/Caddy may terminate TLS in its own topology.
+RoadRunner serves only allowlisted browser asset extensions rooted at `/app/public` (`.css`, `.ico`, `.js`, `.json`, `.png`, `.svg`, and `.woff2`). Dotfiles, PHP/source files, backups, configuration files, and traversal targets are not static matches and fall through to Mezzio rather than being exposed as files. Terminate TLS at the external reverse proxy.
 
 The container healthcheck first uses the loopback RoadRunner status endpoint and then the application `/health` endpoint. The public `/health` endpoint is the readiness and deployment signal; status is diagnostic only.
 
 ## Migrations and graceful operations
 
-Both app entrypoints use the same migration helper. By default, startup retries migrations while PostgreSQL becomes ready. After successful migrations, it runs `cycle:seed:run RuntimeSettingsCatalogSeed -n` to add missing runtime settings without overwriting existing admin choices. A migration or seed failure prevents the HTTP server from starting. Set `RUN_MIGRATIONS=false` to skip both migrations and this seed; `MIGRATION_ATTEMPTS` defaults to `12` and `MIGRATION_RETRY_SECONDS` to `5` seconds.
+The app entrypoint runs the migration helper. By default, startup retries migrations while PostgreSQL becomes ready. After successful migrations, it runs `cycle:seed:run RuntimeSettingsCatalogSeed -n` to add missing runtime settings without overwriting existing admin choices. A migration or seed failure prevents the HTTP server from starting. Set `RUN_MIGRATIONS=false` to skip both migrations and this seed; `MIGRATION_ATTEMPTS` defaults to `12` and `MIGRATION_RETRY_SECONDS` to `5` seconds.
 
-For source changes in local RoadRunner development, run `rr reset -c /app/config/roadrunner/.rr.yaml` (the matrix command above) after updating code. In production, publish and prepare caches/schema before restarting services. For an intentional RoadRunner recycle or graceful restart, let the service manager send its configured stop signal, honor at least `RR_DESTROY_TIMEOUT`, and wait for replacement workers plus `/health` to become ready. Do not kill the container during an in-flight request unless the configured grace period has expired.
+For source changes in local development, run `rr reset -c /app/config/roadrunner/.rr.yaml` (the matrix command above) after updating code. In production, publish and prepare caches/schema before restarting services. For an intentional RoadRunner recycle or graceful restart, let the service manager send its configured stop signal, honor at least `RR_DESTROY_TIMEOUT`, and wait for replacement workers plus `/health` to become ready. Do not kill the container during an in-flight request unless the configured grace period has expired.
 
 ## Production images
 
@@ -446,8 +444,8 @@ immutable image IDs to verify the same artifacts again without building or pulli
 python3 test/Support/Release/image.test.py --verify-only \
   --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
   --expected-sha "$(git rev-parse HEAD)" --report /tmp/packio-verification.json
-python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
-python3 test/Support/RoadRunner/services.test.py "$worker_image"
+sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
+sh test/Support/RoadRunner/services.test.sh "$worker_image"
 docker save -o /tmp/packio-release-images.tar "$app_image" "$worker_image" "$ssr_image"
 ```
 
@@ -465,7 +463,5 @@ a registry digest and publication bundle remain separate release requirements.
 The harness removes only its own runtime resources; built images remain available.
 The RoadRunner image runs as a
 non-root user, uses the pinned RoadRunner binary declared in its Dockerfile,
-and includes PostgreSQL support. `.docker/Dockerfile` and
-`.docker/Dockerfile.worker` remain development images; their incomplete `prod`
-targets have been removed. `.docker/Dockerfile.ssr` builds its own SSR bundle for
-development; its source bind mount in `compose.yaml` still exposes local changes.
+and includes PostgreSQL support. Its `dev` target is the development image used
+by `compose.yaml`; it is not a production target.

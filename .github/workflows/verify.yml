@@ -115,7 +115,7 @@ jobs:
             else
               status=$?
             fi
-            if [ ! -f "$report" ] || ! python3 -c 'import json,sys; value=json.load(open(sys.argv[1], encoding="utf-8")); assert isinstance(value,list); print(len(value))' "$report" > "$work_dir/$scope.count" 2> "$work_dir/$scope.parse.log"; then
+            if [ ! -f "$report" ] || ! jq -e 'if type == "array" then length else error("not a list") end' "$report" > "$work_dir/$scope.count" 2> "$work_dir/$scope.parse.log"; then
               echo "::error::$scope scan failed or did not produce a valid private report (exit $status)"
               return 1
             fi
@@ -178,7 +178,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Compose/deploy-compose.test.py && sh test/Support/Release/image-tags.test.sh
+        run: composer check && composer openapi-check && sh test/Support/Docs/links.test.sh && sh test/Support/Compose/dev-compose.test.sh && sh test/Support/Compose/deploy-compose.test.sh && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 
@@ -226,7 +226,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
-      # The notices check in the image step reads node_modules/swagger-ui-dist.
+      # The proxy step mounts node_modules into its browser container.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -278,10 +278,9 @@ jobs:
           python3 test/Support/Release/image.test.py --verify-only \
             --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
             --expected-sha "$candidate_sha" --report data/coverage/images/report.json
-          python3 test/Support/Release/notices.test.py \
-            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image"
-          python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
-          python3 test/Support/RoadRunner/services.test.py "$worker_image"
+          sh test/Support/Release/notices.test.sh "$app_image" "$worker_image" "$ssr_image"
+          sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
+          sh test/Support/RoadRunner/services.test.sh "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"
       - name: Verify real production SSR and proxy browser contract
         run: |

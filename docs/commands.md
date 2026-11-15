@@ -52,7 +52,7 @@ changes nothing when the repository has not changed.
 ### `audit:log:prune` cron
 
 Audit log entries are kept for `AUDIT_LOG_RETENTION_DAYS` days (default 180). Nothing is archived: export the
-`audit_entries` table first if you need older entries. The Docker `worker-cleanup` service runs the command in its
+`audit_entries` table first if you need older entries. The `worker-cleanup` process of the Docker `workers` service runs the command in its
 loop; without Docker, run it daily:
 
 ```cron

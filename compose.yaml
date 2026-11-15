@@ -20,21 +20,16 @@ x-app-environment: &app-environment
   MAIL_FROM_ADDRESS: "${MAIL_FROM_ADDRESS:-noreply@packio.localhost}"
   MAIL_FROM_NAME: "${MAIL_FROM_NAME:-Packio}"
 
-x-worker-service: &worker-service
-  build: &worker-build
+x-php-service: &php-service
+  build: &php-build
     context: .
-    dockerfile: .docker/Dockerfile.worker
-    target: worker
+    dockerfile: .docker/Dockerfile.roadrunner
+    target: dev
     args:
       APP_UID: "${PACKIO_DOCKER_UID:-1000}"
       APP_GID: "${PACKIO_DOCKER_GID:-1000}"
   user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
   restart: unless-stopped
-  depends_on:
-    postgres:
-      condition: service_healthy
-    setup-php:
-      condition: service_completed_successfully
   volumes:
     - .:/app
   networks:
@@ -42,7 +37,7 @@ x-worker-service: &worker-service
 
 services:
   setup-php:
-    build: *worker-build
+    build: *php-build
     user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
     restart: "no"
     entrypoint: ["sh", "/app/.docker/setup-dev-php.sh"]
@@ -156,12 +151,8 @@ services:
       - packio-network
 
   app:
-    build:
-      context: .
-      dockerfile: .docker/Dockerfile
-      target: app-base
+    <<: *php-service
     container_name: packio-mezzio-app
-    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -175,91 +166,56 @@ services:
       - "8080:80"
     environment:
       <<: *app-environment
+      # Goridge reserves PHP worker stdout for its protocol; application logs go to stderr.
+      LOG_CHANNEL: stderr
       TRUSTED_PROXIES: "${TRUSTED_PROXIES:-}"
-      APP_HEALTHCHECK_URL: "http://localhost:80/health"
       APP_URL: "${APP_URL:-http://packio.localhost:8080}"
       BRAND_DOMAIN: "${BRAND_DOMAIN:-packio.localhost}"
       BRAND_REGISTRY_BASE_DOMAIN: "${BRAND_REGISTRY_BASE_DOMAIN:-packio.localhost}"
-      SERVER_NAME: "${SERVER_NAME:-packio.localhost:80, *.packio.localhost:80, localhost:80, *.localhost:80}"
-      CADDY_GLOBAL_OPTIONS: "auto_https off"
       RUN_MIGRATIONS: "${RUN_MIGRATIONS:-true}"
       MIGRATION_ATTEMPTS: "${MIGRATION_ATTEMPTS:-12}"
       MIGRATION_RETRY_SECONDS: "${MIGRATION_RETRY_SECONDS:-5}"
       VITE_DEV_SERVER_URL: "${VITE_DEV_SERVER_URL:-http://localhost:5173}"
       INERTIA_SSR_ENABLED: "${INERTIA_SSR_ENABLED:-true}"
       INERTIA_SSR_URL: "${INERTIA_SSR_URL:-http://ssr:13714/render}"
-    volumes:
-      - .:/app
+      RR_NUM_WORKERS: "${RR_NUM_WORKERS:-2}"
+      RR_MAX_JOBS: "${RR_MAX_JOBS:-500}"
+      RR_MAX_QUEUE_SIZE: "${RR_MAX_QUEUE_SIZE:-256}"
+      RR_MAX_WORKER_MEMORY_MB: "${RR_MAX_WORKER_MEMORY_MB:-256}"
+      RR_ALLOCATE_TIMEOUT: "${RR_ALLOCATE_TIMEOUT:-60s}"
+      RR_DESTROY_TIMEOUT: "${RR_DESTROY_TIMEOUT:-60s}"
+      RR_EXEC_TTL: "${RR_EXEC_TTL:-60s}"
+      RR_RELAY_TIMEOUT: "${RR_RELAY_TIMEOUT:-60s}"
+      RR_MAX_REQUEST_SIZE_MB: "${RR_MAX_REQUEST_SIZE_MB:-32}"
     healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/app-healthcheck.sh"]
+      test: ["CMD", "sh", "/usr/local/bin/roadrunner-healthcheck.sh"]
       interval: 10s
       timeout: 5s
       retries: 3
-    networks:
-      - packio-network
+      # The first start runs every migration before RoadRunner listens.
+      start_period: 120s
 
-  worker:
-    <<: *worker-service
-    container_name: packio-mezzio-worker
+  # One container, as in production: RoadRunner supervises the queue workers and the maintenance loops.
+  workers:
+    <<: *php-service
+    container_name: packio-mezzio-workers
+    entrypoint: ["/usr/local/bin/entrypoint-roadrunner-services.sh"]
+    stop_grace_period: 120s
+    depends_on:
+      app:
+        condition: service_healthy
     environment:
       <<: *app-environment
+      LOG_CHANNEL: stderr
+      PACKIO_WORKER_NUM: "${PACKIO_WORKER_NUM:-2}"
       WORKER_TIMEOUT: "${WORKER_TIMEOUT:-30}"
       WORKER_MEMORY_LIMIT: "${WORKER_MEMORY_LIMIT:-512M}"
       WORKER_MAX_JOBS: "${WORKER_MAX_JOBS:-100}"
-      WORKER_ID: "${WORKER_ID:-}"
-    healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/worker-healthcheck.sh"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  worker-cleanup:
-    <<: *worker-service
-    container_name: packio-mezzio-worker-cleanup
-    entrypoint:
-      - /usr/local/bin/worker-cleanup-entrypoint.sh
-    environment:
-      <<: *app-environment
       WORKER_CLEANUP_INTERVAL_SECONDS: "${WORKER_CLEANUP_INTERVAL_SECONDS:-3600}"
       WORKER_CLEANUP_RETENTION_DAYS: "${WORKER_CLEANUP_RETENTION_DAYS:-30}"
       AUDIT_LOG_RETENTION_DAYS: "${AUDIT_LOG_RETENTION_DAYS:-180}"
-    healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/worker-cleanup-healthcheck.sh"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  email-verification-cleanup:
-    <<: *worker-service
-    container_name: packio-mezzio-email-verification-cleanup
-    entrypoint:
-      - /usr/local/bin/email-verification-cleanup-entrypoint.sh
-    environment:
-      <<: *app-environment
       EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS: "${EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS:-3600}"
-    healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/email-verification-cleanup-healthcheck.sh"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  password-reset-cleanup:
-    <<: *worker-service
-    container_name: packio-mezzio-password-reset-cleanup
-    entrypoint:
-      - /usr/local/bin/password-reset-cleanup-entrypoint.sh
-    environment:
-      <<: *app-environment
       PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS: "${PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS:-3600}"
-    healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/password-reset-cleanup-healthcheck.sh"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-  source-oauth-refresh:
-    <<: *worker-service
-    container_name: packio-mezzio-source-oauth-refresh
-    entrypoint:
-      - /usr/local/bin/source-oauth-refresh-entrypoint.sh
-    environment:
-      <<: *app-environment
       SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS: "${SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS:-86400}"
       SOURCE_OAUTH_REFRESH_LIMIT: "${SOURCE_OAUTH_REFRESH_LIMIT:-100}"
       SOURCE_OAUTH_REFRESH_PROVIDER: "${SOURCE_OAUTH_REFRESH_PROVIDER:-}"
@@ -269,16 +225,19 @@ services:
       SOURCE_OAUTH_REFRESH_IDLE_BEFORE: "${SOURCE_OAUTH_REFRESH_IDLE_BEFORE:-}"
       SOURCE_OAUTH_REFRESH_MINIMUM_INTERVAL: "${SOURCE_OAUTH_REFRESH_MINIMUM_INTERVAL:-}"
     healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/source-oauth-refresh-healthcheck.sh"]
+      test: ["CMD", "php", "/app/bin/healthcheck-roadrunner-services.php"]
       interval: 10s
       timeout: 5s
       retries: 3
+      start_period: 30s
+
   ssr:
-    build:
-      context: .
-      dockerfile: .docker/Dockerfile.ssr
+    image: node:24.21.0-alpine
     container_name: packio-mezzio-ssr
     restart: unless-stopped
+    user: "${PACKIO_DOCKER_UID:-1000}:${PACKIO_DOCKER_GID:-1000}"
+    working_dir: /app
+    entrypoint: ["sh", "/app/.docker/entrypoint-ssr.sh"]
     ports:
       - "127.0.0.1:13714:13714"
     environment:
@@ -291,7 +250,7 @@ services:
     volumes:
       - .:/app
     healthcheck:
-      test: ["CMD", "sh", "/usr/local/bin/ssr-healthcheck.sh"]
+      test: ["CMD", "sh", "/app/.docker/healthcheck-ssr.sh"]
       interval: 10s
       timeout: 5s
       retries: 3

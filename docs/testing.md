@@ -445,7 +445,7 @@ Commit the root lock and all six `tools/*/composer.lock` files when preserving r
 
 `composer test:runner` includes the bootstrap regression and the PostgreSQL runner contract. The bootstrap selects the repository root even when invoked from another working directory. Integration configuration loads the actual ConfigAggregator inside its own temporary directory, preserving the application cache; per-test artifact paths and shutdown cleanup belong only to the test run. PHPUnit stores result caches under ignored `test/data/cache/phpunit`. Tests do not remove runtime `data/cache/config-cache.php`.
 
-`composer check` includes formatter coverage for `src`, `test`, `config`, `bin` and migrations, static and architecture checks, runner tests and the base suites. `composer test:concurrency` runs separately. `npm run check` executes the frontend unit/component suite once through `test:front:ci`, producing `data/coverage/vitest.junit.xml`, then SSR, browser, format and build checks. Run `sh test/Support/Release/image-tags.test.sh` to check the release tag to image tag mapping used by the `publish` job. Run `python3 test/Support/Docs/links.test.py` to check local documentation destinations; it excludes anchors and external URLs. `python3 test/Support/Compose/dev-compose.test.py` checks the dev `compose.yaml` setup services; CI runs these after `composer check` and `composer openapi-check`.
+`composer check` includes formatter coverage for `src`, `test`, `config`, `bin` and migrations, static and architecture checks, runner tests and the base suites. `composer test:concurrency` runs separately. `npm run check` executes the frontend unit/component suite once through `test:front:ci`, producing `data/coverage/vitest.junit.xml`, then SSR, browser, format and build checks. Run `sh test/Support/Release/image-tags.test.sh` to check the release tag to image tag mapping used by the `publish` job. Run `sh test/Support/Docs/links.test.sh` to check local documentation destinations; it excludes anchors and external URLs. `sh test/Support/Compose/dev-compose.test.sh` checks the dev `compose.yaml` setup services; CI runs these after `composer check` and `composer openapi-check`.
 
 ## Product fixture from final images
 
@@ -472,42 +472,41 @@ The harness owns its non-root Firefox container and keeps browser traces, mail b
 
 The private installation must resolve `packio-fixture/private-package:1.0.0` from Packio, execute `Probe::value()` and compare the installed package files with the independently prepared fixture hashes. Direct authenticated metadata and archive downloads verify the same package and archive. A second fresh installation must succeed. Anonymous clients, tokens for another organization and revoked tokens must fail both metadata and archive requests with the existing registry status contract; fresh Composer installations must also fail. Separate controls revoke a token before installation and use the wrong auth hostname, so cached packages or direct upstream access cannot produce a passing result. Tokens, authorization headers and client output stay out of the public report.
 
-The public runtime job requires the complete product check against the same image IDs and candidate SHA verified earlier in the job. Its product step has no infrastructure skip or allowed failure; the early stdlib regression runs before Node/npm setup, and the browser parser self-check runs after actual browser prerequisites are available. The PHPUnit feature suite and Playwright Inertia protocol fixtures remain separate checks.
+The public runtime job requires the complete product check against the same image IDs and candidate SHA verified earlier in the job. Its product step has no infrastructure skip or allowed failure; the browser parser self-check runs after actual browser prerequisites are available. The PHPUnit feature suite and Playwright Inertia protocol fixtures remain separate checks.
 
 ## Distribution notices
 
 [THIRD_PARTY_NOTICES.md](../THIRD_PARTY_NOTICES.md) records the bundled assets and
 their licenses. After installing the locked frontend dependencies, refresh the
-Swagger assets and their upstream license and notice files:
+Swagger assets and their upstream license and notice files, then check the
+built images:
 
 ```bash
 npm run openapi-assets
-python3 test/Support/Release/notices.test.py --checkout-only
-python3 test/Support/Release/notices.test.py \
-  --app-image "$APP_IMAGE" --worker-image "$WORKER_IMAGE" --ssr-image "$SSR_IMAGE"
+sh test/Support/Release/notices.test.sh "$APP_IMAGE" "$WORKER_IMAGE" "$SSR_IMAGE"
 ```
 
-The image check reads the actual saved image layers. It compares notices with
-the checkout, verifies the installed Swagger version and asset bytes against
-the lock, and checks the font and Swagger assets in the app and worker images.
-The SSR image carries the notices for its bundle. It also checks the images'
-installed package versions, runtime binaries and retained license files against
-`third-party-sources.json`.
+The check compares the license and notice files in each image with the
+checkout. It requires the Debian copyright files in every image, the protobuf
+licenses in the app and worker images and the Node.js license in the SSR image,
+and it requires the Swagger supplement to name the locked `swagger-ui-dist`
+version.
 
 The [Swagger supplement](../public/api-doc/assets/THIRD_PARTY_NOTICES.md) retains
 the complete dependency and embedded-code terms for the verified bundle bytes.
 Its inventory comes from the exact upstream source and locked emitted modules;
 the source maps shipped in the npm package do not describe the current bundles.
 Changing Swagger requires verifying the new emitted inventory and terms, then
-updating the supplement and the checker's version/hash-bound inventory together.
+updating the supplement.
 
-`third-party-sources.json` lists the exact upstream source for PHP 8.5.11
-(including bundled libmbfl), for protobuf and for every installed operating-system
-source package, each with its URL, size and SHA-256. The images do not ship these
-sources; the file is the pointer to them. Each entry's `path` is the conventional
-file name of the artifact, not a shipped file.
+The images do not ship third-party sources. PHP 8.5.11 (including bundled
+libmbfl) is built from the official `php-8.5.11.tar.xz` and protobuf from the
+PECL archive; the `php-build` stage of `.docker/Dockerfile.roadrunner` verifies
+both by SHA-256. The Debian packages are unmodified: `dpkg-query -W` in an image
+lists them, and `apt-get source <package>=<version>` or snapshot.debian.org
+provides the matching source package.
 
-The upstream PHP tarball listed in `third-party-sources.json` contains generated `configure`, all PHP/mbstring/libmbfl source
+The upstream PHP tarball contains generated `configure`, all PHP/mbstring/libmbfl source
 and build definitions. To rebuild with a modified libmbfl, extract the archive
 and edit `ext/mbstring/libmbfl/`. Use the build dependencies, configure options,
 `make` and `make install` commands in the recipe's `php-build` stage. In a
@@ -520,159 +519,6 @@ source. The resulting `mbstring.so` contains the rebuilt libmbfl and can be
 used in a derivative runtime in place of the original extension. The existing
 stage also supplies PHP's other enabled extension build configuration; no
 Packio application build or Git history is needed for this PHP rebuild.
-
-### Verify deterministic PHP and protobuf builds
-
-The `php-build` stage pins the PHP 8.5.11 builder image and verifies the PHP
-source archive before extracting it. `SOURCE_DATE_EPOCH=1790083926` comes from
-that immutable archive's root timestamp, so PHP's embedded build date does not
-depend on the current date or Git commit. The same stage downloads protobuf
-5.36.2 from the URL in `third-party-sources.json`, checks its size and SHA-256,
-and compiles it from the fixed `/usr/src/protobuf-5.36.2` directory. Its two
-license files are installed at the runtime paths already checked by the source
-and image inventory.
-
-To verify a change to these build inputs, run two uncached builds from
-separate temporary contexts and retain each full build log and artifact under
-one unique evidence directory. The `php-build` target needs only its Dockerfile,
-so each context contains a private copy of that file. The pinned base digest
-and the `PACKIO_BUILD_INPUTS_BEGIN`/`PACKIO_BUILD_INPUTS_END` section in each
-log bind the installed package versions, architectures and Debian source
-packages. Run the shell blocks in one Bash session; they share the private
-`run_dir` and cleanup trap.
-
-```bash
-set -euo pipefail
-mkdir -p data/coverage
-run_dir=$(mktemp -d data/coverage/php-build-repro.XXXXXX)
-context_a="$run_dir/context-a"
-context_b="$run_dir/context-b"
-mkdir -p "$context_a" "$context_b"
-cp .docker/Dockerfile.roadrunner "$context_a/Dockerfile"
-cp .docker/Dockerfile.roadrunner "$context_b/Dockerfile"
-image_a=
-image_b=
-container_a=
-container_b=
-cleanup() {
-  [ -z "$container_a" ] || docker rm "$container_a" >/dev/null 2>&1 || true
-  [ -z "$container_b" ] || docker rm "$container_b" >/dev/null 2>&1 || true
-  [ -z "$image_a" ] || docker image rm "$image_a" >/dev/null 2>&1 || true
-  if [ -n "$image_b" ] && [ "$image_b" != "$image_a" ]; then
-    docker image rm "$image_b" >/dev/null 2>&1 || true
-  fi
-}
-trap cleanup EXIT
-docker buildx build --pull --no-cache --load --progress=plain \
-  --iidfile "$run_dir/build-a.iid" --file "$context_a/Dockerfile" \
-  --target php-build "$context_a" >"$run_dir/build-a.log" 2>&1
-image_a=$(cat "$run_dir/build-a.iid")
-docker buildx build --pull --no-cache --load --progress=plain \
-  --iidfile "$run_dir/build-b.iid" --file "$context_b/Dockerfile" \
-  --target php-build "$context_b" >"$run_dir/build-b.log" 2>&1
-image_b=$(cat "$run_dir/build-b.iid")
-```
-
-Normalize BuildKit's changing step and timestamp prefix, extract the marked
-package rows, and require two complete, identical inventories. The normalized
-files are retained alongside both logs:
-
-```bash
-python3 - "$run_dir/build-a.log" "$run_dir/build-b.log" \
-  "$run_dir/build-a-inputs.tsv" "$run_dir/build-b-inputs.tsv" <<'PY'
-import pathlib
-import re
-import sys
-
-def package_rows(path):
-    rows = []
-    inside = False
-    begins = ends = 0
-    for raw in pathlib.Path(path).read_text().splitlines():
-        line = re.sub(r"^#[0-9]+\s+[0-9]+(?:\.[0-9]+)?\s?", "", raw)
-        if line == "PACKIO_BUILD_INPUTS_BEGIN":
-            begins += 1
-            inside = True
-        elif line == "PACKIO_BUILD_INPUTS_END":
-            ends += 1
-            inside = False
-        elif inside and line.startswith("+"):
-            continue
-        elif inside and line:
-            fields = line.split("\t")
-            if len(fields) != 5 or any(not field for field in fields):
-                raise SystemExit(f"invalid package row in {path}: {line!r}")
-            rows.append(line)
-    if begins != 1 or ends != 1 or inside or not rows:
-        raise SystemExit(f"missing or incomplete package inventory in {path}")
-    return rows
-
-first, second = package_rows(sys.argv[1]), package_rows(sys.argv[2])
-for rows, output in ((first, sys.argv[3]), (second, sys.argv[4])):
-    pathlib.Path(output).write_text("\n".join(rows) + "\n")
-if first != second:
-    raise SystemExit("builder package inventories differ")
-print(f"matched {len(first)} builder package rows")
-PY
-```
-
-If they differ, the builds did not use identical resolved toolchain inputs and
-cannot establish reproducibility. For matching inputs, copy the complete
-runtime binaries and retained license files from each build stage and compare
-them byte for byte, including debug sections and GNU build IDs:
-
-```bash
-image_a=$(cat "$run_dir/build-a.iid")
-image_b=$(cat "$run_dir/build-b.iid")
-container_a=$(docker create --network none "$image_a")
-container_b=$(docker create --network none "$image_b")
-docker cp "$container_a:/usr/local/bin/php" "$run_dir/php-a"
-docker cp "$container_b:/usr/local/bin/php" "$run_dir/php-b"
-docker cp "$container_a:/usr/local/lib/php/extensions/no-debug-non-zts-20250925/protobuf.so" \
-  "$run_dir/protobuf-a.so"
-docker cp "$container_b:/usr/local/lib/php/extensions/no-debug-non-zts-20250925/protobuf.so" \
-  "$run_dir/protobuf-b.so"
-docker cp "$container_a:/usr/local/lib/php/doc/protobuf/LICENSE" "$run_dir/LICENSE-a"
-docker cp "$container_b:/usr/local/lib/php/doc/protobuf/LICENSE" "$run_dir/LICENSE-b"
-docker cp "$container_a:/usr/local/lib/php/doc/protobuf/third_party/utf8_range/LICENSE" \
-  "$run_dir/utf8-range-LICENSE-a"
-docker cp "$container_b:/usr/local/lib/php/doc/protobuf/third_party/utf8_range/LICENSE" \
-  "$run_dir/utf8-range-LICENSE-b"
-printf '%s\n' 'PHP 8.5.11' 'protobuf 5.36.2' > "$run_dir/source-versions.txt"
-cmp "$run_dir/php-a" "$run_dir/php-b"
-cmp "$run_dir/protobuf-a.so" "$run_dir/protobuf-b.so"
-cmp "$run_dir/LICENSE-a" "$run_dir/LICENSE-b"
-cmp "$run_dir/utf8-range-LICENSE-a" "$run_dir/utf8-range-LICENSE-b"
-stat -c '%n %s bytes' "$run_dir"/{php-a,php-b,protobuf-a.so,protobuf-b.so}
-sha256sum "$run_dir"/{php-a,php-b,protobuf-a.so,protobuf-b.so}
-docker rm "$container_a" "$container_b"
-if [ "$image_a" = "$image_b" ]; then
-  docker image rm "$image_a"
-else
-  docker image rm "$image_a" "$image_b"
-fi
-image_a=
-image_b=
-container_a=
-container_b=
-trap - EXIT
-```
-
-`docker create --network none` does not start either build container. The
-version record comes from the pinned PHP source and the verified protobuf
-package metadata; the retained license files are compared with `cmp`. Keep
-both build logs, the matched package-input sections, binary sizes and hashes,
-and the version and license records in `run_dir`. A mismatch is a failed
-reproducibility check; do not update the
-runtime hashes to make it pass. Refresh the source or runtime pins only after
-the exact source, base, package inventory and configure inputs have been
-reviewed and two independent uncached builds produce identical complete
-binaries. Candidate-specific OCI metadata remains bound to each image build;
-it does not change the stable runtime binary bytes.
-
-Reconstruct any Debian source package from the `.dsc` and adjacent payloads
-listed in `third-party-sources.json` with `dpkg-source -x`; the Debian patch
-series and build instructions remain inside that source package.
 
 For local worktree verification, the image `--verify-only` and product
 commands also accept the pair `--source-identity FILE --build-record FILE`.

@@ -4,7 +4,7 @@ Thanks for helping improve Packio. Before opening a pull request, check existing
 
 ## Development setup
 
-Packio's current development and supported platform is Linux on amd64 with PHP 8.5.x, PostgreSQL 17, and Node 24.21.0. Use Composer 2 (2.8.x is the supported client). RoadRunner 2025.1.15 is the production HTTP and worker runtime. FrankenPHP remains a local development option. See the [support scope](docs/support.md) for current limits.
+Packio's current development and supported platform is Linux on amd64 with PHP 8.5.x, PostgreSQL 17, and Node 24.21.0. Use Composer 2 (2.8.x is the supported client). RoadRunner 2025.1.15 is the HTTP and worker runtime, in development and in production. See the [support scope](docs/support.md) for current limits.
 
 From a clean clone you only need Docker:
 
@@ -34,7 +34,7 @@ composer check
 composer test:concurrency
 composer openapi-check
 npm run check
-python3 test/Support/Docs/links.test.py
+sh test/Support/Docs/links.test.sh
 ```
 
 `composer check` runs the configured PHP style, static and architecture checks (see [Module architecture](docs/development/architecture.md)), runner checks, and base PHPUnit suites. `composer test:concurrency` runs the PostgreSQL concurrency and locking group separately. `composer openapi-check` regenerates the OpenAPI document and checks that it is current. `npm run check` runs frontend types, lint, Inertia compatibility checks, unit/component tests, SSR tests, real Chromium browser tests, formatting, and client/SSR builds. The browser check needs the locked Playwright browser and its operating-system dependencies. See [Testing](docs/testing.md) for suite boundaries, database isolation, and focused test commands.

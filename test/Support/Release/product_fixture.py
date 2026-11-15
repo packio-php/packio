@@ -673,7 +673,7 @@ def _validate_test_snapshot(test_snapshot, expected_sha, image_refs, expected_ki
                      "tsconfig.json", "postcss.config.js", "postcss.config.cjs", "postcss.config.mjs",
                      "tailwind.config.js", "tailwind.config.cjs", "tailwind.config.mjs"}
         if include_r1_notices:
-            top_files.update(("LICENSE", "THIRD_PARTY_NOTICES.md", "third-party-sources.json"))
+            top_files.update(("LICENSE", "THIRD_PARTY_NOTICES.md"))
         runtime_roots = ("src/", "config/", "bin/", "templates/", "resources/", ".docker/", "public/",
                          "data/db/cycle/")
         for raw in listed.split(b"\0"):
@@ -696,7 +696,7 @@ def _validate_test_snapshot(test_snapshot, expected_sha, image_refs, expected_ki
                 if current_hash != frozen_hash:
                     raise ValueError
                 runtime_paths.add((relative, current_hash))
-        if include_r1_notices and not {"LICENSE", "THIRD_PARTY_NOTICES.md", "third-party-sources.json"}.issubset(
+        if include_r1_notices and not {"LICENSE", "THIRD_PARTY_NOTICES.md"}.issubset(
                 {path for path, _ in runtime_paths}):
             raise ValueError
         if not runtime_paths:

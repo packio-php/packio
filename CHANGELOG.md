@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- `third-party-sources.json`, from the repository and the images. `THIRD_PARTY_NOTICES.md` now says where the upstream sources are.
+
 ## [0.3.1] - 2026-11-15
 
 ### Changed

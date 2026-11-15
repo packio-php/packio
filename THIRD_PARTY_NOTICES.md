@@ -113,27 +113,20 @@ Swagger `LICENSE`, `NOTICE`, and bundle-specific license notices in distributed
 images. The app and worker images retain the Composer package license files
 under `vendor/`. Production builds are made from a Git checkout.
 
-Packio does not redistribute the source of third-party components. The
-repository and every image contain [third-party-sources.json](third-party-sources.json),
-which identifies, for each third-party component installed in the images, the
-exact upstream source artifact by URL, size and SHA-256: the official PHP and
-PECL tarballs (PHP 8.5.11 including bundled libmbfl, and protobuf), and the
-Debian source packages and patch sets for all 91 source-package/version pairs
-installed across the app, worker and SSR images, at the pinned versions. The
-Debian packages are unmodified. The whole-package set includes permissively
-licensed files as well as copyleft components; per-file licenses remain in the
-upstream source packages. The file also lists the exact runtime packages,
-retained copyright/license paths and hashes, and copied runtime binary hashes.
-The `path` field of each source entry is the conventional file name of the
-artifact, not a file shipped with Packio. PHP and protobuf were compiled with
-the build options in the Docker recipe, and RoadRunner/Node were copied.
+Packio does not redistribute the source of third-party components. PHP 8.5.11
+(including bundled libmbfl) and PECL protobuf 5.36.2 are compiled from the
+official upstream archives, which the Docker recipe
+(`.docker/Dockerfile.roadrunner`) verifies by SHA-256, with the build options in
+that recipe. RoadRunner and Node are copied from their official images. The
+Debian packages are unmodified: `dpkg-query -W` in an image lists the installed
+packages and versions, and Debian publishes the matching source packages
+(`apt-get source <package>=<version>`, or snapshot.debian.org for versions that
+have left the archive). The whole-package set includes permissively licensed
+files as well as copyleft components; per-file licenses remain in the upstream
+source packages.
 
-The notice check (`test/Support/Release/notices.test.py`) validates the structure
-and bindings of that manifest and compares the installed package versions,
-runtime binary hashes and retained license files in the images with it. It does
-not download or check the upstream artifacts. The Docker recipe and the
-[source reconstruction instructions](docs/testing.md#distribution-notices)
-describe how to fetch the artifacts and rebuild. PHP's upstream source permits
+The [source reconstruction instructions](docs/testing.md#distribution-notices)
+describe how to rebuild. PHP's upstream source permits
 rebuilding mbstring and its statically included libmbfl with modified library
 source; Packio imposes no extra restriction on modification or reverse
 engineering to debug those modifications. This source material is independent
@@ -145,7 +138,6 @@ Node.js 24.21.0 and its bundled external-library license text remain at
 `/usr/local/LICENSE` in SSR. PECL protobuf 5.36.2's BSD license and bundled
 utf8_range license remain at `/usr/local/lib/php/doc/protobuf/LICENSE` and
 `/usr/local/lib/php/doc/protobuf/third_party/utf8_range/LICENSE` in app/worker.
-Their exact retained file hashes are included in the runtime manifest.
 
 
 ## Included license texts

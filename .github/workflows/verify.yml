@@ -226,7 +226,7 @@ jobs:
           coverage: none
           tools: composer:v2
       - run: composer install --no-interaction --prefer-dist --no-progress
-      # The notices check in the image step reads node_modules/swagger-ui-dist.
+      # The proxy step mounts node_modules into its browser container.
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -278,8 +278,7 @@ jobs:
           python3 test/Support/Release/image.test.py --verify-only \
             --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
             --expected-sha "$candidate_sha" --report data/coverage/images/report.json
-          python3 test/Support/Release/notices.test.py \
-            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image"
+          sh test/Support/Release/notices.test.sh "$app_image" "$worker_image" "$ssr_image"
           python3 test/Support/RoadRunner/cold-worker.test.py "$worker_image"
           python3 test/Support/RoadRunner/services.test.py "$worker_image"
           docker save -o data/coverage/images/release-images.tar "$app_image" "$worker_image" "$ssr_image"

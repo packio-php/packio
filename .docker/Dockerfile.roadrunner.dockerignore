@@ -38,7 +38,6 @@
 !package-lock.json
 !LICENSE
 !THIRD_PARTY_NOTICES.md
-!third-party-sources.json
 !svelte.config.js
 !vite.config.js
 **/.env

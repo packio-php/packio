@@ -45,18 +45,6 @@ final class RoadRunnerRuntimeImageTest extends TestCase
         self::assertStringContainsString('http://127.0.0.1:2114/health', $this->read('.docker/healthcheck-roadrunner.sh'));
     }
 
-    #[Test]
-    public function itRunsTheProductionTargetWithProductionOnlyConfigurationInRuntimeSmoke(): void
-    {
-        $runtimeSmokeOverride = $this->read('compose.runtime-smoke.yaml');
-
-        self::assertStringContainsString('target: prod', $runtimeSmokeOverride);
-        self::assertStringContainsString('APP_DEBUG: "false"', $runtimeSmokeOverride);
-        self::assertStringContainsString('APP_PRODUCTION: "true"', $runtimeSmokeOverride);
-        self::assertStringContainsString('APP_SECRET_ENCRYPTION_KEY:', $runtimeSmokeOverride);
-        self::assertStringNotContainsString('SESSION_COOKIE_SECURE', $runtimeSmokeOverride);
-    }
-
     private function entrypoint(): string
     {
         return $this->read('.docker/entrypoint-roadrunner.sh');

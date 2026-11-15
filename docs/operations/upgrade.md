@@ -1,11 +1,9 @@
 # Upgrade and rollback
 
 Use a maintenance window on the supported single-host PostgreSQL 17/local-archive
-installation. The rehearsal baseline is the previous public release tag,
-starting with `v0.1.0`. An upgrade path is supported only when a complete
-recovery report exists for that exact baseline and the exact candidate images
-and source SHA. Until a second public version exists, no upgrade path has been
-rehearsed. This does not establish arbitrary historical upgrades or zero downtime.
+installation. Packio ships no automated upgrade rehearsal: rehearse the upgrade
+on an isolated copy of the installation first. This does not establish arbitrary
+historical upgrades or zero downtime.
 
 For the setup from the [self-hosting guide](../self-hosting.md), run the Compose commands in this runbook from the directory with the deploy files (`packio` in the guide) without `--env-file` or `-f`; `COMPOSE_FILE` in `.env` selects the files. A routine update there is `docker compose pull && docker compose up -d` after pinning `PACKIO_VERSION`; see [self-hosting.md](../self-hosting.md#updating).
 
@@ -71,25 +69,3 @@ mail/provider operations, or claim automatic rollback across incompatible data.
 Preserve the encryption key between deployments. Changing an environment value
 is not a supported live rotation/re-encryption procedure. S3 and multi-host
 recovery are outside this release path.
-
-## Run the isolated release rehearsal
-
-With Docker, Python 3, the matching Playwright 1.62.1 browser image and the existing
-frontend test dependencies available, supply the resolved local `sha256:…`
-image IDs for the exact candidate; resolve tags or repository references first:
-
-```bash
-python3 test/Support/Release/recovery.test.py \
-  --baseline-ref v0.1.0 \
-  --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
-  --expected-sha "$candidate_sha" --report recovery-report.json
-```
-
-The baseline is any tag or commit of this repository other than the candidate
-itself; the rehearsal builds its images from a clean clone of that ref.
-
-A successful run must report every positive and expected negative case, real
-private installation and readiness, correct source/image/hash identities, and
-cleanup of all owned resources while a foreign sentinel remains untouched.
-Skipped checks, missing infrastructure and failed cleanup are failures. Aggregate
-reports must never include keys, database dumps, tokens or message bodies.

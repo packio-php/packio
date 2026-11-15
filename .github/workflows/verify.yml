@@ -275,9 +275,7 @@ jobs:
           app_image=$(cat data/coverage/images/prod.id)
           worker_image=$(cat data/coverage/images/prod-worker.id)
           ssr_image=$(cat data/coverage/images/prod-ssr.id)
-          python3 test/Support/Release/image.test.py --verify-only \
-            --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
-            --expected-sha "$candidate_sha" --report data/coverage/images/report.json
+          sh test/Support/Release/image.test.sh "$app_image" "$worker_image" "$ssr_image" "$candidate_sha"
           sh test/Support/Release/notices.test.sh "$app_image" "$worker_image" "$ssr_image"
           sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
           sh test/Support/RoadRunner/services.test.sh "$worker_image"

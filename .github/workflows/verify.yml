@@ -62,6 +62,19 @@ jobs:
           [[rules]]
           id = "generic-api-key"
 
+          # The next two files are deleted but remain in the scanned history.
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?compose\.runtime-smoke\.yaml$''']
+          regexes = ['''^(0123456789abcdef){4}$''']
+
+          [[rules.allowlists]]
+          condition = "AND"
+          regexTarget = "secret"
+          paths = ['''^(\./)?test/Support/Release/dependencies\.test\.py$''']
+          regexes = ['''^(0123456789abcdef){4}$''']
+
           [[rules.allowlists]]
           condition = "AND"
           regexTarget = "secret"

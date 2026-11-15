@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-11-15
+
+### Changed
+
+- Self-hosting guide: the local trial comes first and can be followed on its own, with the full download command, the expected result and the steps after registration. It also states the download sizes of the images and explains how to run a trial on a machine that already runs Packio.
+
 ## [0.3.0] - 2026-11-15
 
 ### Added

@@ -1,6 +1,6 @@
 # Self-hosting Packio
 
-Run Packio on your own server from ready-made Docker images. You do not clone the repository, build anything, or need a GitHub token.
+Run Packio on your own server from ready-made Docker images. You do not clone the repository or build anything.
 
 The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr`. Compose downloads them for you. The images are published starting with the first release after 0.2.0, so use the version you find on the releases page.
 
@@ -67,7 +67,7 @@ The images are `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` a
 
 If you already run a web server such as Nginx or Caddy on the server, keep `COMPOSE_FILE=compose.yaml` (the default in `.env.example`). Then Packio does not start its own proxy.
 
-The app listens only on `127.0.0.1:8080` of the server (change the port with `HTTP_PORT`). A proxy running on the same server can reach it there. The bundled files do not open this port to other machines.
+The app listens only on `127.0.0.1:8080` of the server (change the port with `HTTP_PORT`). A proxy running on the host itself (or with host networking) can reach it there. A proxy in another container cannot: it has its own `127.0.0.1`. The bundled files do not open this port to other machines.
 
 Your proxy must:
 
@@ -76,7 +76,16 @@ Your proxy must:
 - Pass the client's `Origin` header through unchanged; the app uses it for CSRF checks.
 - Overwrite the forwarding headers (`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Forwarded-Host`, `X-Forwarded-Port`, `Forwarded`) instead of passing the client's values.
 
-Set `TRUSTED_PROXIES` in `.env` to the address the app sees your proxy at. Without it, all visitors look like one client and share a single rate limit. Never use `*`. How to find that address is described in [Docker and runtime operations](docker.md#host-caddy-reverse-proxy).
+You must also set `TRUSTED_PROXIES` in `.env` to the address the app sees your proxy at. Without it the app sees `http://<domain>` while the browser sends `https://<domain>`, so every form (sign-in, registration) fails the origin check, and all visitors share a single rate limit. Never use `*`.
+
+For the usual case (a proxy on the host talking to `127.0.0.1:8080`) the app sees the gateway of the Compose network. Start the stack once, read the address, and start again:
+
+```bash
+docker compose up -d
+docker network inspect packio_default -f '{{(index .IPAM.Config 0).Gateway}}'
+```
+
+Put that address into `.env` as `TRUSTED_PROXIES=<address>`, then run `docker compose up -d` again. The network is called `packio_default` because the Compose project is named `packio`. For other setups see [Docker and runtime operations](docker.md#host-caddy-reverse-proxy).
 
 A ready Caddy example with the header rules is in [examples/reverse-proxy/Caddyfile](examples/reverse-proxy/Caddyfile).
 
@@ -129,9 +138,9 @@ Back up the database, the package archives, and `.env` (it holds the encryption 
 PostgreSQL: `compose.yaml` runs its own PostgreSQL 17 and fixes `DATABASE_HOST` to it, so `.env` cannot point the app at another database. To use your own server:
 
 1. Copy `compose.yaml` to `compose.external-db.yaml` (a copy survives the next download of the deploy files).
-2. In the copy, delete the `postgres` service, the `postgres` entry under `depends_on` of the `app` service, and `postgres-data` under `volumes`.
+2. In the copy, delete the `postgres` service, the whole `depends_on:` block of the `app` service (its only entry is `postgres`), and `postgres-data` under `volumes`.
 3. In the copy, set `DATABASE_HOST` and `DATABASE_PORT` in the `x-environment` block to an address the containers can reach (not `localhost`).
-4. In `.env`, use `compose.external-db.yaml` instead of `compose.yaml` in the `COMPOSE_FILE` line.
+4. In `.env`, use `compose.external-db.yaml` instead of `compose.yaml` in the `COMPOSE_FILE` line, then run `docker compose up -d --remove-orphans` (otherwise the old `postgres` container keeps running).
 
 Only PostgreSQL 17 is supported. See [Environment variables](../ENV.md#database).
 
@@ -141,9 +150,11 @@ S3 archives: package archives are stored in a Docker volume by default. S3-compa
 
 To look around without a domain, use the local variant. It runs over plain HTTP and catches all mail in Mailpit. Do not use it on a server.
 
+Do this in a new, empty folder: download the deploy files as in step 1 of the quick start. Never run it in the server's folder, because `cp .env.local.example .env` would overwrite your real `.env`, including the encryption key.
+
 ```bash
 cp .env.local.example .env
-docker compose up -d
+docker compose up -d --wait
 ```
 
 Open `http://packio.localhost:8080` and register. Mail arrives in Mailpit at `http://localhost:8025`. To remove everything including the data:

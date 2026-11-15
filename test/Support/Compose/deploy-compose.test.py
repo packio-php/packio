@@ -139,6 +139,7 @@ class DeployComposeTest(unittest.TestCase):
             self.assertEqual(result.returncode, 0, f"{files}: {result.stderr}")
             services = self.model(files, SERVER_ENV)
             self.assertEqual(services["app"]["environment"]["TRUSTED_PROXIES"], "172.30.255.2")
+            self.assertEqual(services["app"]["ports"][0]["host_ip"], "127.0.0.1")
             self.assertEqual(set(services["caddy"]["networks"]), {"edge"})
             self.assertEqual(services["caddy"]["networks"]["edge"]["ipv4_address"], "172.30.255.2")
             self.assertEqual(services["caddy"]["environment"]["PACKIO_REGISTRY_DOMAIN"], "packio.example.com")

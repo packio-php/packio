@@ -12,24 +12,24 @@ Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.
 
 ## Try it locally
 
-Try Packio on your own machine from the published images (published starting with the first release after 0.2.0). No clone, no build, no GitHub token. It serves plain HTTP and is not a production setup.
+Try Packio on your own machine from the published images (published starting with the first release after 0.2.0). No clone and no build. It serves plain HTTP and is not a production setup.
 
-Requirements: Linux on amd64, Docker with Compose v2, curl. For step 5 below, create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) first: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too. Find the latest version on the [releases page](https://github.com/packio-php/packio/releases) and replace `X.Y.Z` with it (without the `v`):
+Requirements: Linux on amd64, Docker with Compose v2, curl. For step 3 below, create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) first: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too. Find the latest version on the [releases page](https://github.com/packio-php/packio/releases) and replace `X.Y.Z` with it (without the `v`):
 
 ```bash
 mkdir packio && cd packio
 curl -fsSL https://github.com/packio-php/packio/archive/refs/tags/vX.Y.Z.tar.gz | tar -xz --strip-components=2 --wildcards '*/deploy/*'
 cp .env.local.example .env
-docker compose up -d
+docker compose up -d --wait
 ```
 
 Then:
 
-3. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
-4. Create an organization, for example `acme`.
-5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
-6. Open Tokens (`/organization/acme/tokens`), enter a name, and click Issue token. Copy the token.
-7. The Registry Setup page (`/organization/acme/registry/setup`) shows the registry host and repository URL; for `acme` the host is `acme.packio.localhost:8080`. In an empty project folder, run Composer in Docker (Linux; `--network host` lets the container reach the host's port 8080). Any local Composer 2 works too.
+1. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
+2. Create an organization, for example `acme`.
+3. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
+4. Open Tokens (`/organization/acme/tokens`), enter a name, and click Issue token. Copy the token.
+5. The Registry Setup page (`/organization/acme/registry/setup`) shows the registry host and repository URL; for `acme` the host is `acme.packio.localhost:8080`. In an empty project folder, run Composer in Docker (Linux; `--network host` lets the container reach the host's port 8080). Any local Composer 2 works too.
 
    ```bash
    mkdir demo && cd demo
@@ -40,7 +40,7 @@ Then:
    composer config repositories.packio composer '<repository URL from the Registry page>'
    composer require <vendor/package>
    ```
-8. Stop and remove everything, including the data (run this in the `packio` folder, not in `demo`):
+6. Stop and remove everything, including the data (run this in the `packio` folder, not in `demo`):
 
    ```bash
    docker compose down -v

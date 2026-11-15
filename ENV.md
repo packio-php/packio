@@ -1,14 +1,11 @@
 # Environment variables
 
-The supported deployment target is the standalone `compose.prod.yaml` stack on a
-Linux amd64 host, with RoadRunner, PostgreSQL 17, PHP 8.5.x, and Node 24.21.0 for
-the image build. The production example uses `packio.example.com`; replace the app
-and registry domains with names backed by your DNS and TLS certificate. Copy
-`.env.prod.example` to the ignored `.env.prod.local` and set its secrets before
-starting the stack. The example's app service runs migrations and the runtime
-settings seed automatically at startup; do not also run them manually.
+The supported deployment target is the `deploy/` Compose stack on a Linux amd64 host, with
+RoadRunner, PostgreSQL 17, PHP 8.5.x, and Node 24.21.0 for the image build. Its app service
+runs migrations and the runtime settings seed automatically at startup; do not also run them
+manually.
 
-For the published images, start from `deploy/.env.example` (see [self-hosting.md](docs/self-hosting.md)); it lists the few values you must set, and any variable below can be added to the same `.env`, except those fixed in the `environment:` section of `deploy/compose.yaml`.
+Start from `deploy/.env.example` (see [self-hosting.md](docs/self-hosting.md)); it lists the few values you must set, and any variable below can be added to the same `.env`, except those fixed in the `environment:` section of `deploy/compose.yaml`.
 
 Local development uses `compose.yaml` defaults: PostgreSQL is published on
 `localhost:15432`, and app URLs use `packio.localhost`. Copy `.env.example` to

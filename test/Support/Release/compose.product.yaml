@@ -1,11 +1,8 @@
-# Overlay for compose.prod.yaml, used by product.test.sh: the supplied images behind the documented
+# Overlay for deploy/compose.yaml and deploy/compose.ssr.yaml, used by product.test.sh: the supplied images behind the documented
 # Caddy example, a disposable Git provider, Mailpit, and the Playwright and Composer clients.
 x-fixture-environment: &fixture-environment
-  BRAND_DOMAIN: app.fixture.test
   BRAND_REGISTRY_BASE_DOMAIN: registry.fixture.test
   TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
-  MAIL_HOST: mailpit
-  MAIL_PORT: "1025"
   CURL_CA_BUNDLE: /run/fixture/root-ca.pem
   SSL_CERT_FILE: /run/fixture/root-ca.pem
   GIT_SSL_CAINFO: /run/fixture/root-ca.pem
@@ -17,7 +14,6 @@ x-fixture-volumes: &fixture-volumes
 
 services:
   app:
-    build: !reset null
     env_file: !reset []
     image: ${APP_IMAGE:?Supply the app image}
     environment:
@@ -33,14 +29,12 @@ services:
     ports: !override []
 
   workers:
-    build: !reset null
     env_file: !reset []
     image: ${WORKER_IMAGE:?Supply the worker image}
     environment: *fixture-environment
     volumes: *fixture-volumes
 
   ssr:
-    build: !reset null
     image: ${SSR_IMAGE:?Supply the SSR image}
 
   mailpit:

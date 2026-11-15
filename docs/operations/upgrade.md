@@ -30,7 +30,7 @@ For the setup from the [self-hosting guide](../self-hosting.md), run the Compose
 ## Apply with traffic and consumers closed
 
 Start PostgreSQL and SSR for the chosen candidate while retaining the closed
-proxy gate. Start the candidate app through its normal entrypoint: the standalone
+proxy gate. Start the candidate app through its normal entrypoint: the
 Compose app runs migrations and `RuntimeSettingsCatalogSeed`; do not concurrently
 run a second migration/seed command. Its startup also prepares application caches.
 Warm the worker's object mappings before allowing any consumer to start.

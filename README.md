@@ -54,7 +54,7 @@ To work on the code, see [the source-based development stack](docs/docker.md#try
 2. Fill in the domain, two secrets and the mail address, and choose the Caddy line for automatic HTTPS.
 3. Run `docker compose up -d`.
 
-The full guide with every command: [Self-hosting Packio](docs/self-hosting.md). Building from a Git clone is described in [Docker and runtime operations](docs/docker.md#install-from-a-clean-git-clone).
+The full guide with every command: [Self-hosting Packio](docs/self-hosting.md). Building from a Git clone is described in [Docker and runtime operations](docs/docker.md#production-from-a-source-build).
 
 ## First account and Composer setup
 
@@ -63,8 +63,6 @@ Register through the app, then verify the account using the email sent through y
 ```bash
 docker compose exec app php vendor/bin/laminas user:make-admin admin@example.com
 ```
-
-This is the command for the `deploy/` setup. With a source build, add `--env-file .env.prod.local -f compose.prod.yaml` after `docker compose`.
 
 Sign in as that user and create an organization. To import repositories, configure a source OAuth app for the provider, connect that account, add a repository, and run a source sync from its page. Login OAuth is optional; source OAuth setup is covered in [the OAuth guide](docs/oauth.md).
 

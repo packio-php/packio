@@ -105,17 +105,20 @@ done
 
 # check MESSAGE JQ_FILTER: the filter must be true for the resolved services.
 check() {
-    jq -e '["worker", "worker-cleanup", "email-verification-cleanup", "password-reset-cleanup", "source-oauth-refresh"] as $workers
-        | .services as $s | '"$2" "$tmp/config.json" > /dev/null || fail "$1"
+    jq -e ".services as \$s | $2" "$tmp/config.json" > /dev/null || fail "$1"
 }
 
-check "app and worker services send mail to mailpit" \
-    'all(("app", $workers[]); $s[.].environment | .MAIL_HOST == "mailpit" and .MAIL_PORT == "1025")'
-check "PHP services wait for setup-php" \
-    'all(("app", $workers[]); $s[.].depends_on["setup-php"].condition == "service_completed_successfully")'
+check "app and workers send mail to mailpit" \
+    'all(("app", "workers"); $s[.].environment | .MAIL_HOST == "mailpit" and .MAIL_PORT == "1025")'
+check "app waits for setup-php and workers wait for app" \
+    '$s.app.depends_on["setup-php"].condition == "service_completed_successfully"
+        and $s.workers.depends_on.app.condition == "service_healthy"'
+check "app, workers and setup-php share the dev image" \
+    'all(("app", "workers", "setup-php"); $s[.].build | .target == "dev" and (.dockerfile | endswith("Dockerfile.roadrunner")))'
 check "vite and ssr wait for setup-node" \
     'all(("vite", "ssr"); $s[.].depends_on["setup-node"].condition == "service_completed_successfully")'
 check "setup services run once as the docker uid" \
-    'all(("setup-php", "setup-node"); $s[.] | .user == "1000:1000" and .restart == "no") and $s.vite.user == "1000:1000"'
+    'all(("setup-php", "setup-node"); $s[.] | .user == "1000:1000" and .restart == "no")
+        and all(("app", "workers", "vite", "ssr"); $s[.].user == "1000:1000")'
 
 echo "PASS: dev compose wiring"

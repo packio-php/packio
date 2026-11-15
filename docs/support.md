@@ -6,7 +6,7 @@ This page lists what Packio supports. Anything not listed here is not supported.
 | --- | --- |
 | Deployment | Self-hosted Linux containers on one host, amd64 |
 | HTTP and jobs | RoadRunner app, `prod-worker` services, SSR in the production Compose stack |
-| Alternative runtime | None. FrankenPHP and the standalone worker/SSR images are experimental (see below) |
+| Alternative runtime | None |
 | Database | PostgreSQL 17 |
 | PHP | `~8.5.0` (8.5.x only) |
 | Node | 24.21.0 for the image build and local frontend tooling |
@@ -17,7 +17,7 @@ This page lists what Packio supports. Anything not listed here is not supported.
 
 ## Experimental
 
-FrankenPHP is the local development default in `compose.yaml`, but it has no supported production target. The standalone worker and SSR Dockerfiles are development images. S3 is available as an opt-in package archive backend, but it is not a supported configuration.
+S3 is available as an opt-in package archive backend, but it is not a supported configuration.
 
 ## Not supported
 

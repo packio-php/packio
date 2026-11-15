@@ -46,7 +46,7 @@ final class LongRunningHttpApplicationTest extends TestCase
             })
         ;
 
-        new LongRunningHttpApplication($application, $runtimeResetter, $logger, $objectMapper)->bootstrap('frankenphp');
+        new LongRunningHttpApplication($application, $runtimeResetter, $logger, $objectMapper)->bootstrap('roadrunner');
 
         self::assertSame(['warmed', 'logged'], $events);
     }

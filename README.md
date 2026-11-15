@@ -12,7 +12,7 @@ Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.
 
 ## Try it locally
 
-Try Packio on your own machine from the published images (published starting with the first release after 0.2.0). No clone and no build. It serves plain HTTP and is not a production setup.
+Try Packio on your own machine from the published images (published starting with 0.3.0). No clone and no build. It serves plain HTTP and is not a production setup.
 
 Requirements: Linux on amd64, Docker with Compose v2, curl. For step 3 below, create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) first: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too. Find the latest version on the [releases page](https://github.com/packio-php/packio/releases) and replace `X.Y.Z` with it (without the `v`):
 

@@ -12,7 +12,7 @@ A Packio release is a source tag `vX.Y.Z`, created with `composer create-release
 
    Each is tagged `X.Y.Z`, `X.Y` and `latest`.
 
-Pre-release tags (for example `v1.0.0-rc.1`) are not published. Images exist starting with the first release after 0.2.0; there are none for 0.1.0 or 0.2.0.
+Pre-release tags (for example `v1.0.0-rc.1`) are not published. Images exist starting with 0.3.0; there are none for 0.1.0 or 0.2.0.
 
 ## Owner steps
 

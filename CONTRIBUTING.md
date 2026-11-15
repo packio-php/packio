@@ -34,7 +34,7 @@ composer check
 composer test:concurrency
 composer openapi-check
 npm run check
-python3 test/Support/Docs/links.test.py
+sh test/Support/Docs/links.test.sh
 ```
 
 `composer check` runs the configured PHP style, static and architecture checks (see [Module architecture](docs/development/architecture.md)), runner checks, and base PHPUnit suites. `composer test:concurrency` runs the PostgreSQL concurrency and locking group separately. `composer openapi-check` regenerates the OpenAPI document and checks that it is current. `npm run check` runs frontend types, lint, Inertia compatibility checks, unit/component tests, SSR tests, real Chromium browser tests, formatting, and client/SSR builds. The browser check needs the locked Playwright browser and its operating-system dependencies. See [Testing](docs/testing.md) for suite boundaries, database isolation, and focused test commands.

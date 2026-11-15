@@ -1,97 +1,104 @@
-services:
-  postgres:
-    image: ${POSTGRES_IMAGE:?Resolve the PostgreSQL fixture image first}
+# Overlay for compose.prod.yaml, used by product.test.sh: the supplied images behind the documented
+# Caddy example, a disposable Git provider, Mailpit, and the Playwright and Composer clients.
+x-fixture-environment: &fixture-environment
+  BRAND_DOMAIN: app.fixture.test
+  BRAND_REGISTRY_BASE_DOMAIN: registry.fixture.test
+  TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
+  MAIL_HOST: mailpit
+  MAIL_PORT: "1025"
+  CURL_CA_BUNDLE: /run/fixture/root-ca.pem
+  SSL_CERT_FILE: /run/fixture/root-ca.pem
+  GIT_SSL_CAINFO: /run/fixture/root-ca.pem
 
+x-fixture-volumes: &fixture-volumes
+  - ${PRODUCT_DIR:?}/local.php:/app/config/autoload/local.php:ro
+  - ${PRODUCT_DIR:?}/root-ca.pem:/run/fixture/root-ca.pem:ro
+  - ${PRODUCT_DIR:?}/fixture-ca.ini:/usr/local/etc/php/conf.d/99-fixture-ca.ini:ro
+
+services:
   app:
     build: !reset null
     env_file: !reset []
-    image: ${APP_IMAGE:?Supply the immutable app image}
+    image: ${APP_IMAGE:?Supply the app image}
     environment:
-      APP_SECRET_ENCRYPTION_KEY: ${PRODUCT_PRIVATE_KEY:?}
-      APP_URL: ${PRODUCT_APP_URL:?}
-      BRAND_DOMAIN: app.fixture.test
-      BRAND_REGISTRY_BASE_DOMAIN: ${PRODUCT_REGISTRY_BASE_DOMAIN:?}
-      DATABASE_PASS: ${PRODUCT_DATABASE_PASS:?}
-      DATABASE_USER: packio
-      DATABASE_NAME: packio
-      DATABASE_HOST: postgres
-      DEFAULT_DB_CONNECTION: postgres
-      APP_DEBUG: "false"
-      APP_PRODUCTION: "true"
-      RUN_MIGRATIONS: "true"
-      INERTIA_SSR_ENABLED: "true"
-      INERTIA_SSR_URL: http://ssr:13714/render
-      TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
-      MAIL_HOST: mailpit
-      MAIL_PORT: "1025"
-      CURL_CA_BUNDLE: /run/fixture/root-ca.pem
-      SSL_CERT_FILE: /run/fixture/root-ca.pem
-      GIT_SSL_CAINFO: /run/fixture/root-ca.pem
-    volumes:
-      - ${PRODUCT_LOCAL_CONFIG:?}:/app/config/autoload/local.php:ro
-      - ${PRODUCT_CA_CERT:?}:/run/fixture/root-ca.pem:ro
-      - ${PRODUCT_CA_INI:?}:/usr/local/etc/php/conf.d/99-e1-fixture-ca.ini:ro
+      <<: *fixture-environment
+      CORS_ALLOWED_ORIGINS: https://app.fixture.test
+      RATE_LIMIT_LOGIN_MAX: "2"
+      RATE_LIMIT_LOGIN_DECAY: "900"
+      # Cloudflare's public always-pass test keys.
+      TURNSTILE_ENABLED: ${PRODUCT_TURNSTILE:-false}
+      TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+    volumes: *fixture-volumes
     ports: !override []
 
   workers:
     build: !reset null
     env_file: !reset []
-    image: ${WORKER_IMAGE:?Supply the immutable worker image}
-    environment:
-      APP_SECRET_ENCRYPTION_KEY: ${PRODUCT_PRIVATE_KEY:?}
-      APP_URL: ${PRODUCT_APP_URL:?}
-      BRAND_DOMAIN: app.fixture.test
-      BRAND_REGISTRY_BASE_DOMAIN: ${PRODUCT_REGISTRY_BASE_DOMAIN:?}
-      DATABASE_PASS: ${PRODUCT_DATABASE_PASS:?}
-      DATABASE_USER: packio
-      DATABASE_NAME: packio
-      DATABASE_HOST: postgres
-      DEFAULT_DB_CONNECTION: postgres
-      APP_DEBUG: "false"
-      APP_PRODUCTION: "true"
-      RUN_MIGRATIONS: "false"
-      TRUSTED_PROXIES: ${PRODUCT_TRUSTED_PROXIES:-}
-      MAIL_HOST: mailpit
-      MAIL_PORT: "1025"
-      CURL_CA_BUNDLE: /run/fixture/root-ca.pem
-      SSL_CERT_FILE: /run/fixture/root-ca.pem
-      GIT_SSL_CAINFO: /run/fixture/root-ca.pem
-    volumes:
-      - ${PRODUCT_LOCAL_CONFIG:?}:/app/config/autoload/local.php:ro
-      - ${PRODUCT_CA_CERT:?}:/run/fixture/root-ca.pem:ro
-      - ${PRODUCT_CA_INI:?}:/usr/local/etc/php/conf.d/99-e1-fixture-ca.ini:ro
+    image: ${WORKER_IMAGE:?Supply the worker image}
+    environment: *fixture-environment
+    volumes: *fixture-volumes
 
   ssr:
-    image: ${SSR_IMAGE:?Supply the immutable SSR image}
     build: !reset null
-    env_file: !reset []
+    image: ${SSR_IMAGE:?Supply the SSR image}
 
   mailpit:
-    image: ${MAILPIT_IMAGE:?Resolve the Mailpit fixture image first}
-    ports: !override
-      - "127.0.0.1:${PRODUCT_MAILPIT_API_PORT:?}:8025"
+    image: axllent/mailpit
 
   provider:
-    image: ${CADDY_IMAGE:?Resolve the Caddy fixture image first}
-    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+    image: caddy:2.11.2-alpine
     volumes:
-      - ${PRODUCT_PROVIDER_CADDYFILE:?}:/etc/caddy/Caddyfile:ro
-      - ${PRODUCT_PROVIDER_DATA:?}:/srv/git:ro
-    build: !reset null
+      - ./test/Support/Release/fixtures/provider/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PRODUCT_DIR:?}/provider:/srv/git:ro
+      - ${PRODUCT_DIR:?}/server-cert.pem:/run/fixture/server-cert.pem:ro
+      - ${PRODUCT_DIR:?}/server-key.pem:/run/fixture/server-key.pem:ro
+    networks:
+      default:
+        aliases:
+          - provider.fixture.test
 
+  # The edge is the Caddyfile operators are told to use.
   tls:
-    image: ${CADDY_IMAGE:?Resolve the Caddy fixture image first}
-    command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
-    build: !reset null
-    ports: !override
-      - "127.0.0.1:${PRODUCT_HTTP_PORT:?}:443"
+    image: caddy:2.11.2-alpine
+    environment:
+      PACKIO_APP_DOMAIN: app.fixture.test
+      PACKIO_REGISTRY_DOMAIN: registry.fixture.test
+      PACKIO_HTTP_UPSTREAM: app:80
+      PACKIO_TLS_CERT: /run/fixture/server-cert.pem
+      PACKIO_TLS_KEY: /run/fixture/server-key.pem
     volumes:
-      - ${PRODUCT_EDGE_CADDYFILE:?}:/etc/caddy/Caddyfile:ro
-      - ${PRODUCT_TLS_CERT:?}:/run/fixture/server-cert.pem:ro
-      - ${PRODUCT_TLS_KEY:?}:/run/fixture/server-key.pem:ro
+      - ./docs/examples/reverse-proxy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${PRODUCT_DIR:?}/server-cert.pem:/run/fixture/server-cert.pem:ro
+      - ${PRODUCT_DIR:?}/server-key.pem:/run/fixture/server-key.pem:ro
     networks:
       default:
         aliases:
           - app.fixture.test
-          - provider.fixture.test
-          - org.registry.fixture.test
+          - ${PRODUCT_ORG_SLUG:?}.registry.fixture.test
+
+  playwright:
+    profiles: [tools]
+    image: mcr.microsoft.com/playwright:v1.62.1-noble
+    user: ${PRODUCT_USER:?}
+    ipc: host
+    working_dir: /work
+    environment:
+      HOME: /tmp
+      PRODUCT_STATE_DIR: /state
+      PRODUCT_ORG_SLUG: ${PRODUCT_ORG_SLUG:?}
+    volumes:
+      - .:/work:ro
+      - ${PRODUCT_DIR:?}/state:/state
+
+  composer:
+    profiles: [tools]
+    image: composer:2.8
+    user: ${PRODUCT_USER:?}
+    working_dir: /case/project
+    environment:
+      COMPOSER_HOME: /case/home
+      COMPOSER_CACHE_DIR: /case/cache
+      COMPOSER_CAFILE: /run/fixture/root-ca.pem
+    volumes:
+      - ${PRODUCT_DIR:?}/root-ca.pem:/run/fixture/root-ca.pem:ro

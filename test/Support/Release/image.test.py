@@ -6,7 +6,6 @@ import argparse
 import base64
 import gzip
 import hashlib
-import importlib.util
 import json
 import os
 from pathlib import Path
@@ -225,7 +224,7 @@ def verify_provenance(archive, image_id, descriptor_digests, platform, expected_
         raise AssertionError(f"{image_id}: linked SLSA provenance for {expected_target} is missing")
 
 
-def check_app(image, sha, *, dirty_snapshot=False):
+def check_app(image, sha):
     script = (
         "test \"$(id -u)\" != 0 && test -f vendor/autoload.php && test -f public/build/.vite/manifest.json "
         "&& test -f public/api-doc/assets/swagger-ui.css "
@@ -237,7 +236,7 @@ def check_app(image, sha, *, dirty_snapshot=False):
     )
     run("docker", "run", "--pull=never", "--rm", "--entrypoint", "sh", image, "-ec", script)
     metadata = read_image_metadata(image)
-    (check_snapshot_metadata if dirty_snapshot else check_metadata)(metadata, sha, image)
+    check_metadata(metadata, sha, image)
     if MARKER.decode() in json.dumps(metadata):
         raise AssertionError("stale release metadata was packaged")
     print(f"{image}: {metadata['version']} ({metadata['sha']})")
@@ -257,24 +256,6 @@ def check_metadata(metadata, expected_sha, image):
         raise AssertionError(f"{image}: metadata SHA {metadata_sha} differs from {expected_sha}")
     if metadata.get("dirty") is not False:
         raise AssertionError(f"{image}: release metadata must set dirty=false")
-
-
-def check_snapshot_metadata(metadata, expected_sha, image):
-    metadata_sha = metadata.get("sha") if isinstance(metadata, dict) else None
-    if (not isinstance(metadata_sha, str) or not re.fullmatch(r"[0-9a-f]{7,40}", metadata_sha)
-            or not expected_sha.startswith(metadata_sha) or metadata.get("dirty") is not True):
-        raise AssertionError(f"{image}: dirty test snapshot metadata does not match the requested source")
-
-
-def validate_r1_snapshot(source_identity, build_record, expected_sha, image_ids):
-    fixture_path = ROOT / "test" / "Support" / "Release" / "product_fixture.py"
-    spec = importlib.util.spec_from_file_location("release_product_fixture_snapshot", fixture_path)
-    if spec is None or spec.loader is None:
-        raise ValueError("R1 snapshot verification helper is unavailable")
-    fixture = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(fixture)
-    return fixture.validate_r1_test_snapshot(
-        {"identity": source_identity, "build": build_record}, expected_sha, image_ids)
 
 
 def run_names():
@@ -377,7 +358,7 @@ def check_ssr_parity(images):
     }
 
 
-def verify_only(app_ref, worker_ref, ssr_ref, expected_sha, report, *, source_identity=None, build_record=None):
+def verify_only(app_ref, worker_ref, ssr_ref, expected_sha, report):
     destination = Path(report)
     destination.unlink(missing_ok=True)
     if not re.fullmatch(r"[0-9a-f]{40}", expected_sha):
@@ -385,22 +366,15 @@ def verify_only(app_ref, worker_ref, ssr_ref, expected_sha, report, *, source_id
 
     references = {"app": app_ref, "worker": worker_ref, "ssr": ssr_ref}
     resolved = {name: resolve_image(reference) for name, reference in references.items()}
-    snapshot_proof = None
-    if source_identity or build_record:
-        if not source_identity or not build_record:
-            raise ValueError("R1 snapshot verification requires both --source-identity and --build-record")
-        snapshot_proof = validate_r1_snapshot(
-            source_identity, build_record, expected_sha,
-            {name: resolved[name]["id"] for name in ("app", "worker", "ssr")})
     images = {}
     with tempfile.TemporaryDirectory(prefix="packio-release-verify-") as temporary:
         temp = Path(temporary)
         metadata = {}
         for name in ("app", "worker"):
             metadata[name] = read_image_metadata(resolved[name]["id"])
-            (check_snapshot_metadata if snapshot_proof else check_metadata)(metadata[name], expected_sha, name)
-        check_app(resolved["app"]["id"], expected_sha, dirty_snapshot=snapshot_proof is not None)
-        check_app(resolved["worker"]["id"], expected_sha, dirty_snapshot=snapshot_proof is not None)
+            check_metadata(metadata[name], expected_sha, name)
+        check_app(resolved["app"]["id"], expected_sha)
+        check_app(resolved["worker"]["id"], expected_sha)
         check_ssr(resolved["ssr"]["id"])
         ssr_parity = check_ssr_parity({name: resolved[name]["id"] for name in ("app", "worker", "ssr")})
 
@@ -436,8 +410,6 @@ def verify_only(app_ref, worker_ref, ssr_ref, expected_sha, report, *, source_id
     result = {"expected_sha": expected_sha, "source_sha": expected_sha, "images": images,
               "ssr_parity": ssr_parity,
               "startup": {"result": "passed", "services": startup}}
-    if snapshot_proof is not None:
-        result["source_snapshot"] = snapshot_proof
     write_report(destination, result)
     print(f"Verified local images for {expected_sha}; report: {destination}")
 
@@ -569,11 +541,8 @@ def main(argv=None):
     parser.add_argument("--ssr-image")
     parser.add_argument("--expected-sha")
     parser.add_argument("--report")
-    parser.add_argument("--source-identity", help="R1 dirty test snapshot identity JSON")
-    parser.add_argument("--build-record", help="R1 dirty test snapshot build record JSON")
     args = parser.parse_args(argv)
-    supplied = any((args.app_image, args.worker_image, args.ssr_image, args.expected_sha,
-                    args.source_identity, args.build_record))
+    supplied = any((args.app_image, args.worker_image, args.ssr_image, args.expected_sha))
     if not args.verify_only:
         if supplied:
             parser.error("image references require --verify-only")
@@ -582,10 +551,7 @@ def main(argv=None):
                if not getattr(args, name)]
     if missing:
         parser.error("--verify-only requires --app-image, --worker-image, --ssr-image, --expected-sha, and --report")
-    if bool(args.source_identity) != bool(args.build_record):
-        parser.error("--source-identity and --build-record must be supplied together")
-    return verify_only(args.app_image, args.worker_image, args.ssr_image, args.expected_sha, args.report,
-                       source_identity=args.source_identity, build_record=args.build_record)
+    return verify_only(args.app_image, args.worker_image, args.ssr_image, args.expected_sha, args.report)
 
 
 if __name__ == "__main__":

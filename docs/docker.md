@@ -109,30 +109,11 @@ This is separate from the trusted HTTPS origin used for CSRF checks and the
 configured HTTPS registry URLs derived from `APP_URL`. This example does not
 normalize the app request URI.
 
-Supply verified image IDs through `PACKIO_PROXY_APP_IMAGE` and
-`PACKIO_PROXY_SSR_IMAGE`, or build the two existing targets for this disposable
-edge regression:
-
-```bash
-docker build -f .docker/Dockerfile.roadrunner --target prod -t packio-release-011-prod:local .
-docker build -f .docker/Dockerfile.roadrunner --target prod-ssr -t packio-release-011-prod-ssr:local .
-python3 test/Support/Release/proxy.test.py
-```
-
-Run the fixture as an ordinary non-root user; Caddy uses that user's UID/GID
-and the generated TLS private key stays owner-only. It starts a temporary app,
-SSR, PostgreSQL, and Caddy fixture, uses disposable
-credentials, and cleans up its own containers, network, and temporary files.
-Browser validation of SSR and Turnstile remains a separate required check;
-neither running this command nor using the example alone establishes that
-browser validation passed. To include it, supply `--browser-endpoint` for a
-matching Playwright 1.62.1 remote browser and `--node` for the existing host
-Node 24.21.0 executable. The browser check uses Cloudflare's public test keys,
-loads its real script/iframe, checks the SSR form and Inertia navigation, and
-rejects report-only CSP violations. It requires access to
-`https://challenges.cloudflare.com`; it does not mock that service.
-`PACKIO_PROXY_APP_IMAGE` and `PACKIO_PROXY_SSR_IMAGE` can select other local
-candidate tags without changing the script.
+This example is the edge of the [product check](testing.md#product-check-on-final-images):
+it runs the built images behind this Caddyfile and sends forged forwarding
+headers, foreign origins and repeated logins through it. The check also loads
+the login page with Turnstile on Cloudflare's public test keys and rejects
+report-only CSP violations.
 
 Build from a Git checkout with release tags available (`git fetch --tags` if needed).
 The image generates `data/build/release.json` from that checkout during the build

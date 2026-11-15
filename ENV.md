@@ -8,6 +8,8 @@ and registry domains with names backed by your DNS and TLS certificate. Copy
 starting the stack. The example's app service runs migrations and the runtime
 settings seed automatically at startup; do not also run them manually.
 
+For the published images, start from `deploy/.env.example` (see [self-hosting.md](docs/self-hosting.md)); it lists the few values you must set, and any variable below can be added to the same `.env`, except those fixed in the `environment:` section of `deploy/compose.yaml`.
+
 Local development uses `compose.yaml` defaults: PostgreSQL is published on
 `localhost:15432`, and app URLs use `packio.localhost`. Copy `.env.example` to
 `.env` when changing those defaults.

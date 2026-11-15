@@ -8,34 +8,28 @@ To try Packio without installing it, register at [packio.us](https://packio.us),
 
 ## Supported deployment
 
-Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.5.x, Node 24.21.0 for the image build, and PostgreSQL 17. The standalone production Compose stack includes the application, queue and maintenance workers, Inertia SSR, and PostgreSQL. See [the support scope](docs/support.md) for the full list of supported, experimental and unsupported configurations.
+Packio supports a Linux single host on amd64, using RoadRunner 2025.1.15, PHP 8.5.x, Node 24.21.0 for the image build, and PostgreSQL 17. The `deploy/` Compose files run the application, queue and maintenance workers, optional Inertia SSR, and PostgreSQL. See [the support scope](docs/support.md) for the full list of supported, experimental and unsupported configurations.
 
 ## Try it locally
 
-Try Packio on your own machine with the development stack. It serves plain HTTP on `localhost` and is not a production setup.
+Try Packio on your own machine from the published images (published starting with the first release after 0.2.0). No clone and no build. It serves plain HTTP and is not a production setup.
 
-1. Requirements: Linux on amd64 (macOS is not guaranteed), Git, curl, and Docker with Compose. Nothing else is installed on the host. Create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) before you start: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too.
-2. Clone the repository and start the stack:
+Requirements: Linux on amd64, Docker with Compose v2, curl. For step 3 below, create a GitHub [fine-grained personal access token](https://github.com/settings/personal-access-tokens/new) first: set Repository access to "Public repositories", add no permissions, and choose a short expiry. The token can only read public data; a classic token with no scopes selected works too. Find the latest version on the [releases page](https://github.com/packio-php/packio/releases) and replace `X.Y.Z` with it (without the `v`):
 
-   ```bash
-   git clone https://github.com/packio-php/packio.git
-   cd packio
-   cp .env.example .env
-   ```
+```bash
+mkdir packio && cd packio
+curl -fsSL https://github.com/packio-php/packio/archive/refs/tags/vX.Y.Z.tar.gz | tar -xz --strip-components=2 --wildcards '*/deploy/*'
+cp .env.local.example .env
+docker compose up -d --wait
+```
 
-   If your user ID (`id -u`) is not 1000, set `PACKIO_DOCKER_UID` and `PACKIO_DOCKER_GID` in `.env` now. Then start the stack and wait until the app answers:
+Then:
 
-   ```bash
-   docker compose -f compose.yaml up -d --build
-   until curl -fsS http://localhost:8080/health; do sleep 2; done
-   ```
-
-   One `up` command also installs PHP and Node dependencies and builds the SSR bundle. The first start takes 2-3 minutes; later starts take a few seconds. If the `until` loop does not finish, press Ctrl-C and check `docker compose logs app`. The workers can restart for up to a minute while `app` runs migrations; they recover on their own.
-3. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
-4. Create an organization, for example `acme`.
-5. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
-6. Open Tokens (`/organization/acme/tokens`), enter a name, and click Issue token. Copy the token.
-7. The Registry Setup page (`/organization/acme/registry/setup`) shows the registry host and repository URL; for `acme` the host is `acme.packio.localhost:8080`. In an empty project folder, run Composer in Docker (Linux; `--network host` lets the container reach the host's port 8080). Any local Composer 2 works too.
+1. Open `http://packio.localhost:8080` and register. The verification code arrives in Mailpit at `http://localhost:8025`.
+2. Create an organization, for example `acme`.
+3. Open Sources, click Add source, and choose GitHub. Under "or enter token manually", paste your GitHub token and click Save provider access, then Continue to add source. The list shows only repositories of the token owner, so pick one of your own public repositories that has a `composer.json` and version tags; if you have none, fork a small Composer package and untick "Copy the main branch only" in GitHub's fork dialog so the fork keeps its tags. Click Connect. A read-only token cannot create webhooks, so Packio shows a warning and does not follow new pushes on its own; synchronization from the source page still works. The source synchronizes in the background; its page shows the sync status and the packages found.
+4. Open Tokens (`/organization/acme/tokens`), enter a name, and click Issue token. Copy the token.
+5. The Registry Setup page (`/organization/acme/registry/setup`) shows the registry host and repository URL; for `acme` the host is `acme.packio.localhost:8080`. In an empty project folder, run Composer in Docker (Linux; `--network host` lets the container reach the host's port 8080). Any local Composer 2 works too.
 
    ```bash
    mkdir demo && cd demo
@@ -46,53 +40,31 @@ Try Packio on your own machine with the development stack. It serves plain HTTP 
    composer config repositories.packio composer '<repository URL from the Registry page>'
    composer require <vendor/package>
    ```
-8. Stop and remove everything, including the database volume:
+6. Stop and remove everything, including the data (run this in the `packio` folder, not in `demo`):
 
    ```bash
-   docker compose -f compose.yaml down -v
+   docker compose down -v
    ```
 
-## Install from a clean Git clone
+To work on the code, see [the source-based development stack](docs/docker.md#try-the-development-stack-from-source).
 
-The production build requires Git metadata. Do not use a source archive as a substitute for a Git checkout.
+## Install on a server
 
-```bash
-git clone https://github.com/packio-php/packio.git packio
-cd packio
-cp .env.prod.example .env.prod.local
-chmod 600 .env.prod.local
-openssl rand -hex 32     # set DATABASE_PASS in .env.prod.local
-openssl rand -base64 32  # set APP_SECRET_ENCRYPTION_KEY=base64:<value>
-```
+1. Download `deploy/` and copy `.env.example` to `.env`.
+2. Fill in the domain, two secrets and the mail address, and choose the Caddy line for automatic HTTPS.
+3. Run `docker compose up -d`.
 
-Edit `.env.prod.local` before starting the stack:
-
-- Set a unique PostgreSQL password and a persistent encryption key. Keep the key backed up with the database and unchanged across deployments.
-- Replace `packio.example.com` with the public application domain in `APP_URL`, `BRAND_DOMAIN`, `BRAND_REGISTRY_BASE_DOMAIN`, and `CORS_ALLOWED_ORIGINS`. Set the matching `PACKIO_APP_DOMAIN` and `PACKIO_REGISTRY_DOMAIN` values for the host Caddy example.
-- Point DNS for the application host and `*.<registry-domain>` to the Linux host. Provide a TLS certificate and key covering both the app host and wildcard registry hosts; the Caddy example does not provision certificates.
-- Configure a working SMTP `MAIL_DSN`, `MAIL_FROM_ADDRESS`, and optional display name. Authentication emails require SMTP and running queue workers.
-- Set `TRUSTED_PROXIES` to the exact proxy peer address observed by the app. Leave it empty if no trusted proxy headers are used; never set it to `*`.
-
-The `.env.prod.local` file contains secrets and must stay private. Do not commit it.
-
-Validate and start all production services:
-
-```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml config --quiet
-docker compose --env-file .env.prod.local -f compose.prod.yaml up -d --build --remove-orphans --wait --wait-timeout 300
-curl -fsS http://127.0.0.1:8080/health
-docker compose --env-file .env.prod.local -f compose.prod.yaml ps
-```
-
-Use `compose.prod.yaml` by itself. Its app entrypoint runs pending PostgreSQL migrations and the runtime-settings seed with `RUN_MIGRATIONS=true`; do not run migrations or seed commands manually alongside startup. Workers start after the app is healthy. They are required for queued authentication mail and source/package synchronization. See [Docker operations](docs/docker.md) for the proxy configuration, upgrades, backups, and service details.
+The full guide with every command: [Self-hosting Packio](docs/self-hosting.md). Building from a Git clone is described in [Docker and runtime operations](docs/docker.md#install-from-a-clean-git-clone).
 
 ## First account and Composer setup
 
 Register through the app, then verify the account using the email sent through your configured SMTP service. After registration, promote the existing user to admin from the app container:
 
 ```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml exec app php vendor/bin/laminas user:make-admin admin@example.com
+docker compose exec app php vendor/bin/laminas user:make-admin admin@example.com
 ```
+
+This is the command for the `deploy/` setup. With a source build, add `--env-file .env.prod.local -f compose.prod.yaml` after `docker compose`.
 
 Sign in as that user and create an organization. To import repositories, configure a source OAuth app for the provider, connect that account, add a repository, and run a source sync from its page. Login OAuth is optional; source OAuth setup is covered in [the OAuth guide](docs/oauth.md).
 
@@ -133,6 +105,7 @@ Replace the package name and version with one published by your organization.
 For local development, use [the development Compose guide](docs/docker.md#local-command-matrix). The host tooling targets PHP 8.5.x and Node 24.21.0. Copy `.env.example` to `.env`; local defaults use PostgreSQL on `localhost:15432` and Packio's localhost development domains.
 
 - [Environment variables](ENV.md)
+- [Self-hosting guide](docs/self-hosting.md)
 - [Docker and runtime operations](docs/docker.md)
 - [Support matrix](docs/support.md)
 - [Testing](docs/testing.md)

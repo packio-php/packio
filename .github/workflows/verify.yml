@@ -177,7 +177,7 @@ jobs:
             composer --working-dir="$tool" audit --locked
           done
       - if: matrix.suite == 'base'
-        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
+        run: composer check && composer openapi-check && python3 test/Support/Docs/links.test.py && python3 test/Support/Compose/dev-compose.test.py && python3 test/Support/Compose/deploy-compose.test.py && python3 test/Support/Release/verify-workflow.test.py && sh test/Support/Release/image-tags.test.sh
       - if: matrix.suite == 'concurrency'
         run: composer test:concurrency
 
@@ -306,6 +306,53 @@ jobs:
             --worker-image "$(cat data/coverage/images/prod-worker.id)" \
             --ssr-image "$(cat data/coverage/images/prod-ssr.id)" \
             --expected-sha "$PACKIO_CANDIDATE_SHA" --report data/coverage/images/product-report.json
+      - name: Start the deploy Compose files on the built images
+        run: |
+          set -eu
+          for pair in prod:packio prod-worker:packio-worker prod-ssr:packio-ssr; do
+            docker tag "$(cat "data/coverage/images/${pair%%:*}.id")" "ghcr.io/packio-php/${pair#*:}:ci"
+          done
+          # Only the Packio images exist locally; everything else is pulled here, so compose may never pull.
+          docker pull postgres:17-alpine
+          docker pull axllent/mailpit
+          work="$RUNNER_TEMP/deploy"
+          rm -rf "$work"
+          cp -r deploy "$work"
+          cd "$work"
+          cp .env.local.example .env
+          sed -i 's/^PACKIO_VERSION=.*/PACKIO_VERSION=ci/' .env
+          trap 'docker compose down -v --remove-orphans' EXIT
+          for files in compose.yaml:compose.local.yaml compose.yaml:compose.local.yaml:compose.ssr.yaml; do
+            echo "::group::$files"
+            export COMPOSE_FILE="$files"
+            if ! docker compose up -d --pull never --wait --wait-timeout 300; then
+              echo "::endgroup::"
+              docker compose logs
+              exit 1
+            fi
+            base=http://packio.localhost:8080
+            resolve='--resolve packio.localhost:8080:127.0.0.1'
+            ok=true
+            curl -fsS $resolve "$base/health" || ok=false
+            curl -sS $resolve -D headers.txt -o login.html "$base/auth/login" || ok=false
+            command grep -qi '^HTTP/[0-9.]* 200' headers.txt || { echo "login page did not answer 200"; ok=false; }
+            if command grep -i '^set-cookie:.*;[[:space:]]*secure' headers.txt; then
+              echo "a Secure cookie would break the plain-HTTP local variant"
+              ok=false
+            fi
+            case "$files" in
+              *compose.ssr.yaml)
+                command grep -Eiq '<input\b[^>]*type="email"' login.html || { echo "login page was not server-rendered"; ok=false; } ;;
+            esac
+            command grep -qi '^set-cookie: PACKIO_SESSID=' headers.txt || { echo "no session cookie was set"; ok=false; }
+            if [ "$ok" != true ]; then
+              echo "::endgroup::"
+              docker compose logs
+              exit 1
+            fi
+            docker compose down -v --remove-orphans
+            echo "::endgroup::"
+          done
       - uses: actions/upload-artifact@v4
         if: always()
         with:

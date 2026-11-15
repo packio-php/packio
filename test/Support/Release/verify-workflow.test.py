@@ -60,6 +60,17 @@ class VerifyWorkflowTests(unittest.TestCase):
         self.assertNotIn("\n    if: ", job.split("\n    if: ", 1)[1].split("\n", 1)[1],
                          "the runtime job has exactly one condition")
 
+    def test_runtime_job_starts_the_deploy_compose_files_after_the_product_step(self):
+        workflow = (ROOT / ".github/workflows/verify.yml").read_text(encoding="utf-8")
+        job = workflow.split("\n  runtime:\n", 1)[1].split("\n  publish:\n", 1)[0]
+        product = job.index("product.test.py")
+        step = job.index("      - name: Start the deploy Compose files on the built images")
+        self.assertLess(product, step)
+        self.assertLess(step, job.index("actions/upload-artifact"))
+        script = verify_workflow_step_run("Start the deploy Compose files on the built images")
+        for needle in ("compose.ssr.yaml", "--pull never", "down -v", "compose logs", "/auth/login"):
+            self.assertIn(needle, script)
+
     def test_publish_job_pushes_only_verified_images_after_every_other_job(self):
         workflow = (ROOT / ".github/workflows/verify.yml").read_text(encoding="utf-8")
         job = workflow.split("\n  publish:\n", 1)[1]

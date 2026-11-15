@@ -7,6 +7,8 @@ recovery report exists for that exact baseline and the exact candidate images
 and source SHA. Until a second public version exists, no upgrade path has been
 rehearsed. This does not establish arbitrary historical upgrades or zero downtime.
 
+For the setup from the [self-hosting guide](../self-hosting.md), run the Compose commands in this runbook from the directory with the deploy files (`packio` in the guide) without `--env-file` or `-f`; `COMPOSE_FILE` in `.env` selects the files. A routine update there is `docker compose pull && docker compose up -d` after pinning `PACKIO_VERSION`; see [self-hosting.md](../self-hosting.md#updating).
+
 ## Before the candidate starts
 
 1. Obtain and verify the candidate's immutable app, worker and SSR image IDs or

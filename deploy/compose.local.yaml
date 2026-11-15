@@ -1,0 +1,19 @@
+# Local trial over plain HTTP with a catch-all mailbox. Not for servers.
+x-local: &local
+  APP_PRODUCTION: "false"
+  APP_URL: http://${PACKIO_DOMAIN}:${HTTP_PORT:-8080}
+  MAIL_DSN: smtp://mailpit:1025
+
+services:
+  app:
+    environment: *local
+
+  workers:
+    environment: *local
+
+  mailpit:
+    image: axllent/mailpit
+    restart: unless-stopped
+    # Read the mails Packio sends at http://localhost:8025.
+    ports:
+      - "127.0.0.1:8025:8025"

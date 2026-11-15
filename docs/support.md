@@ -13,7 +13,7 @@ This page lists what Packio supports. Anything not listed here is not supported.
 | Composer client | Composer 2.8.x |
 | Package archives | Local filesystem in the `package-archives` named volume (`PACKAGE_ARCHIVE_STORAGE_DRIVER=local`); back up this volume |
 | S3 archives | Experimental |
-| Installation | Production: `compose.prod.yaml` from a clean checkout. Local development: `compose.yaml` with bind mounts and Vite |
+| Installation | Production: the `deploy/` Compose files with the published images (see [self-hosting.md](self-hosting.md)), or `compose.prod.yaml` from a clean checkout. Local development: `compose.yaml` with bind mounts and Vite |
 
 ## Experimental
 
@@ -25,7 +25,7 @@ PostgreSQL 17 is the only supported database. The default is `postgres`, and any
 
 ## Images
 
-Prebuilt images are not published. Build them from source by following [docker.md](docker.md).
+Release tags publish the images `ghcr.io/packio-php/packio`, `ghcr.io/packio-php/packio-worker` and `ghcr.io/packio-php/packio-ssr` (amd64 only), each tagged `X.Y.Z`, `X.Y` and `latest`. The `verify.yml` workflow builds, tests and pushes them on a `vX.Y.Z` tag. Start from [self-hosting.md](self-hosting.md). Building from source is still possible, see [docker.md](docker.md).
 
 ## Backup and upgrades
 

@@ -1,0 +1,24 @@
+# Optional server-side rendering for Inertia pages.
+services:
+  ssr:
+    image: ghcr.io/packio-php/packio-ssr:${PACKIO_VERSION:-latest}
+    restart: unless-stopped
+    stop_grace_period: 90s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    healthcheck:
+      test: ["CMD", "sh", "/usr/local/bin/healthcheck-ssr.sh"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  app:
+    environment:
+      INERTIA_SSR_ENABLED: "true"
+      INERTIA_SSR_URL: http://ssr:13714/render
+    depends_on:
+      ssr:
+        condition: service_healthy

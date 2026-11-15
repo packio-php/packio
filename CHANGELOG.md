@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Local development runs on RoadRunner, like production. In `compose.yaml` one `workers` service replaces `worker` and the four maintenance services; run `docker compose up -d --build --remove-orphans` once to remove the old containers.
+
 ### Removed
 
+- The FrankenPHP development runtime: `compose.roadrunner.yaml`, `public/index-worker.php`, the FrankenPHP, standalone worker and SSR Dockerfiles, and the `SERVER_NAME` setting.
 - `third-party-sources.json`, from the repository and the images. `THIRD_PARTY_NOTICES.md` now says where the upstream sources are.
 
 ## [0.3.1] - 2026-11-15

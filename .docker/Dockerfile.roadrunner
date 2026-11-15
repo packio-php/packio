@@ -115,7 +115,16 @@ ENTRYPOINT ["/usr/local/bin/roadrunner-entrypoint.sh"]
 
 EXPOSE 80
 
-FROM app-runtime AS app-base
+# Development image: compose.yaml mounts the checkout at /app. Adds Composer and the worker scripts.
+FROM app-runtime AS dev
+
+USER root
+COPY --from=composer:2.8 /usr/bin/composer /usr/local/bin/composer
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git openssh-client unzip \
+    && rm -rf /var/lib/apt/lists/*
+COPY --chmod=755 .docker/entrypoint-*.sh .docker/maintenance-process.sh .docker/run-worker.sh .docker/warmup-object-mapper.sh /usr/local/bin/
+USER ${APP_USER}
 
 FROM app-runtime AS prod-dependencies
 
@@ -170,7 +179,7 @@ COPY --from=release-source --chown=${APP_USER}:${APP_USER} \
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/config /app/config
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/src /app/src
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/templates /app/templates
-COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/index.php /app/public/index-worker.php /app/public/index-roadrunner.php /app/public/
+COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/index.php /app/public/index-roadrunner.php /app/public/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/manifest.json /app/public/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/favicon.ico /app/public/favicon.svg /app/public/favicon-16x16.png /app/public/favicon-32x32.png /app/public/
 COPY --from=release-source --chown=${APP_USER}:${APP_USER} /app/public/apple-touch-icon.png /app/public/android-chrome-192x192.png /app/public/android-chrome-512x512.png /app/public/og-image.png /app/public/

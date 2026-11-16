@@ -7,8 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The version in the footer links to GitHub: the commit hash to its commit, and the version of a tagged build to its release.
+
 ### Changed
 
+- Package cards in the package list have an "Open details" button that opens the package, as the table view does. The source name on the card links to the source; the "Open source" button is removed.
 - `sirix/mezzio-radixrouter` is updated to 4.0.0. A `HEAD` request to a `GET` route now reaches middleware and handlers as `GET`, and the response body is emptied afterwards. After updating, run `composer refresh-route-cache`.
 
 ## [0.3.2] - 2026-11-16

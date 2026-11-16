@@ -41,7 +41,6 @@ use Packio\Application\Middleware\ResolveCurrentUserMiddleware;
 use Packio\Application\Middleware\ResolveOrganizationActorContextMiddleware;
 use Packio\Application\Middleware\RuntimeCorsMiddleware;
 use Packio\Application\Middleware\StripPackageMappingErrorInertiaDecorationMiddleware;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
 use Packio\Application\Security\RateLimiter\FileRateLimiter;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Packio\Organization\Infrastructure\Facade\OrganizationApiFacade;
@@ -219,11 +218,10 @@ final class OperationalProbePipelineTest extends TestCase
             self::assertFileExists($config['test_markers']['attributes'], 'Normal boundary fixture did not load the compiled route attributes.');
             self::assertFileExists($config['test_markers']['radix'], 'Normal boundary fixture did not load the compiled Radix artifact.');
         }
-        $adapter = $serviceManager->get(ImplicitHeadRouterAdapter::class);
         self::assertSame([
             'id' => '42',
-        ], $adapter->match($this->request('GET', '/__probe-boundary/42', 'packio.us'))->getMatchedParams());
-        self::assertTrue($adapter->match($this->request('HEAD', '/__probe-boundary/42', 'packio.us'))->isFailure(), 'The probe adapter must share the raw router while restoring native implicit HEAD handling locally.');
+        ], $router->match($this->request('GET', '/__probe-boundary/42', 'packio.us'))->getMatchedParams());
+        self::assertTrue($router->match($this->request('HEAD', '/__probe-boundary/42', 'packio.us'))->isFailure(), 'The router must leave implicit HEAD to ImplicitHeadMiddleware.');
 
         foreach (['GET', 'HEAD'] as $method) {
             $boundaryState->reset();
@@ -237,8 +235,8 @@ final class OperationalProbePipelineTest extends TestCase
             self::assertNull($cors['params']);
             self::assertNull($cors['id']);
             self::assertNull($cors['forwardedMethod']);
-            self::assertSame($method, $afterRouting['method'], 'Normal routing must not rewrite HEAD before late implicit HEAD handling.');
-            self::assertNull($afterRouting['forwardedMethod']);
+            self::assertSame('GET', $afterRouting['method'], 'Middleware after routing must see an implicit HEAD as GET, with the matched route.');
+            self::assertSame('HEAD' === $method ? 'HEAD' : null, $afterRouting['forwardedMethod']);
             self::assertInstanceOf(RouteResult::class, $afterRouting['result']);
             self::assertSame([
                 'id' => '42',

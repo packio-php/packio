@@ -396,12 +396,12 @@ final class ReadinessFeatureTest extends FeatureTestCase
             $withOrigin = $this->request('POST', $path, [], [
                 'Origin' => 'https://packio.us',
             ]);
-            $withOrigin->assertStatus(405)->assertHeader('Allow', 'GET,HEAD');
+            $withOrigin->assertStatus(405)->assertHeader('Allow', 'GET');
             $withOrigin->assertHeader('Access-Control-Allow-Origin', 'https://packio.us');
             self::assertSame('', $withOrigin->body());
 
             $withoutOrigin = $this->request('POST', $path);
-            $withoutOrigin->assertStatus(405)->assertHeader('Allow', 'GET,HEAD');
+            $withoutOrigin->assertStatus(405)->assertHeader('Allow', 'GET');
             self::assertSame('', $withoutOrigin->body());
         }
 
@@ -409,7 +409,7 @@ final class ReadinessFeatureTest extends FeatureTestCase
             $withCsrf = $this->withCsrf()->post($path, [], [
                 'Origin' => 'https://packio.us',
             ]);
-            $withCsrf->assertStatus(405)->assertHeader('Allow', 'GET,HEAD');
+            $withCsrf->assertStatus(405)->assertHeader('Allow', 'GET');
             $withCsrf->assertHeader('Access-Control-Allow-Origin', 'https://packio.us');
             self::assertSame('', $withCsrf->body());
         }
@@ -458,14 +458,7 @@ final class ReadinessFeatureTest extends FeatureTestCase
         ] as [$path, $expectedStatus, $expectedRouteName, $expectedContentType, $getCacheControl, $headCacheControl, $location]) {
             $get  = $this->get($path)->assertStatus($expectedStatus);
             $head = $this->request('HEAD', $path)->assertStatus($expectedStatus);
-            if ('/auth/login' === $path) {
-                self::assertStringContainsString('<html', $head->body(), 'The original login HEAD response retains its HTML body.');
-            } else {
-                self::assertSame($get->body(), $head->body(), 'Raw Radix HEAD preserves the original response body for ' . $path);
-            }
-            if ('' !== $expectedContentType) {
-                self::assertNotSame('', $head->body(), 'The original pipeline keeps the handler body for ' . $path);
-            }
+            self::assertSame('', $head->body(), 'An implicit HEAD response has no body for ' . $path);
             self::assertSame(
                 [
                     [
@@ -474,13 +467,13 @@ final class ReadinessFeatureTest extends FeatureTestCase
                         'hasRouteResult' => true,
                     ],
                     [
-                        'method'         => 'HEAD',
+                        'method'         => 'GET',
                         'routeName'      => $expectedRouteName,
                         'hasRouteResult' => true,
                     ],
                 ],
                 array_splice($readinessAuthBoundary->observations, 0, 2),
-                'Routing must preserve the original method and RouteResult through the optional-auth boundary for ' . $path,
+                'An implicit HEAD must reach the optional-auth boundary as GET with the matched route for ' . $path,
             );
             self::assertSame($location, $get->header('Location'));
             self::assertSame($location, $head->header('Location'));

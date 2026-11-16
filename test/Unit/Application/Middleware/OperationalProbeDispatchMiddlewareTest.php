@@ -13,7 +13,6 @@ use Mezzio\Router\Middleware\DispatchMiddleware;
 use Mezzio\Router\Route;
 use Mezzio\Router\RouteResult;
 use Packio\Application\Middleware\OperationalProbeDispatchMiddleware;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
 use Packio\Registry\Application\Service\RegistryOrganizationResolver;
 use Packio\Registry\Infrastructure\Middleware\RestrictRegistrySubdomainMiddleware;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -107,7 +106,7 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
 
         $countingRadixRouter = new CountingRadixRouter();
         $countingRadixRouter->addRoute(new Route('/ready', new ProbeRouteMiddleware(), ['GET', 'HEAD'], 'other-head'));
-        $operationalProbeDispatchMiddleware     = $this->middleware(new ImplicitHeadRouterAdapter($countingRadixRouter));
+        $operationalProbeDispatchMiddleware     = $this->middleware($countingRadixRouter);
         $serverRequest                          = new ServerRequest(uri: 'https://packio.us/ready', method: 'HEAD');
         $probeCapturingHandler                  = new ProbeCapturingHandler();
         $operationalProbeDispatchMiddleware->process($serverRequest, $probeCapturingHandler);
@@ -152,14 +151,13 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
     public function selectedProbeCannotFallThroughToMainStack(): void
     {
         $radixRouter               = new RadixRouter();
-        $implicitHeadRouterAdapter = new ImplicitHeadRouterAdapter($radixRouter);
-        $implicitHeadRouterAdapter->addRoute(new Route('/ready', new class implements MiddlewareInterface {
+        $radixRouter->addRoute(new Route('/ready', new class implements MiddlewareInterface {
             public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
             {
                 return $handler->handle($request);
             }
         }, ['GET'], 'ready'));
-        $middleware                  = $this->middleware($implicitHeadRouterAdapter);
+        $middleware                  = $this->middleware($radixRouter);
         $probeCapturingHandler       = new ProbeCapturingHandler();
 
         try {
@@ -175,7 +173,7 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
     {
         foreach (['POST', 'OPTIONS'] as $method) {
             $router     = new CountingRadixRouter();
-            $middleware = $this->middleware(new ImplicitHeadRouterAdapter($router));
+            $middleware = $this->middleware($router);
             $request    = new ServerRequest(uri: 'https://packio.us/ready', method: $method);
             $next       = new ProbeCapturingHandler();
 
@@ -196,21 +194,20 @@ final class OperationalProbeDispatchMiddlewareTest extends TestCase
     private function fixture(string $name, string $path, array $methods = ['GET'], array $extraMethods = []): array
     {
         $radixRouter                       = new RadixRouter();
-        $implicitHeadRouterAdapter         = new ImplicitHeadRouterAdapter($radixRouter);
         $probeRouteMiddleware              = new ProbeRouteMiddleware();
         $handler                           = $probeRouteMiddleware->handler;
-        $implicitHeadRouterAdapter->addRoute(new Route($path, $probeRouteMiddleware, [...$methods, ...$extraMethods], $name));
+        $radixRouter->addRoute(new Route($path, $probeRouteMiddleware, [...$methods, ...$extraMethods], $name));
 
-        return [$this->middleware($implicitHeadRouterAdapter), $probeRouteMiddleware, $handler];
+        return [$this->middleware($radixRouter), $probeRouteMiddleware, $handler];
     }
 
-    private function middleware(ImplicitHeadRouterAdapter $implicitHeadRouterAdapter): OperationalProbeDispatchMiddleware
+    private function middleware(RadixRouter $radixRouter): OperationalProbeDispatchMiddleware
     {
         $brandingConfig               = new BrandingConfig();
         $registryOrganizationResolver = new RegistryOrganizationResolver($brandingConfig);
 
         return new OperationalProbeDispatchMiddleware(
-            $implicitHeadRouterAdapter,
+            $radixRouter,
             new RestrictRegistrySubdomainMiddleware($registryOrganizationResolver, $brandingConfig),
             new StreamFactory(),
             new DispatchMiddleware(),

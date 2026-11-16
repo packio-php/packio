@@ -8,7 +8,7 @@ use Laminas\Stratigility\MiddlewarePipe;
 use Mezzio\Router\Middleware\DispatchMiddleware;
 use Mezzio\Router\Middleware\ImplicitHeadMiddleware;
 use Mezzio\Router\Middleware\RouteMiddleware;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
+use Mezzio\Router\RouterInterface;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Message\StreamFactoryInterface;
@@ -22,15 +22,15 @@ final readonly class OperationalProbeDispatchMiddleware implements MiddlewareInt
     private MiddlewarePipe $middlewarePipe;
 
     public function __construct(
-        private ImplicitHeadRouterAdapter $implicitHeadRouterAdapter,
+        private RouterInterface $router,
         MiddlewareInterface $registrySubdomainMiddleware,
         StreamFactoryInterface $streamFactory,
         DispatchMiddleware $dispatchMiddleware,
     ) {
         $this->middlewarePipe = new MiddlewarePipe();
-        $this->middlewarePipe->pipe(new RouteMiddleware($this->implicitHeadRouterAdapter));
+        $this->middlewarePipe->pipe(new RouteMiddleware($this->router));
         $this->middlewarePipe->pipe($registrySubdomainMiddleware);
-        $this->middlewarePipe->pipe(new ImplicitHeadMiddleware($this->implicitHeadRouterAdapter, $streamFactory));
+        $this->middlewarePipe->pipe(new ImplicitHeadMiddleware($this->router, $streamFactory));
         $this->middlewarePipe->pipe($dispatchMiddleware);
     }
 
@@ -40,9 +40,9 @@ final readonly class OperationalProbeDispatchMiddleware implements MiddlewareInt
             return $handler->handle($request);
         }
 
-        $routeResult = $this->implicitHeadRouterAdapter->match($request);
+        $routeResult = $this->router->match($request);
         if ('HEAD' === $request->getMethod() && $routeResult->isFailure()) {
-            $routeResult = $this->implicitHeadRouterAdapter->match($request->withMethod('GET'));
+            $routeResult = $this->router->match($request->withMethod('GET'));
         }
 
         if (! $routeResult->isSuccess()

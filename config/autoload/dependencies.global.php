@@ -8,13 +8,13 @@ use Laminas\ServiceManager\Proxy\LazyServiceFactory;
 use Laminas\Stratigility\Middleware\ErrorHandler;
 use Mezzio\Middleware\ErrorResponseGenerator;
 use Mezzio\Router\Middleware\DispatchMiddleware;
+use Mezzio\Router\RouterInterface;
 use Mezzio\Template\TemplateRendererInterface;
 use Packio\Application\Error\AuthorizationExceptionResponseFactory;
 use Packio\Application\Error\ConsoleErrorLoggingDelegator;
 use Packio\Application\Error\HttpErrorLoggingDelegator;
 use Packio\Application\Error\InertiaErrorResponseGenerator;
 use Packio\Application\Middleware\OperationalProbeDispatchMiddleware;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
 use Packio\Application\Runtime\LongRunningHttpApplication;
 use Packio\Application\Runtime\LongRunningHttpApplicationFactory;
 use Packio\Application\Security\Authentication\CsrfAwareAuthManagerDelegator;
@@ -75,7 +75,7 @@ return [
             AuthorizationExceptionResponseFactory::class,
         ],
         OperationalProbeDispatchMiddleware::class => [
-            ImplicitHeadRouterAdapter::class,
+            RouterInterface::class,
             RestrictRegistrySubdomainMiddleware::class,
             StreamFactoryInterface::class,
             DispatchMiddleware::class,

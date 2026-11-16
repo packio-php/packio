@@ -70,8 +70,13 @@
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">
           <p class="font-medium ui-title">Managed by source</p>
-          <p class="mt-2 truncate text-sm ui-title">
-            {section.source.name}
+          <p class="mt-2 truncate text-sm">
+            <Link
+              class="ui-link-accent font-medium"
+              href={withOrganization(`/sources/${section.source.id}`)}
+            >
+              {section.source.name}
+            </Link>
           </p>
           <p
             class="mt-1 break-all text-xs ui-muted line-clamp-2 min-h-[2.25rem]"
@@ -124,13 +129,6 @@
             : "no failures"}
         </p>
       </div>
-
-      <Link
-        class="ui-button-secondary mt-4 inline-flex rounded-full px-4 py-2 text-xs font-medium"
-        href={withOrganization(`/sources/${section.source.id}`)}
-      >
-        Open source
-      </Link>
     </InsetCard>
   {:else}
     <div aria-hidden="true">
@@ -157,13 +155,16 @@
           <p>last success not synced yet</p>
           <p>last failure no failures</p>
         </div>
-
-        <span
-          class="ui-button-secondary mt-4 inline-flex rounded-full px-4 py-2 text-xs font-medium"
-        >
-          Open source
-        </span>
       </InsetCard>
     </div>
   {/if}
+
+  <div class="mt-auto pt-4">
+    <Link
+      class="ui-button-secondary inline-flex rounded-full px-4 py-2 text-xs font-medium"
+      href={packageDetailsUrl(section)}
+    >
+      Open details
+    </Link>
+  </div>
 </Card>

@@ -108,6 +108,12 @@ describe("Packages index page", () => {
     expect(screen.getByText("acme/app")).toBeInTheDocument();
     expect(screen.getByText("Managed by source")).toBeInTheDocument();
     expect(
+      screen.getByRole("link", { name: "Open details" }).getAttribute("href"),
+    ).toContain("/organization/acme/packages/acme/app");
+    expect(
+      screen.getByRole("link", { name: "acme/app-source" }),
+    ).toHaveAttribute("href", "/organization/acme/sources/source-1");
+    expect(
       screen.queryByRole("table", { name: "Packages" }),
     ).not.toBeInTheDocument();
   });

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import AppVersionLink from "@/Components/ui/AppVersionLink.svelte";
   import { usePage } from "@inertiajs/svelte";
   import { router } from "@inertiajs/svelte";
   import { ChevronDown, Menu, Moon, Sun, X } from "@lucide/svelte";
@@ -785,10 +786,8 @@
       </div>
       <div class="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
         <span class="text-xs">{branding.domain}</span>
-        {#if appVersion?.display}
-          <span class="text-[10px] tracking-[0.14em] opacity-75"
-            >v{appVersion.display}</span
-          >
+        {#if appVersion?.number}
+          <AppVersionLink version={appVersion} />
         {/if}
       </div>
     </div>

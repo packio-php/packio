@@ -5,33 +5,42 @@ Packio runs on RoadRunner, in development and in production. The HTTP entrypoint
 | Compose file | Use |
 | --- | --- |
 | `compose.yaml` | Local development: the checkout is bind-mounted, with Vite and Mailpit |
-| `compose.prod.yaml` | Production example built from source |
-| `deploy/` | Production from the published images, see [self-hosting.md](self-hosting.md) |
+| `deploy/` | Production: the published images, see [self-hosting.md](self-hosting.md), or [your own build](#production-from-a-source-build) |
 
-## Production example with RoadRunner
+## Production from a source build
 
-Most users should follow [self-hosting.md](self-hosting.md), which uses the published images. The rest of this section builds the images from source with `compose.prod.yaml`.
-
-`compose.prod.yaml` is a standalone single-host example. It builds the application,
-frontend and SSR from source, installs locked Composer dependencies without dev
-packages, and runs four containers: `app`, `workers`, `ssr` and `postgres`.
-The `workers` container runs RoadRunner with `config/roadrunner/services.yaml`.
-No host `vendor`, Node installation or source bind mounts are needed.
+Most users should follow [self-hosting.md](self-hosting.md), which uses the published images.
+To run your own build, build the three images from a Git checkout and start them with the
+same `deploy/` files:
 
 ```bash
-cp .env.prod.example .env.prod.local
-chmod 600 .env.prod.local
-openssl rand -hex 32     # use as DATABASE_PASS
-openssl rand -base64 32  # use as APP_SECRET_ENCRYPTION_KEY, prefixed with base64:
+git clone https://github.com/packio-php/packio.git packio
+cd packio
+for pair in prod:packio prod-worker:packio-worker prod-ssr:packio-ssr; do
+  docker build -f .docker/Dockerfile.roadrunner --target "${pair%%:*}" \
+    -t "ghcr.io/packio-php/${pair#*:}:local" .
+done
+cd deploy
+cp .env.example .env
+chmod 600 .env
 ```
 
-Edit `.env.prod.local`: fill the PostgreSQL password and encryption key, your public
-HTTPS URL, branding domains, CORS origin, and working SMTP `MAIL_DSN` (for example
-`smtps://user:password@smtp.example.com:465`, with URL-encoded credentials). SMTP
-and the queue workers are required to deliver registration verification, password
-reset, and other authentication mail. Keep the encryption key across deployments: workers
-and HTTP use the same key to decrypt stored credentials. Additional application
-settings from `.env.example` can be added to this file.
+The build needs Git metadata; a source archive is not a substitute for a Git checkout.
+It installs locked Composer dependencies without dev packages and builds the frontend and
+SSR inside Docker: no host `vendor`, Node installation or source bind mounts are needed.
+
+In `.env` set `PACKIO_VERSION=local`, so Compose runs the images you just built instead of
+pulling a release, and fill in the other values as the [self-hosting guide](self-hosting.md)
+describes: the domain, the PostgreSQL password, the encryption key and a working SMTP
+`MAIL_DSN` (for example `smtps://user:password@smtp.example.com:465`, with URL-encoded
+credentials). SMTP and the queue workers are required to deliver registration verification,
+password reset, and other authentication mail. Keep the encryption key across deployments:
+workers and HTTP use the same key to decrypt stored credentials. Any other setting from
+[ENV.md](../ENV.md) can be added to the same file.
+
+The stack runs `app`, `workers` and `postgres`, plus `ssr` when `COMPOSE_FILE` includes
+`compose.ssr.yaml`. The `workers` container runs RoadRunner with
+`config/roadrunner/services.yaml`.
 
 Malformed, tampered or wrong-key stored secrets are rejected without using the
 encrypted value as a credential. Authentication mail jobs fail safely without
@@ -46,14 +55,14 @@ a replacement key does not recover existing encrypted data. Invalid or missing
 production key configuration remains a startup error.
 
 ```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml config --quiet
-docker compose --env-file .env.prod.local -f compose.prod.yaml up -d --build --remove-orphans --wait --wait-timeout 300
+docker compose config --quiet
+docker compose up -d --remove-orphans --wait --wait-timeout 300
 curl -fsS http://127.0.0.1:8080/health
-docker compose --env-file .env.prod.local -f compose.prod.yaml ps
-docker compose --env-file .env.prod.local -f compose.prod.yaml logs -f app workers
+docker compose ps
+docker compose logs -f app workers
 ```
 
-Use only this Compose file, without `compose.yaml`.
+Run these in `deploy/`; do not combine its files with the development `compose.yaml`.
 The app listens on container port `80`, published only on host loopback as
 `127.0.0.1:${HTTP_PORT:-8080}`. `HTTP_PORT` changes this published HTTP port; it
 does not change the HTTPS listener or Caddy's upstream automatically. PostgreSQL
@@ -129,7 +138,7 @@ packaged metadata without a valid version and commit hash fails startup.
 If an older image reports `0.0.1-dev.1+`, rebuild both `app` and `workers` with the
 updated Dockerfile; restarting the old image cannot repair its packaged metadata.
 
-In `compose.prod.yaml`, the app service sets `RUN_MIGRATIONS=true`, so pending
+In `deploy/compose.yaml`, the app service sets `RUN_MIGRATIONS=true`, so pending
 migrations and then `RuntimeSettingsCatalogSeed` run on app startup. Workers and
 SSR keep migrations disabled, and workers start after application readiness. Do not
 run migrations or the seed manually while this app service is starting. Before RoadRunner starts any worker or
@@ -153,10 +162,10 @@ cleared so the seven processes cannot share an explicit ID. Maintenance interval
 and queue settings retain their existing environment variables. HTTP worker count
 is controlled separately by `RR_NUM_WORKERS`.
 
-Change `PACKIO_WORKER_NUM` in `.env.prod.local`, then apply it with:
+Change `PACKIO_WORKER_NUM` in `.env`, then apply it with:
 
 ```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml up -d --no-deps --force-recreate workers
+docker compose up -d --no-deps --force-recreate workers
 ```
 
 The healthcheck queries RoadRunner's loopback RPC and verifies all expected service
@@ -214,7 +223,7 @@ Source records, and tests that warmup failures stop startup before consumers run
 
 This is a baseline with a maintenance window, not a rolling deployment setup.
 Local PHP configuration overrides do not enter production images; configure this
-example through `.env.prod.local`.
+setup through `deploy/.env`.
 
 ## Try the development stack from source
 
@@ -257,40 +266,6 @@ Try Packio from a source checkout with the development stack. Most users should 
    ```bash
    docker compose -f compose.yaml down -v
    ```
-
-## Install from a clean Git clone
-
-The production build requires Git metadata. Do not use a source archive as a substitute for a Git checkout.
-
-```bash
-git clone https://github.com/packio-php/packio.git packio
-cd packio
-cp .env.prod.example .env.prod.local
-chmod 600 .env.prod.local
-openssl rand -hex 32     # set DATABASE_PASS in .env.prod.local
-openssl rand -base64 32  # set APP_SECRET_ENCRYPTION_KEY=base64:<value>
-```
-
-Edit `.env.prod.local` before starting the stack:
-
-- Set a unique PostgreSQL password and a persistent encryption key. Keep the key backed up with the database and unchanged across deployments.
-- Replace `packio.example.com` with the public application domain in `APP_URL`, `BRAND_DOMAIN`, `BRAND_REGISTRY_BASE_DOMAIN`, and `CORS_ALLOWED_ORIGINS`. Set the matching `PACKIO_APP_DOMAIN` and `PACKIO_REGISTRY_DOMAIN` values for the host Caddy example.
-- Point DNS for the application host and `*.<registry-domain>` to the Linux host. Provide a TLS certificate and key covering both the app host and wildcard registry hosts; the Caddy example does not provision certificates.
-- Configure a working SMTP `MAIL_DSN`, `MAIL_FROM_ADDRESS`, and optional display name. Authentication emails require SMTP and running queue workers.
-- Set `TRUSTED_PROXIES` to the exact proxy peer address observed by the app. Leave it empty if no trusted proxy headers are used; never set it to `*`.
-
-The `.env.prod.local` file contains secrets and must stay private. Do not commit it.
-
-Validate and start all production services:
-
-```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml config --quiet
-docker compose --env-file .env.prod.local -f compose.prod.yaml up -d --build --remove-orphans --wait --wait-timeout 300
-curl -fsS http://127.0.0.1:8080/health
-docker compose --env-file .env.prod.local -f compose.prod.yaml ps
-```
-
-Use `compose.prod.yaml` by itself. Its app entrypoint runs pending PostgreSQL migrations and the runtime-settings seed with `RUN_MIGRATIONS=true`; do not run migrations or seed commands manually alongside startup. Workers start after the app is healthy. They are required for queued authentication mail and source/package synchronization. See [Host Caddy reverse proxy](#host-caddy-reverse-proxy) and the sections below for the proxy configuration, upgrades, backups, and service details.
 
 ## Local command matrix
 

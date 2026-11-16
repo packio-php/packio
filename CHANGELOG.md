@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Removed
 
+- `compose.prod.yaml` and `.env.prod.example`. A source build now runs with the `deploy/` files, see "Production from a source build" in `docs/docker.md`. To keep the volumes of an existing `compose.prod.yaml` installation, move its settings to `deploy/.env`, add `PACKIO_DOMAIN`, `COMPOSE_PROJECT_NAME=packio-prod` and `compose.ssr.yaml` in `COMPOSE_FILE`, and tag your images as `ghcr.io/packio-php/packio`, `packio-worker` and `packio-ssr`.
 - The FrankenPHP development runtime: `compose.roadrunner.yaml`, `public/index-worker.php`, the FrankenPHP, standalone worker and SSR Dockerfiles, and the `SERVER_NAME` setting.
 - `third-party-sources.json`, from the repository and the images. `THIRD_PARTY_NOTICES.md` now says where the upstream sources are.
 

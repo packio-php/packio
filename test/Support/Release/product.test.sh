@@ -23,11 +23,14 @@ export PRODUCT_DIR="$work" PRODUCT_ORG_SLUG=fixture-org
 PRODUCT_USER="$(id -u):$(id -g)"
 APP_SECRET_ENCRYPTION_KEY=$(openssl rand -hex 32)
 DATABASE_PASS=$(openssl rand -hex 16)
-export PRODUCT_USER APP_SECRET_ENCRYPTION_KEY DATABASE_PASS APP_URL=https://app.fixture.test
+export PRODUCT_USER APP_SECRET_ENCRYPTION_KEY DATABASE_PASS
+export PACKIO_DOMAIN=app.fixture.test MAIL_DSN=smtp://mailpit:1025
 registry="$PRODUCT_ORG_SLUG.registry.fixture.test"
 
 compose() {
-  docker compose -p "$project" -f compose.prod.yaml -f test/Support/Release/compose.product.yaml "$@"
+  # The files operators run, with paths still relative to the checkout.
+  docker compose -p "$project" --project-directory . -f deploy/compose.yaml -f deploy/compose.ssr.yaml \
+    -f test/Support/Release/compose.product.yaml "$@"
 }
 cleanup() {
   status=$?

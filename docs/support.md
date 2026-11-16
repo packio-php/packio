@@ -13,7 +13,7 @@ This page lists what Packio supports. Anything not listed here is not supported.
 | Composer client | Composer 2.8.x |
 | Package archives | Local filesystem in the `package-archives` named volume (`PACKAGE_ARCHIVE_STORAGE_DRIVER=local`); back up this volume |
 | S3 archives | Experimental |
-| Installation | Production: the `deploy/` Compose files with the published images (see [self-hosting.md](self-hosting.md)), or `compose.prod.yaml` from a clean checkout. Local development: `compose.yaml` with bind mounts and Vite |
+| Installation | Production: the `deploy/` Compose files with the published images (see [self-hosting.md](self-hosting.md)), or with images built from a clean checkout. Local development: `compose.yaml` with bind mounts and Vite |
 
 ## Experimental
 

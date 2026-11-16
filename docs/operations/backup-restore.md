@@ -31,14 +31,13 @@ restrict access and retention according to the installation's policy.
    volume. Keep PostgreSQL running for the dump. Confirm the installation is
    quiescent; preserve pending/retrying jobs and deletion lifecycle state.
 
-Use the installation's explicit Compose project, file and protected environment
-file for every command. For the standalone example, after the proxy is closed:
+Run every command in the directory with the deploy files (`packio` in the
+[self-hosting guide](../self-hosting.md)), so Compose picks up the installation's project,
+files and protected `.env`. After the proxy is closed:
 
 ```bash
-docker compose --env-file .env.prod.local -f compose.prod.yaml stop workers app
+docker compose stop workers app
 ```
-
-For the self-hosting setup, drop `--env-file .env.prod.local -f compose.prod.yaml` from this and the following commands and run them in the directory with the deploy files (`packio` in the [self-hosting guide](../self-hosting.md)): `docker compose stop workers app`. The same applies to the restore commands below.
 
 Do not use `down -v`: it destroys database and archive volumes.
 
@@ -46,12 +45,12 @@ Do not use `down -v`: it destroys database and archive volumes.
 
 Run PostgreSQL 17 `pg_dump --format=custom --no-owner --no-acl` against the
 quiescent installation, using the container's existing credential environment
-rather than a password argument. For the standalone example:
+rather than a password argument:
 
 ```bash
 umask 077
 mkdir -m 700 backup-set
-docker compose --env-file .env.prod.local -f compose.prod.yaml exec -T postgres \
+docker compose exec -T postgres \
   sh -ec 'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom --no-owner --no-acl' \
   > backup-set/database.dump
 ```
@@ -68,14 +67,14 @@ layout, obtain the stopped app's exact image and archive volume, then snapshot
 that read-only mount with networking disabled:
 
 ```bash
-app_container=$(docker compose --env-file .env.prod.local -f compose.prod.yaml ps --all --quiet app)
+app_container=$(docker compose ps --all --quiet app)
 backup_app_image=$(docker inspect --format '{{.Image}}' "$app_container")
 archive_volume=$(docker inspect --format '{{range .Mounts}}{{if eq .Destination "/app/data/package-archives"}}{{.Name}}{{end}}{{end}}' "$app_container")
 test -n "$archive_volume"
 docker run --rm --network none --read-only --user 0 --entrypoint tar \
   --mount "type=volume,source=$archive_volume,target=/archives,readonly" \
   "$backup_app_image" -cpf - -C /archives . > backup-set/archives.tar
-docker compose --env-file .env.prod.local -f compose.prod.yaml exec -T postgres \
+docker compose exec -T postgres \
   pg_restore --list < backup-set/database.dump > backup-set/database.inventory
 tar -tf backup-set/archives.tar > backup-set/archives.inventory
 sha256sum backup-set/database.dump backup-set/archives.tar > backup-set/SHA256SUMS

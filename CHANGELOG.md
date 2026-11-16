@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-11-16
+
 ### Changed
 
 - Local development runs on RoadRunner, like production. In `compose.yaml` one `workers` service replaces `worker` and the four maintenance services; run `docker compose up -d --build --remove-orphans` once to remove the old containers.

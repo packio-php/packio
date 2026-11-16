@@ -51,6 +51,8 @@ return function(Application $app, MiddlewareFactoryInterface $factory, Container
     $app->pipe(RequestSizeLimitMiddleware::class);
     $app->pipe(BodyParamsMiddleware::class);
     $app->pipe(RouteMiddleware::class);
+    // Right after routing: the middleware below read route options, which a HEAD request only gets once it is re-matched as GET.
+    $app->pipe(ImplicitHeadMiddleware::class);
     $app->pipe(RestrictRegistrySubdomainMiddleware::class);
     $app->pipe(SessionMiddleware::class);
     $app->pipe(FlashMessageMiddleware::class);
@@ -71,7 +73,6 @@ return function(Application $app, MiddlewareFactoryInterface $factory, Container
     $app->pipe(HandleInertiaRequests::class);
 
     // Routing
-    $app->pipe(ImplicitHeadMiddleware::class);
     $app->pipe(ImplicitOptionsMiddleware::class);
     $app->pipe(MethodNotAllowedMiddleware::class);
     $app->pipe(UrlHelperMiddleware::class);

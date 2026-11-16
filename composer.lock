@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "0b5ce30add89afde1cb9d7bc5f80ba57",
+    "content-hash": "a765abd86b7ac5b6e894caa4a8f3d528",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -6926,16 +6926,16 @@
         },
         {
             "name": "sirix/mezzio-radixrouter",
-            "version": "3.2.3",
+            "version": "4.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-radixrouter.git",
-                "reference": "960c0bf2a51bc84b6cc7ea24de71b2fc59be2f66"
+                "reference": "c0d230e81b1818014b986d0192de120378c5dc95"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-radixrouter/zipball/960c0bf2a51bc84b6cc7ea24de71b2fc59be2f66",
-                "reference": "960c0bf2a51bc84b6cc7ea24de71b2fc59be2f66",
+                "url": "https://api.github.com/repos/sirix777/mezzio-radixrouter/zipball/c0d230e81b1818014b986d0192de120378c5dc95",
+                "reference": "c0d230e81b1818014b986d0192de120378c5dc95",
                 "shasum": ""
             },
             "require": {
@@ -6944,7 +6944,7 @@
                 "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.0.1 || ^2.0.0",
-                "wilaak/radix-router": "^3.5"
+                "wilaak/radix-router": "^3.7.1"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
@@ -6996,7 +6996,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-radixrouter/issues",
-                "source": "https://github.com/sirix777/mezzio-radixrouter/tree/3.2.3"
+                "source": "https://github.com/sirix777/mezzio-radixrouter/tree/4.0.0"
             },
             "funding": [
                 {
@@ -7008,7 +7008,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-08T13:53:15+00:00"
+            "time": "2026-11-16T13:16:57+00:00"
         },
         {
             "name": "sirix/mezzio-rbac",
@@ -11209,16 +11209,16 @@
         },
         {
             "name": "wilaak/radix-router",
-            "version": "v3.7.1",
+            "version": "v3.7.2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/wilaak/radix-router.git",
-                "reference": "24b80b9783420e71c9a3a9240fd8b43af39318e5"
+                "reference": "7415e7d9b8ec1550220f6516a453a7692be56a7a"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/wilaak/radix-router/zipball/24b80b9783420e71c9a3a9240fd8b43af39318e5",
-                "reference": "24b80b9783420e71c9a3a9240fd8b43af39318e5",
+                "url": "https://api.github.com/repos/wilaak/radix-router/zipball/7415e7d9b8ec1550220f6516a453a7692be56a7a",
+                "reference": "7415e7d9b8ec1550220f6516a453a7692be56a7a",
                 "shasum": ""
             },
             "require": {
@@ -11257,7 +11257,7 @@
                 "issues": "https://github.com/wilaak/radix-router/issues",
                 "source": "https://github.com/wilaak/radix-router"
             },
-            "time": "2026-10-07T09:35:46+00:00"
+            "time": "2026-10-08T09:44:16+00:00"
         },
         {
             "name": "yiisoft/arrays",

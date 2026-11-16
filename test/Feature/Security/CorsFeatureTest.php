@@ -42,7 +42,7 @@ final class CorsFeatureTest extends FeatureTestCase
             'Origin'                        => 'https://packio.us',
         ])
             ->assertStatus(200)
-            ->assertHeader('Allow', 'GET,HEAD')
+            ->assertHeader('Allow', 'GET')
         ;
     }
 

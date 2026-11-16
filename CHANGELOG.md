@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `sirix/mezzio-radixrouter` is updated to 4.0.0. A `HEAD` request to a `GET` route now reaches middleware and handlers as `GET`, and the response body is emptied afterwards. After updating, run `composer refresh-route-cache`.
+
 ## [0.3.2] - 2026-11-16
 
 ### Changed

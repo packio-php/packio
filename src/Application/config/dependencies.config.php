@@ -46,7 +46,6 @@ use Packio\Application\Middleware\SecurityHeadersMiddleware;
 use Packio\Application\Middleware\StripPackageMappingErrorInertiaDecorationMiddleware;
 use Packio\Application\Middleware\ValidateMappedRequestMiddleware;
 use Packio\Application\Release\AppReleaseVersion;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
 use Packio\Application\Security\Csrf\CsrfTokenManager;
 use Packio\Application\Security\Honeypot\HoneypotFieldNameGenerator;
 use Packio\Application\Security\Honeypot\HoneypotValidator;
@@ -89,7 +88,6 @@ use Sirix\InertiaPsr15\Service\InertiaVersionProviderInterface;
 use Sirix\InertiaPsr15\View\RootViewProviderInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthenticationProfileProviderInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
-use Sirix\Mezzio\Router\RadixRouter;
 use Sirix\Mezzio\Valinor\Error\DefaultMappingErrorResponder;
 use Sirix\Mezzio\Valinor\Error\MappingErrorResponderInterface;
 use Yiisoft\Validator\ValidatorInterface;
@@ -123,7 +121,6 @@ return [
             SafeRedirectTarget::class                                   => SafeRedirectTarget::class,
         ],
         'factories'  => [
-            ImplicitHeadRouterAdapter::class                        => ConfigAbstractFactory::class,
             ReadyHandler::class                                     => ConfigAbstractFactory::class,
             ReadinessChecker::class                                 => ConfigAbstractFactory::class,
             ApiAuthenticationAttemptLimiter::class                  => ConfigAbstractFactory::class,
@@ -163,7 +160,6 @@ return [
         ],
     ],
     ConfigAbstractFactory::class => [
-        ImplicitHeadRouterAdapter::class                       => [RadixRouter::class],
         ReadyHandler::class                                    => [
             ReadinessChecker::class,
         ],

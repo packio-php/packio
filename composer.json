@@ -75,7 +75,7 @@
         "sirix/inertia-psr15-mezzio-flash": "^1.0",
         "sirix/mezzio-authentication": "^2.1",
         "sirix/mezzio-eventdispatcher": "^0.1.0",
-        "sirix/mezzio-radixrouter": "^3.0",
+        "sirix/mezzio-radixrouter": "^4.0",
         "sirix/mezzio-rbac": "^2.0",
         "sirix/mezzio-routing-attributes": "^1.4",
         "sirix/mezzio-routing-contracts": "^1.2",

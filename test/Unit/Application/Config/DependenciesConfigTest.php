@@ -22,7 +22,6 @@ use Packio\Application\Infrastructure\Readiness\ReadinessChecker;
 use Packio\Application\Middleware\OperationalProbeDispatchMiddleware;
 use Packio\Application\Middleware\OptionalRouteAuthenticationMiddleware;
 use Packio\Application\Middleware\StripPackageMappingErrorInertiaDecorationMiddleware;
-use Packio\Application\Router\ImplicitHeadRouterAdapter;
 use Packio\Registry\Api\ArchiveStorageApiFacadeInterface;
 use Packio\Registry\Application\Service\RegistryOrganizationResolver;
 use Packio\Registry\Infrastructure\Middleware\RestrictRegistrySubdomainMiddleware;
@@ -83,9 +82,7 @@ final class DependenciesConfigTest extends TestCase
             $container->get(StripPackageMappingErrorInertiaDecorationMiddleware::class),
         );
         $selector = $container->get(OperationalProbeDispatchMiddleware::class);
-        $adapter  = $container->get(ImplicitHeadRouterAdapter::class);
         self::assertInstanceOf(OperationalProbeDispatchMiddleware::class, $selector);
-        self::assertInstanceOf(ImplicitHeadRouterAdapter::class, $adapter);
         self::assertFalse($applicationOverridesRouterAlias, 'The application must leave RouterInterface to the vendor RadixRouter alias.');
         $router    = $container->get(RouterInterface::class);
         $collector = new RouteCollector($router);
@@ -95,7 +92,7 @@ final class DependenciesConfigTest extends TestCase
                 return $handler->handle($request);
             }
         }, 'shared');
-        self::assertSame('shared', $adapter->match(new ServerRequest(uri: 'https://packio.us/shared'))->getMatchedRouteName());
+        self::assertSame('shared', $router->match(new ServerRequest(uri: 'https://packio.us/shared'))->getMatchedRouteName());
         self::assertSame(0, $forbiddenFactoryCalls);
     }
 

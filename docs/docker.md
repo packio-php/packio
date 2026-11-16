@@ -411,37 +411,30 @@ PHP dependencies and build client, API documentation, and SSR assets inside Dock
 Production must not use a source bind mount:
 
 ```bash
-python3 test/Support/Release/image.test.py --report /tmp/packio-images.json
-```
-
-The local build mode uses unique tags and a disposable tracked-source context,
-inserts harmless canaries, checks every exported layer (each target has its own forbidden-path list and an
-uncompressed size ceiling, `MAX_LAYER_BYTES` in `test/Support/Release/image.test.py`;
-a ceiling is raised only deliberately, in a separate change), verifies dependencies and
-assets, and starts the final images without source mounts. Keep the reported
-immutable image IDs to verify the same artifacts again without building or pulling:
-
-```bash
-python3 test/Support/Release/image.test.py --verify-only \
-  --app-image "$app_image" --worker-image "$worker_image" --ssr-image "$ssr_image" \
-  --expected-sha "$(git rev-parse HEAD)" --report /tmp/packio-verification.json
+sh test/Support/Release/image.test.sh "$app_image" "$worker_image" "$ssr_image" "$(git rev-parse HEAD)"
 sh test/Support/RoadRunner/cold-worker.test.sh "$worker_image"
 sh test/Support/RoadRunner/services.test.sh "$worker_image"
 docker save -o /tmp/packio-release-images.tar "$app_image" "$worker_image" "$ssr_image"
 ```
 
-Set the three shell variables to the image IDs in the build report. Verification
-resolves supplied local refs before checking, rejects missing or mismatched app/worker
-release metadata and dirty builds, and reports layer/startup results. SSR source identity is verified against the BuildKit provenance in its exported OCI
-image index: the attestation subject must match the image manifest and its source
-revision must match the candidate SHA. The SSR bundle ships only in the SSR image,
-which reports its tree by digest; the app and worker images must not contain
-`/app/data/ssr/`. The SSR startup/health scripts must match the clean worker copies. Dirty metadata anchors are rejected before these comparisons.
-Missing or mismatched provenance or packaged SSR contents fails verification. Build with BuildKit and a Docker containerd image store that preserves
-attestations; prefetch `postgres:17-alpine` before verify-only startup checks.
-Missing Docker or Compose fails the check. Preserve the export and report together;
-a registry digest and publication bundle remain separate release requirements.
-The harness removes only its own runtime resources; built images remain available.
+Set the three shell variables to already built local images; nothing is built or pulled.
+`image.test.sh` checks that:
+
+- the app and worker images run as a non-root user and carry the locked dependencies, the
+  built assets, the migrations and the required PHP extensions;
+- their release metadata names the given commit and is not dirty;
+- no exported layer contains a forbidden path, and the uncompressed layers stay under the
+  ceiling of the target. Both lists are at the top of the script; a ceiling is raised only
+  deliberately, in a separate change;
+- the SSR bundle ships only in the SSR image, and its startup and health scripts match the
+  worker copies;
+- the BuildKit provenance stored with each image names the image manifest, the build target
+  and the given commit. The SSR image has no release metadata, so this is its only source check.
+
+Build with `--provenance=true` and a Docker containerd image store that preserves
+attestations, as the `runtime` job in `.github/workflows/verify.yml` does. Startup of the
+same images is covered by the [product check](testing.md#product-check-on-final-images).
+
 The RoadRunner image runs as a
 non-root user, uses the pinned RoadRunner binary declared in its Dockerfile,
 and includes PostgreSQL support. Its `dev` target is the development image used

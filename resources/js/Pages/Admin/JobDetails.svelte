@@ -9,7 +9,7 @@
   import SnippetBlock from "@/Components/ui/SnippetBlock.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import { Endpoints } from "@/lib/api";
-  import { formatDate } from "@/lib/date";
+  import { formatDate, formatDuration } from "@/lib/date";
   import { jobStatusTone, jobTypeLabel } from "@/lib/job";
   import type { AuthPayload } from "@/types/auth";
 
@@ -66,26 +66,6 @@
     message: string;
     context: Record<string, unknown>;
     createdAt: string;
-  }
-
-  function formatDuration(seconds: number | null): string {
-    if (seconds === null) {
-      return "—";
-    }
-
-    if (seconds < 60) {
-      return `${seconds}s`;
-    }
-
-    if (seconds < 3600) {
-      const mins = Math.floor(seconds / 60);
-      const secs = seconds % 60;
-      return `${mins}m ${secs}s`;
-    }
-
-    const hours = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    return `${hours}h ${mins}m`;
   }
 
   function logLevelColor(level: string): string {

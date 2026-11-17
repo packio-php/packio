@@ -3,7 +3,7 @@ name: Public verification
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
     tags: ['v*']
   workflow_dispatch:
 
@@ -94,9 +94,11 @@ jobs:
             exit 1
           fi
           {
-            if git rev-parse --verify --quiet 'refs/remotes/origin/main^{commit}' > /dev/null; then
-              echo refs/remotes/origin/main
-            fi
+            for branch in main develop; do
+              if git rev-parse --verify --quiet "refs/remotes/origin/$branch^{commit}" > /dev/null; then
+                echo "refs/remotes/origin/$branch"
+              fi
+            done
             git for-each-ref --format='%(refname)' refs/tags
             echo HEAD
           } > "$work_dir/scan-refs"

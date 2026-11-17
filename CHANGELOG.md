@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The admin jobs page has a "Refresh" button that reloads the jobs, counts and queue health with the current filters.
+
+### Changed
+
+- The admin jobs page shows one "Queue health" card instead of "Queue progress" and "System auth mail", which repeated the status counts. It shows retrying, stuck and oldest ready age for the whole queue and pending, failed and oldest ready age for auth mail, and highlights stuck jobs, failed auth mail and a ready age above five minutes. The status counts are in a "Statuses" card that says whether the page filters apply.
+
 ## [0.4.0] - 2026-11-17
 
 ### Added

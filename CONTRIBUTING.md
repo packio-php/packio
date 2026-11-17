@@ -25,6 +25,33 @@ rm -f data/ssr/ssr.mjs && docker compose -f compose.yaml run --rm setup-node && 
 
 The default development stack uses PostgreSQL and serves the app at `http://localhost:8080/` (or `http://packio.localhost:8080/`); Mailpit is available at `http://localhost:8025/`. The PHP test runner uses a separate `postgres-test` Compose service and isolated test database. It requires Docker. Do not point tests at a development or production database.
 
+### PHP and Node on the host
+
+Alternatively, run PHP and Node on the host and keep only PostgreSQL and Mailpit in Docker. This needs the host tooling listed above; `.env.example` already points at the published ports (`localhost:15432` for PostgreSQL, `localhost:1025` for SMTP). Do not run it alongside the full Docker stack: both use port `8080`.
+
+```bash
+cp .env.example .env
+composer install
+npm ci --no-audit --no-fund
+composer development-enable
+docker compose -f compose.yaml up -d --wait postgres mailpit
+php vendor/bin/laminas cycle:migration:run
+```
+
+Then run each of these in its own terminal:
+
+```bash
+composer serve                       # app at http://packio.localhost:8080
+npm run dev                          # Vite dev server at http://localhost:5173
+php vendor/bin/laminas worker:run    # background jobs, including all mail
+```
+
+- `composer development-enable` is required. Without it, Packio caches the merged configuration and routes in `data/cache/`, so new routes and `.env` changes do not show up, and pages load assets from `public/build` instead of Vite, so they render without JavaScript. Run `composer clear-application-cache` if you ever worked with development mode disabled.
+- The worker sends every email, including the registration code. Without it, registration succeeds but nothing arrives in Mailpit.
+- SSR is optional here: without it, pages render in the browser. To check server rendering, run `npm run build:ssr` and then `node data/ssr/ssr.mjs`.
+- `composer serve` uses PHP's single-threaded built-in server and listens on all interfaces, not only on `localhost`. It suits development only.
+- `node_modules` installed on the host and the one installed by the `setup-node` container contain different native binaries. When you switch between this setup and the full Docker stack in the same checkout, remove `node_modules` and install it again for the setup you use.
+
 ## Checks
 
 Run the relevant checks before requesting review. Backend database suites use shared local test resources, so run them serially; do not run `composer check` and `composer test:concurrency` at the same time.

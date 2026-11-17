@@ -74,4 +74,4 @@ sh test/Support/Docs/links.test.sh
 - Preserve tenant isolation and authorization boundaries. Organization-scoped data must remain inaccessible across tenants; review authorization at the application boundary and add tests for both allowed and denied access.
 - Avoid logging credentials, tokens, private package contents, authentication data, or full request payloads.
 
-Open a pull request with the [PR template](.github/pull_request_template.md). Include the reason for the change, user-visible behavior, and checks you actually ran. Do not include secrets, private customer data, database dumps, or generated local planning material.
+Open a pull request against the `develop` branch with the [PR template](.github/pull_request_template.md). Include the reason for the change, user-visible behavior, and checks you actually ran. Do not include secrets, private customer data, database dumps, or generated local planning material.

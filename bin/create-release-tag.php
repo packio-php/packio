@@ -80,6 +80,10 @@ if ($fetch) {
     \git($basePath, 'fetch --tags ' . \escapeshellarg($remote));
 }
 
+if (! $dryRun) {
+    \requirePublishedMain($basePath, $remote);
+}
+
 $metadata       = new AppReleaseMetadataGenerator($basePath)->generate();
 $releaseVersion = \releaseVersion((string) ($metadata['version'] ?? ''));
 $tag            = 'v' . $releaseVersion;
@@ -138,6 +142,20 @@ function releaseVersion(string $version): string
     }
 
     return $matches['version'];
+}
+
+// A tag off main is invisible to `git describe` on main, so the next release would be computed wrongly.
+function requirePublishedMain(string $basePath, string $remote): void
+{
+    $branch = \gitStatus($basePath, 'symbolic-ref -q --short HEAD')['output'];
+    if ('main' !== $branch) {
+        \fail(\sprintf('Release tags are created on main only, current branch is "%s". Run: git checkout main && git pull', $branch));
+    }
+
+    $remoteMain = \gitStatus($basePath, 'rev-parse -q --verify ' . \escapeshellarg('refs/remotes/' . $remote . '/main'));
+    if (0 !== $remoteMain['exitCode'] || \git($basePath, 'rev-parse HEAD') !== $remoteMain['output']) {
+        \fail(\sprintf('Local main is not the same commit as %s/main. Run: git pull', $remote));
+    }
 }
 
 function git(string $basePath, string $arguments, bool $failOnError = true): string

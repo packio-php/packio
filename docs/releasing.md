@@ -2,6 +2,25 @@
 
 A Packio release is a source tag `vX.Y.Z`, created with `composer create-release-tag`. Pushing the tag starts `.github/workflows/verify.yml`.
 
+## Branches
+
+- `develop` is the default branch. Changes reach it through squash-merged pull requests.
+- `main` holds released code only. It changes through two kinds of pull request, both merged with a merge commit, never squashed:
+  - a release pull request from `develop`, which carries the changelog;
+  - a hotfix pull request from a branch cut from `main`.
+- After every release or hotfix, merge `main` back into `develop` with a merge-commit pull request. The release tag sits on `main`, and without the back-merge `git describe` on `develop` does not see it.
+
+## Creating the tag
+
+After the pull request into `main` is merged:
+
+```sh
+git checkout main && git pull
+composer create-release-tag
+```
+
+The script refuses to tag anything other than a local `main` that matches `origin/main`. `--dry-run` skips that check, so it can preview the next version on `develop`.
+
 ## What CI does on a tag
 
 1. The usual checks run, including the `runtime` job, which builds the `prod`, `prod-worker` and `prod-ssr` images once and tests those exact images (layers, startup, notices, private Composer product).

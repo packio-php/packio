@@ -24,7 +24,10 @@
     </Link>
   </p>
 
-  <p class="ui-muted mt-3 text-sm leading-6 line-clamp-2 min-h-[3rem]">
+  <p
+    class="ui-muted mt-3 text-sm leading-6 truncate min-h-[3rem]"
+    title={source.url}
+  >
     {source.url}
   </p>
 

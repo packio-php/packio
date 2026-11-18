@@ -135,6 +135,12 @@ final class AuditEntryEntitySchema implements GeneratorInterface
             ->index(['organization_id', 'source_id', 'occurred_at', 'uuid'])
             ->setName('audit_entries_source_recent_idx')
         ;
+        // global recent feed on the admin dashboard
+        $registry
+            ->getTableSchema($entity)
+            ->index(['occurred_at', 'uuid'])
+            ->setName('audit_entries_recent_idx')
+        ;
         $registry
             ->getTableSchema($entity)
             ->index(['operation_key'])

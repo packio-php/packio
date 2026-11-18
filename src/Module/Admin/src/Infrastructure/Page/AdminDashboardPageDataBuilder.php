@@ -133,6 +133,7 @@ final readonly class AdminDashboardPageDataBuilder
     private function organizationIndex(): array
     {
         $organizations = [];
+        // shortcut: loads every organization per dashboard request like admin jobs; switch to a by-ids lookup when organizations reach thousands.
         foreach ($this->organizationApiFacade->allOrganizations() as $organizationDto) {
             $organizations[$organizationDto->id] = $this->adminOrganizationPresenter->present($organizationDto);
         }

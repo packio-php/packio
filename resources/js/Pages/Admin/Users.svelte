@@ -54,7 +54,7 @@
     stats = { users_count: 0, admins_count: 0 },
   }: Props = $props();
 
-  let verifyingUserIds = new Set<string>();
+  let verifyingUserIds = $state(new Set<string>());
 
   function currentQuery(
     overrides: Partial<AdminUsersFilters> = {},

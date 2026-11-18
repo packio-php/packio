@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
+import { apiClient } from "@/lib/api";
 import { router } from "@/test/inertia";
 import AdminUsers from "./Users.svelte";
 
@@ -80,6 +81,26 @@ describe("Admin users page", () => {
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
     expect(headers.indexOf("Status")).toBeLessThan(headers.indexOf("Verified"));
+  });
+
+  it("shows the verifying state while the verify request is pending", async () => {
+    vi.spyOn(apiClient, "post").mockReturnValue(new Promise(() => {}));
+    render(AdminUsers, {
+      props: {
+        filters,
+        pagination,
+        users: [{ ...users[1], email_verified: false }],
+      },
+    });
+
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Verify email" })[0],
+    );
+
+    const buttons = await screen.findAllByRole("button", {
+      name: "Verifying...",
+    });
+    buttons.forEach((button) => expect(button).toBeDisabled());
   });
 
   it("renders stat tiles", () => {

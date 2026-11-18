@@ -125,6 +125,14 @@ final class AdminFeatureTest extends FeatureTestCase
             self::assertInstanceOf(Source::class, $archivedSource);
             $archivedSource->archive();
             $sourceRepository->save($archivedSource);
+
+            Chronos::setTestNow(Chronos::parse('2026-05-20 10:00:10'));
+            $deleting = $this->createSource($organizationDto, 'dashboard-failed-deleting');
+            $sources->markSyncFailed($deleting->id, 'Deleting failure');
+            $deletingSource = $sourceRepository->findByIdInOrganization($deleting->id, $organizationDto->id);
+            self::assertInstanceOf(Source::class, $deletingSource);
+            $deletingSource->markDeleting();
+            $sourceRepository->save($deletingSource);
         } finally {
             Chronos::setTestNow();
         }
@@ -149,6 +157,7 @@ final class AdminFeatureTest extends FeatureTestCase
         self::assertSame($organizationDto->id, $failedSources[0]['organization']['id'] ?? null);
         self::assertNotSame('', $failedSources[0]['last_failed_sync_at'] ?? '');
         self::assertNotContains($archived->id, array_column($failedSources, 'id'));
+        self::assertNotContains($deleting->id, array_column($failedSources, 'id'));
         self::assertNotContains($succeeded->id, array_column($failedSources, 'id'));
     }
 

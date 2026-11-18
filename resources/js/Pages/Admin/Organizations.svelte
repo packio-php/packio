@@ -165,6 +165,7 @@
                   <input
                     class="ui-button-secondary rounded-xl px-3 py-2 text-sm"
                     name="search"
+                    placeholder="Name or slug"
                     type="search"
                     value={filters?.search ?? ""}
                   />

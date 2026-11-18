@@ -121,4 +121,12 @@ describe("Admin settings page", () => {
       },
     );
   });
+
+  it("side cards do not stretch", () => {
+    const { container } = render(AdminSettings, {
+      props: { settings: { definitions: [], values: {} } },
+    });
+
+    expect(container.querySelector(".content-start")).not.toBeNull();
+  });
 });

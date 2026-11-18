@@ -120,4 +120,13 @@ describe("Admin user details page", () => {
       screen.getByText("You cannot ban your own account."),
     ).toBeInTheDocument();
   });
+
+  it("uses badges", () => {
+    render(AdminUserDetails, {
+      props: { user_record: { ...user, roles: ["admin"] } },
+    });
+
+    expect(screen.getByText("admin")).toHaveClass("ui-badge-gold");
+    expect(screen.getByText("Unverified")).toHaveClass("ui-badge-gold");
+  });
 });

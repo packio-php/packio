@@ -78,9 +78,7 @@
               {section.source.name}
             </Link>
           </p>
-          <p
-            class="mt-1 break-all text-xs ui-muted line-clamp-2 min-h-[2.25rem]"
-          >
+          <p class="mt-1 truncate text-xs ui-muted" title={section.source.url}>
             {section.source.url}
           </p>
         </div>
@@ -137,9 +135,7 @@
           <div class="min-w-0">
             <p class="font-medium ui-title">Managed by source</p>
             <p class="mt-2 truncate text-sm ui-title">source/repository</p>
-            <p
-              class="mt-1 break-all text-xs ui-muted line-clamp-2 min-h-[2.25rem]"
-            >
+            <p class="mt-1 truncate text-xs ui-muted">
               https://example.com/source/repository
             </p>
           </div>

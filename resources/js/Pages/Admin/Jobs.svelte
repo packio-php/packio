@@ -1,6 +1,12 @@
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
-  import { ChevronDown, FilterX, ListFilter, Search } from "@lucide/svelte";
+  import {
+    ChevronDown,
+    FilterX,
+    ListFilter,
+    RefreshCw,
+    Search,
+  } from "@lucide/svelte";
   import Link from "@/Components/core/Link.svelte";
   import AdminShell from "@/Layouts/AdminShell.svelte";
   import Badge from "@/Components/ui/Badge.svelte";
@@ -16,6 +22,8 @@
   import { jobStatusTone, jobTypeLabel } from "@/lib/job";
   import { cleanQuery, queryString, type QueryValue } from "@/lib/queryFilters";
   import type { AuthPayload } from "@/types/auth";
+  import type { QueueProgress } from "@/types/pages";
+  import QueueHealthCard from "./Partials/QueueHealthCard.svelte";
 
   interface Props {
     auth?: AuthPayload;
@@ -60,6 +68,7 @@
   }: Props = $props();
   let filtersOpen = $state(false);
   let advancedFiltersOpen = $state(false);
+  let refreshing = $state(false);
   let currentSort = $derived(filters?.sort ?? "createdAt");
   let currentDirection = $derived(filters?.direction ?? "desc");
 
@@ -118,15 +127,6 @@
     canceled: number;
     held: number;
     audited: number;
-  }
-
-  interface QueueProgress {
-    pending: number;
-    running: number;
-    failed: number;
-    retrying: number;
-    stuck: number;
-    oldest_ready_age_seconds: number | null;
   }
 
   interface AdminJobFilters {
@@ -212,6 +212,24 @@
     if ((filters?.worker_id ?? "") !== "") count += 1;
 
     return count;
+  }
+
+  function refresh(): void {
+    router.reload({
+      onStart: () => {
+        refreshing = true;
+      },
+      onFinish: () => {
+        refreshing = false;
+      },
+    });
+  }
+
+  // status_counts ignore the status filter, so it does not make them filtered.
+  function statusCountsFiltered(): boolean {
+    return (
+      activeFilterCount() - ((filters?.status ?? []).length > 0 ? 1 : 0) > 0
+    );
   }
 
   function activeFilterCount(): number {
@@ -420,44 +438,57 @@
     class="admin-content-inner mx-auto w-full max-w-[80rem] px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10"
   >
     <div class="grid min-w-0 gap-6">
-      <SectionHeading
-        eyebrow="Administration"
-        title="Jobs"
-        description="Global background job operations across all organizations."
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <SectionHeading
+          eyebrow="Administration"
+          title="Jobs"
+          description="Global background job operations across all organizations."
+        />
+        <Button
+          aria-busy={refreshing}
+          className="gap-2 rounded-full"
+          disabled={refreshing}
+          type="button"
+          variant="secondary"
+          onclick={refresh}
+        >
+          <RefreshCw
+            aria-hidden="true"
+            class={refreshing ? "animate-spin" : ""}
+            size={15}
+          />
+          Refresh
+        </Button>
+      </div>
+
+      <Card className="rounded-[1.25rem] p-4">
+        <section aria-labelledby="job-statuses">
+          <h2 id="job-statuses" class="text-base font-semibold ui-title">
+            Statuses
+          </h2>
+          <p class="mt-1 text-sm ui-muted">
+            {statusCountsFiltered() ? "Matching current filters" : "All jobs"}
+          </p>
+          <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-7">
+            {#each statuses as status (status)}
+              <div class="ui-inset rounded-xl border p-3 theme-border">
+                <dt class="text-xs uppercase tracking-[0.18em] ui-muted">
+                  {status}
+                </dt>
+                <dd class="mt-1 text-xl font-semibold ui-title">
+                  {status_counts?.[status] ?? 0}
+                </dd>
+              </div>
+            {/each}
+          </dl>
+        </section>
+      </Card>
+
+      <QueueHealthCard
+        queueProgress={queue_progress}
+        authMailProgress={auth_mail_progress}
+        description="All organizations, ignores filters"
       />
-
-      <div class="grid gap-3 md:grid-cols-5">
-        {#each statuses as status (status)}
-          <div class="ui-inset rounded-xl border p-4 theme-border">
-            <p class="text-xs uppercase tracking-[0.18em] ui-muted">
-              {status}
-            </p>
-            <p class="mt-2 text-2xl font-semibold ui-title">
-              {status_counts?.[status] ?? 0}
-            </p>
-          </div>
-        {/each}
-      </div>
-
-      <div class="grid gap-4 md:grid-cols-2">
-        {#each [{ id: "queue-progress", title: "Queue progress", progress: queue_progress }, { id: "system-auth-mail", title: "System auth mail", progress: auth_mail_progress }] as summary (summary.id)}
-          <Card className="rounded-[1.25rem] p-4">
-            <section aria-labelledby={summary.id}>
-              <h2 id={summary.id} class="text-base font-semibold ui-title">
-                {summary.title}
-              </h2>
-              <dl class="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-                {#each [{ label: "Pending", value: summary.progress?.pending ?? 0 }, { label: "Running", value: summary.progress?.running ?? 0 }, { label: "Failed", value: summary.progress?.failed ?? 0 }, { label: "Retrying", value: summary.progress?.retrying ?? 0 }, { label: "Stuck", value: summary.progress?.stuck ?? 0 }, { label: "Oldest ready job", value: summary.progress?.oldest_ready_age_seconds == null ? "No ready jobs" : `${summary.progress.oldest_ready_age_seconds} seconds` }] as metric (metric.label)}
-                  <div class="ui-inset rounded-xl border p-3 theme-border">
-                    <dt class="text-xs ui-muted">{metric.label}</dt>
-                    <dd class="mt-1 font-semibold ui-title">{metric.value}</dd>
-                  </div>
-                {/each}
-              </dl>
-            </section>
-          </Card>
-        {/each}
-      </div>
 
       <Card className="rounded-[1.25rem] p-4">
         <div class="grid gap-4">
@@ -767,18 +798,20 @@
       </Card>
 
       <div class="grid min-w-0 gap-4">
-        <Pagination
-          currentPage={pagination.current_page}
-          lastPage={pagination.last_page}
-          hasMorePages={pagination.has_more_pages}
-          hasPreviousPages={pagination.has_previous_pages}
-          from={pagination.from}
-          to={pagination.to}
-          total={pagination.total}
-          perPage={pagination.per_page}
-          onPageChange={handlePageChange}
-          onPerPageChange={handlePerPageChange}
-        />
+        {#if jobs.length > 0}
+          <Pagination
+            currentPage={pagination.current_page}
+            lastPage={pagination.last_page}
+            hasMorePages={pagination.has_more_pages}
+            hasPreviousPages={pagination.has_previous_pages}
+            from={pagination.from}
+            to={pagination.to}
+            total={pagination.total}
+            perPage={pagination.per_page}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+          />
+        {/if}
 
         <TableFrame ariaLabel="Admin jobs" tableClassName="min-w-[1080px]">
           <thead>
@@ -952,18 +985,20 @@
           </tbody>
         </TableFrame>
 
-        <Pagination
-          currentPage={pagination.current_page}
-          lastPage={pagination.last_page}
-          hasMorePages={pagination.has_more_pages}
-          hasPreviousPages={pagination.has_previous_pages}
-          from={pagination.from}
-          to={pagination.to}
-          total={pagination.total}
-          perPage={pagination.per_page}
-          onPageChange={handlePageChange}
-          onPerPageChange={handlePerPageChange}
-        />
+        {#if jobs.length > 0}
+          <Pagination
+            currentPage={pagination.current_page}
+            lastPage={pagination.last_page}
+            hasMorePages={pagination.has_more_pages}
+            hasPreviousPages={pagination.has_previous_pages}
+            from={pagination.from}
+            to={pagination.to}
+            total={pagination.total}
+            perPage={pagination.per_page}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+          />
+        {/if}
       </div>
     </div>
   </div>

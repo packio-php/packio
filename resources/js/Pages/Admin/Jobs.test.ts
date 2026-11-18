@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { tick } from "svelte";
 import { describe, expect, it, vi } from "vitest";
 import { router } from "@/test/inertia";
 import AdminJobs from "./Jobs.svelte";
@@ -7,8 +8,30 @@ vi.mock("@/Layouts/AdminShell.svelte", async () => ({
   default: (await import("@/test/TestShell.svelte")).default,
 }));
 
+const emptyFilters = {
+  organization_id: "",
+  status: [],
+  type: [],
+  search: "",
+  job_id: "",
+  idempotency_key: "",
+  deletion_run_id: "",
+  source_id: "",
+  worker_id: "",
+  created_from: "",
+  created_to: "",
+  scheduled_from: "",
+  scheduled_to: "",
+  has_warnings: false,
+  has_error: false,
+  sort: "createdAt",
+  direction: "desc" as const,
+  page: 1,
+  per_page: 20,
+};
+
 describe("Admin jobs page", () => {
-  it("shows both queue summaries and explains an idle ready queue", async () => {
+  it("shows queue health without duplicating status counts", async () => {
     const { rerender } = render(AdminJobs, {
       props: {
         queue_progress: {
@@ -30,33 +53,27 @@ describe("Admin jobs page", () => {
       },
     });
 
-    const queue = screen.getByRole("region", { name: "Queue progress" });
-    for (const [label, value] of [
-      ["Pending", "4"],
-      ["Running", "2"],
-      ["Failed", "1"],
-      ["Retrying", "1"],
-      ["Stuck", "1"],
-      ["Oldest ready job", "120 seconds"],
-    ]) {
-      expect(within(queue).getByText(label).parentElement).toHaveTextContent(
-        new RegExp(`${label}\\s*${value}`),
-      );
-    }
+    const health = screen.getByRole("region", { name: "Queue health" });
+    const queue = within(health).getByLabelText("Queue");
+    const mail = within(health).getByLabelText("Auth mail");
+    const expectMetric = (
+      list: HTMLElement,
+      label: string,
+      value: string,
+      warn: boolean,
+    ) => {
+      const tile = within(list).getByText(label).parentElement;
+      expect(tile).toHaveTextContent(new RegExp(`${label}\\s*${value}`));
+      expect(tile?.dataset.warning === "true").toBe(warn);
+    };
 
-    const mail = screen.getByRole("region", { name: "System auth mail" });
-    for (const [label, value] of [
-      ["Pending", "1"],
-      ["Running", "0"],
-      ["Failed", "0"],
-      ["Retrying", "0"],
-      ["Stuck", "0"],
-      ["Oldest ready job", "600 seconds"],
-    ]) {
-      expect(within(mail).getByText(label).parentElement).toHaveTextContent(
-        new RegExp(`${label}\\s*${value}`),
-      );
-    }
+    expectMetric(queue, "Retrying", "1", false);
+    expectMetric(queue, "Stuck", "1", true);
+    expectMetric(queue, "Oldest ready", "2m 0s", false);
+    expectMetric(mail, "Pending", "1", false);
+    expectMetric(mail, "Failed", "0", false);
+    expectMetric(mail, "Oldest ready", "10m 0s", true);
+    expect(within(queue).queryByText("Running")).not.toBeInTheDocument();
 
     const idle = {
       pending: 0,
@@ -68,11 +85,65 @@ describe("Admin jobs page", () => {
     };
     await rerender({ queue_progress: idle, auth_mail_progress: idle });
 
+    expect(within(health).getAllByText("None")).toHaveLength(2);
+  });
+
+  it("shows status counts and whether filters apply to them", async () => {
+    const { rerender } = render(AdminJobs, {
+      props: {
+        status_counts: {
+          pending: 3,
+          running: 1,
+          completed: 9,
+          failed: 2,
+          canceled: 0,
+          held: 0,
+          audited: 0,
+        },
+      },
+    });
+
+    const statuses = screen.getByRole("region", { name: "Statuses" });
     expect(
-      within(screen.getByRole("region", { name: "Queue progress" })).getByText(
-        "No ready jobs",
-      ),
+      within(statuses).getByText("completed").parentElement,
+    ).toHaveTextContent(/completed\s*9/);
+    expect(within(statuses).getByText("All jobs")).toBeInTheDocument();
+
+    await rerender({ filters: { ...emptyFilters, status: ["failed"] } });
+    expect(within(statuses).getByText("All jobs")).toBeInTheDocument();
+
+    await rerender({ filters: { ...emptyFilters, search: "acme" } });
+    expect(
+      within(statuses).getByText("Matching current filters"),
     ).toBeInTheDocument();
+  });
+
+  it("reloads the page data on refresh and blocks repeated clicks", async () => {
+    router.reload.mockClear();
+    render(AdminJobs);
+
+    const button = screen.getByRole("button", { name: "Refresh" });
+    await fireEvent.click(button);
+
+    expect(router.reload).toHaveBeenCalledTimes(1);
+    const options = router.reload.mock.calls[0]?.[0] as {
+      onStart: () => void;
+      onFinish: () => void;
+    };
+    options.onStart();
+    await tick();
+    expect(button).toBeDisabled();
+
+    options.onFinish();
+    await tick();
+    expect(button).toBeEnabled();
+  });
+
+  it("hides pagination when there are no jobs", () => {
+    render(AdminJobs);
+
+    expect(screen.getByText("No jobs found.")).toBeInTheDocument();
+    expect(screen.queryByText("Per page:")).not.toBeInTheDocument();
   });
 
   it("trims text filters before navigating", async () => {

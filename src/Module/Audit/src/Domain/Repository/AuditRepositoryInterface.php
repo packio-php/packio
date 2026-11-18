@@ -17,6 +17,11 @@ interface AuditRepositoryInterface
     /**
      * @return list<AuditEntry>
      */
+    public function recent(int $limit): array;
+
+    /**
+     * @return list<AuditEntry>
+     */
     public function recentByOrganization(string $organizationId, int $limit = 10): array;
 
     /**

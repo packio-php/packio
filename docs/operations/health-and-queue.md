@@ -16,7 +16,7 @@ The existing Inertia renderer falls back to CSR when SSR is unavailable. Readine
 
 ## Queue progress
 
-The admin-only `/admin/jobs` page adds global `queue_progress` and reserved `system:identity` `auth_mail_progress`; existing `status_counts` remain unchanged. Ordinary organization actors cannot access the admin summary or system/foreign jobs. No public health endpoint exposes queue data.
+The admin-only `/admin/jobs` page adds global `queue_progress` and reserved `system:identity` `auth_mail_progress`; existing `status_counts` remain unchanged. The page shows them in a Queue health card that ignores the page filters: retrying, stuck and oldest ready age for the whole queue, and pending, failed and oldest ready age for auth mail. Counts already in the Statuses card are not repeated. Stuck jobs, failed auth mail and a ready age above five minutes are highlighted. The Refresh button reloads the page data with the current filters; there is no automatic polling. Ordinary organization actors cannot access the admin summary or system/foreign jobs. No public health endpoint exposes queue data.
 
 | Field | Meaning |
 | --- | --- |

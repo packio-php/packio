@@ -122,14 +122,14 @@
     class="admin-content-inner mx-auto w-full max-w-[80rem] px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10"
   >
     {#if !organization_record}
-      <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+      <Card className="rounded-[1.25rem] p-4 sm:p-6">
         <p class="text-sm ui-muted">Organization not found.</p>
       </Card>
     {:else}
       <div class="grid gap-6">
         <BackButton label="Back to organizations" href="/admin/organizations" />
 
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <div
             class="grid gap-4 border-b pb-5 theme-border lg:grid-cols-[minmax(0,1fr)_auto]"
           >
@@ -196,7 +196,7 @@
           </div>
         </Card>
 
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <SectionHeading
             eyebrow="Members"
             title="Users"
@@ -258,7 +258,7 @@
         </Card>
 
         <Card
-          className="rounded-xl border border-(--flash-error-bg) p-4 sm:rounded-[1.75rem] sm:p-6"
+          className="rounded-[1.25rem] border border-(--flash-error-bg) p-4 sm:p-6"
         >
           <div
             class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"

@@ -123,7 +123,7 @@ final class OrganizationSummariesReaderTest extends IntegrationTestCase
             return true;
         }))->willReturn(new Response());
         $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::exactly(2))->method('info');
+        $logger->expects(self::exactly(3))->method('info');
         $database->setLogger($logger);
         $this->getService(AdminOrganizationsHandler::class)->handle(new ServerRequest()->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia));
         $database->setLogger(new NullLogger());

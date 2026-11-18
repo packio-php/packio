@@ -70,7 +70,10 @@
           >
             {source.name}
           </Link>
-          <p class="mt-1 max-w-[20rem] break-all text-xs ui-muted line-clamp-2">
+          <p
+            class="mt-1 max-w-[20rem] truncate text-xs ui-muted"
+            title={source.url}
+          >
             {source.url}
           </p>
         </td>

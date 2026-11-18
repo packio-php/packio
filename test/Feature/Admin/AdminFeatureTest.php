@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Feature\Admin;
 
+use Cake\Chronos\Chronos;
 use Packio\Admin\Api\ProjectSettingsApiFacadeInterface;
 use Packio\Admin\Application\Settings\RuntimeSettingOverride;
 use Packio\Audit\Api\AuditApiFacadeInterface;
@@ -35,6 +36,7 @@ use PHPUnit\Framework\Attributes\Test;
 use function array_column;
 use function array_filter;
 use function array_first;
+use function array_keys;
 use function array_values;
 use function bin2hex;
 use function in_array;
@@ -93,6 +95,151 @@ final class AdminFeatureTest extends FeatureTestCase
         self::assertGreaterThanOrEqual(1, (int) $stats['users_count']);
         self::assertGreaterThanOrEqual(1, (int) $stats['admins_count']);
         self::assertGreaterThanOrEqual(1, (int) $stats['organizations_count']);
+    }
+
+    #[Test]
+    public function testDashboardListsFailedSources(): void
+    {
+        $userDto         = $this->createUser('dashboard-failed', ['admin']);
+        $organizationDto = $this->createOrganization($userDto);
+
+        /** @var SourceApiFacadeInterface $sources */
+        $sources = $this->getService(SourceApiFacadeInterface::class);
+
+        try {
+            $failedIds = [];
+            for ($i = 1; $i <= 7; ++$i) {
+                Chronos::setTestNow(Chronos::parse('2026-05-20 10:00:0' . $i));
+                $sourceDto = $this->createSource($organizationDto, 'dashboard-failed-' . $i);
+                $sources->markSyncFailed($sourceDto->id, 'Failure ' . $i);
+                $failedIds[] = $sourceDto->id;
+            }
+
+            Chronos::setTestNow(Chronos::parse('2026-05-20 10:00:09'));
+            $archived = $this->createSource($organizationDto, 'dashboard-failed-archived');
+            $sources->markSyncFailed($archived->id, 'Archived failure');
+
+            /** @var SourceRepositoryInterface $sourceRepository */
+            $sourceRepository = $this->getService(SourceRepositoryInterface::class);
+            $archivedSource   = $sourceRepository->findByIdInOrganization($archived->id, $organizationDto->id);
+            self::assertInstanceOf(Source::class, $archivedSource);
+            $archivedSource->archive();
+            $sourceRepository->save($archivedSource);
+
+            Chronos::setTestNow(Chronos::parse('2026-05-20 10:00:10'));
+            $deleting = $this->createSource($organizationDto, 'dashboard-failed-deleting');
+            $sources->markSyncFailed($deleting->id, 'Deleting failure');
+            $deletingSource = $sourceRepository->findByIdInOrganization($deleting->id, $organizationDto->id);
+            self::assertInstanceOf(Source::class, $deletingSource);
+            $deletingSource->markDeleting();
+            $sourceRepository->save($deletingSource);
+        } finally {
+            Chronos::setTestNow();
+        }
+
+        $succeeded = $this->createSource($organizationDto, 'dashboard-succeeded');
+        $sources->markSyncSucceeded($succeeded->id);
+
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->assertStatus(200)->json()['props'] ?? [];
+
+        self::assertSame(7, $props['failed_sources_count'] ?? null);
+        $failedSources = $props['failed_sources'] ?? [];
+        self::assertIsArray($failedSources);
+        self::assertCount(5, $failedSources);
+        self::assertSame($failedIds[6], $failedSources[0]['id'] ?? null);
+        self::assertSame('Failure 7', $failedSources[0]['last_sync_error'] ?? null);
+        self::assertSame('org/dashboard-failed-7', $failedSources[0]['name'] ?? null);
+        self::assertSame($organizationDto->id, $failedSources[0]['organization']['id'] ?? null);
+        self::assertNotSame('', $failedSources[0]['last_failed_sync_at'] ?? '');
+        self::assertNotContains($archived->id, array_column($failedSources, 'id'));
+        self::assertNotContains($deleting->id, array_column($failedSources, 'id'));
+        self::assertNotContains($succeeded->id, array_column($failedSources, 'id'));
+    }
+
+    #[Test]
+    public function testDashboardShowsRecentEventsWithoutContext(): void
+    {
+        $userDto         = $this->createUser('dashboard-events', ['admin']);
+        $organizationDto = $this->createOrganization($userDto);
+
+        /** @var AuditApiFacadeInterface $audit */
+        $audit = $this->getService(AuditApiFacadeInterface::class);
+        $audit->record('dashboard.by_admin', [
+            'secret' => 'x',
+        ], $organizationDto->id, actorId: $userDto->id);
+        $audit->record('dashboard.by_system', [
+            'secret' => 'x',
+        ]);
+        $audit->record('dashboard.by_deleted', [
+            'secret' => 'x',
+        ], actorId: '0190a5d0-0000-7000-8000-000000000000');
+
+        $this->logIn($userDto->email);
+
+        $events = $this->get('/admin', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->assertStatus(200)->json()['props']['recent_events'] ?? null;
+
+        self::assertIsArray($events);
+        $byEvent = [];
+        foreach ($events as $event) {
+            self::assertIsArray($event);
+            self::assertArrayNotHasKey('context', $event);
+            $byEvent[$event['event']] = $event;
+        }
+
+        self::assertSame($userDto->displayName, $byEvent['dashboard.by_admin']['actor_name'] ?? null);
+        self::assertSame($organizationDto->id, $byEvent['dashboard.by_admin']['organization']['id'] ?? null);
+        self::assertSame('System', $byEvent['dashboard.by_system']['actor_name'] ?? null);
+        self::assertArrayHasKey('organization', $byEvent['dashboard.by_system']);
+        self::assertNull($byEvent['dashboard.by_system']['organization']);
+        self::assertSame('Deleted user', $byEvent['dashboard.by_deleted']['actor_name'] ?? null);
+        self::assertNotSame('', $byEvent['dashboard.by_deleted']['occurred_at'] ?? '');
+        self::assertNotSame('', $byEvent['dashboard.by_deleted']['id'] ?? '');
+    }
+
+    #[Test]
+    public function testDashboardIncludesQueueHealth(): void
+    {
+        $userDto = $this->createUser('dashboard-queue', ['admin']);
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->assertStatus(200)->json()['props'] ?? [];
+
+        foreach (['queue_progress', 'auth_mail_progress'] as $key) {
+            self::assertIsArray($props[$key] ?? null, $key);
+            foreach (['retrying', 'stuck', 'pending', 'failed', 'oldest_ready_age_seconds'] as $field) {
+                self::assertArrayHasKey($field, $props[$key], $key . '.' . $field);
+            }
+        }
+    }
+
+    #[Test]
+    public function testDashboardRendersOnEmptySystem(): void
+    {
+        $userDto = $this->createUser('dashboard-empty', ['admin']);
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->assertStatus(200)->json()['props'] ?? [];
+
+        self::assertSame([], $props['failed_sources'] ?? null);
+        self::assertSame(0, $props['failed_sources_count'] ?? null);
+        self::assertIsArray($props['recent_events'] ?? null);
+        foreach ($props['recent_events'] as $event) {
+            self::assertSame(['id', 'event', 'occurred_at', 'actor_name', 'organization'], array_keys($event));
+        }
     }
 
     #[Test]
@@ -429,6 +576,42 @@ final class AdminFeatureTest extends FeatureTestCase
         $organizations = $testResponse->json()['props']['organizations'] ?? [];
         self::assertIsArray($organizations);
         self::assertContains($organizationDto->id, array_column($organizations, 'id'));
+    }
+
+    #[Test]
+    public function itFiltersAdminOrganizationsBySearch(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $this->createOrganization($userDto, 'findme-alpha');
+        $this->createOrganization($userDto, 'other-beta');
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin/organizations?search=findme', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json()['props'] ?? [];
+
+        self::assertCount(1, $props['organizations'] ?? []);
+        self::assertSame('findme-alpha', $props['organizations'][0]['name'] ?? null);
+        self::assertSame([
+            'search' => 'findme',
+        ], $props['filters'] ?? null);
+        self::assertSame(2, $props['stats']['organizations_count'] ?? null);
+    }
+
+    #[Test]
+    public function itTreatsAdminOrganizationSearchWildcardsLiterally(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $this->createOrganization($userDto, 'plain-one');
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin/organizations?search=%25', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json()['props'] ?? [];
+
+        self::assertCount(0, $props['organizations'] ?? []);
     }
 
     #[Test]

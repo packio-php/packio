@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Badge from "@/Components/ui/Badge.svelte";
   import { router } from "@inertiajs/svelte";
 
   import FieldErrors from "@/Components/forms/FieldErrors.svelte";
@@ -132,14 +133,14 @@
     class="admin-content-inner mx-auto w-full max-w-[80rem] px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10"
   >
     {#if !user_record}
-      <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+      <Card className="rounded-[1.25rem] p-4 sm:p-6">
         <p class="text-sm ui-muted">User not found.</p>
       </Card>
     {:else}
       <div class="grid gap-6">
         <BackButton label="Back to users" href="/admin/users" />
 
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <div class="grid gap-4 border-b pb-5 theme-border">
             <SectionHeading
               eyebrow="Administration"
@@ -150,23 +151,13 @@
             <div class="min-w-0">
               <p class="break-all text-sm ui-muted">{user_record.email}</p>
               <div class="mt-3 flex flex-wrap gap-2">
-                <span
-                  class="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={user_record.email_verified
-                    ? "background-color: var(--accent-soft); color: var(--accent-ink);"
-                    : "background-color: var(--flash-error-bg); color: var(--flash-error-text);"}
-                >
+                <Badge tone={user_record.email_verified ? "accent" : "gold"}>
                   {user_record.email_verified ? "Verified" : "Unverified"}
-                </span>
+                </Badge>
                 {#each user_record.roles as role (role)}
-                  <span
-                    class="rounded-full px-3 py-1 text-xs font-semibold"
-                    style={role === "admin"
-                      ? "background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                      : "background-color: var(--accent-soft); color: var(--accent-ink);"}
+                  <Badge tone={role === "admin" ? "gold" : "muted"}
+                    >{role}</Badge
                   >
-                    {role}
-                  </span>
                 {/each}
               </div>
             </div>
@@ -189,9 +180,7 @@
             >
               <div class="grid gap-4 md:grid-cols-2">
                 <label class="grid gap-2 text-sm">
-                  <span class="font-medium" style="color: var(--page-ink);">
-                    Display name
-                  </span>
+                  <span class="font-medium ui-title"> Display name </span>
                   <Input
                     name="display_name"
                     type="text"
@@ -204,9 +193,7 @@
                 </label>
 
                 <label class="grid gap-2 text-sm">
-                  <span class="font-medium" style="color: var(--page-ink);">
-                    Email
-                  </span>
+                  <span class="font-medium ui-title"> Email </span>
                   <Input
                     name="email"
                     type="email"
@@ -288,7 +275,7 @@
           </div>
         </Card>
 
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <div
             class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
           >

@@ -39,6 +39,7 @@ use Packio\Admin\Infrastructure\Handler\AdminUserShowHandler;
 use Packio\Admin\Infrastructure\Handler\AdminUserUnbanHandler;
 use Packio\Admin\Infrastructure\Handler\AdminUserUpdateHandler;
 use Packio\Admin\Infrastructure\Handler\AdminUserVerifyHandler;
+use Packio\Admin\Infrastructure\Page\AdminDashboardPageDataBuilder;
 use Packio\Admin\Infrastructure\Page\AdminJobPresenter;
 use Packio\Admin\Infrastructure\Page\AdminOrganizationPresenter;
 use Packio\Admin\Infrastructure\Page\AdminPackagesPageDataBuilder;
@@ -85,6 +86,7 @@ return [
             AdminOrganizationShowHandler::class           => ConfigAbstractFactory::class,
             AdminOrganizationUpdateHandler::class         => ConfigAbstractFactory::class,
             AdminOrganizationDeleteHandler::class         => ConfigAbstractFactory::class,
+            AdminDashboardPageDataBuilder::class          => ConfigAbstractFactory::class,
             AdminPackagesPageDataBuilder::class           => ConfigAbstractFactory::class,
             AdminSourcesPageDataBuilder::class            => ConfigAbstractFactory::class,
             AdminPackagesHandler::class                   => ConfigAbstractFactory::class,
@@ -142,10 +144,16 @@ return [
             LoggerInterface::class,
         ],
         AdminDashboardHandler::class                  => [
+            AdminDashboardPageDataBuilder::class,
+        ],
+        AdminDashboardPageDataBuilder::class          => [
             IdentityApiFacadeInterface::class,
             OrganizationApiFacadeInterface::class,
             PackageApiFacadeInterface::class,
             SourceApiFacadeInterface::class,
+            JobApiFacadeInterface::class,
+            AuditApiFacadeInterface::class,
+            AdminOrganizationPresenter::class,
         ],
         AdminOrganizationsHandler::class              => [
             OrganizationApiFacadeInterface::class,

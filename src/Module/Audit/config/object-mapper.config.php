@@ -15,28 +15,31 @@ return [
                 'target'         => AuditEntryDto::class,
                 'source_match'   => 'cycle_proxy',
                 'rules'          => [
-                    'id'          => [
+                    'id'             => [
                         'method'      => 'getIdentifier',
                         'transformer' => UuidInterfaceToStringTransformer::class,
                     ],
-                    'event'       => [
+                    'event'          => [
                         'method' => 'event',
                     ],
-                    'occurredAt'  => [
+                    'occurredAt'     => [
                         'method'      => 'occurredAt',
                         'transformer' => ChronosToAtomStringTransformer::class,
                     ],
-                    'context'     => [
+                    'context'        => [
                         'method' => 'context',
                     ],
-                    'actorId'     => [
+                    'actorId'        => [
                         'method' => 'actorId',
                     ],
-                    'subjectType' => [
+                    'subjectType'    => [
                         'method' => 'subjectType',
                     ],
-                    'subjectId'   => [
+                    'subjectId'      => [
                         'method' => 'subjectId',
+                    ],
+                    'organizationId' => [
+                        'method' => 'organizationId',
                     ],
                 ],
                 'ignored_source' => [],

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import Badge from "@/Components/ui/Badge.svelte";
   import { router } from "@inertiajs/svelte";
 
   import AdminShell from "@/Layouts/AdminShell.svelte";
@@ -89,10 +90,10 @@
     return value.effective ? "Enabled" : "Disabled";
   }
 
-  function statusBadgeClass(definition: RuntimeSettingDefinition): string {
+  function statusTone(definition: RuntimeSettingDefinition): string {
     const value = values[definition.key];
 
-    return value?.effective ? "ui-badge-accent" : "ui-badge-muted";
+    return value?.effective ? "accent" : "muted";
   }
 
   function fallbackText(definition: RuntimeSettingDefinition): string {
@@ -198,7 +199,7 @@
     <div
       class="grid w-full gap-6 xl:grid-cols-[minmax(0,1.3fr)_minmax(320px,0.7fr)]"
     >
-      <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+      <Card className="rounded-[1.25rem] p-4 sm:p-6">
         <SectionHeading
           eyebrow="Project settings"
           title="Runtime overrides"
@@ -215,10 +216,7 @@
           {#each groupKeys as group}
             <section class="grid gap-3">
               <div>
-                <h2
-                  class="text-sm font-semibold"
-                  style="color: var(--page-ink);"
-                >
+                <h2 class="text-sm font-semibold ui-title">
                   {groupLabels[group] ?? group}
                 </h2>
                 <p class="mt-1 text-sm ui-muted">
@@ -234,17 +232,12 @@
                   >
                     <div class="min-w-0">
                       <div class="flex flex-wrap items-center gap-2">
-                        <h3
-                          class="text-sm font-semibold"
-                          style="color: var(--page-ink);"
-                        >
+                        <h3 class="text-sm font-semibold ui-title">
                           {definition.label}
                         </h3>
-                        <span
-                          class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${statusBadgeClass(definition)}`}
-                        >
+                        <Badge tone={statusTone(definition)}>
                           {statusText(definition)}
-                        </span>
+                        </Badge>
                       </div>
                       {#if definition.help_text}
                         <p class="mt-1 text-sm ui-muted">
@@ -301,8 +294,8 @@
         </form>
       </Card>
 
-      <div class="grid gap-6">
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+      <div class="grid content-start gap-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <SectionHeading
             eyebrow="Runtime"
             title="Runtime policy summary"
@@ -337,55 +330,37 @@
 
           <dl class="mt-6 grid gap-3 text-sm">
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Inherited from config
-              </dt>
+              <dt class="font-medium ui-title">Inherited from config</dt>
               <dd class="mt-1 ui-muted">
                 {runtimeTotals.inherited} settings
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Config cache
-              </dt>
+              <dt class="font-medium ui-title">Config cache</dt>
               <dd class="mt-1 ui-muted">
                 Runtime changes apply immediately; config fallback changes still
                 require cache clear when cache is enabled.
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Application mode
-              </dt>
+              <dt class="font-medium ui-title">Application mode</dt>
               <dd class="mt-1 flex flex-wrap gap-2">
-                <span
-                  class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                    system?.app_production_mode
-                      ? "ui-badge-accent"
-                      : "ui-badge-muted"
-                  }`}
-                >
+                <Badge tone={system?.app_production_mode ? "accent" : "muted"}>
                   {system?.app_production_mode ? "production" : "local"}
-                </span>
-                <span
-                  class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                    system?.app_debug ? "ui-badge-gold" : "ui-badge-muted"
-                  }`}
-                >
+                </Badge>
+                <Badge tone={system?.app_debug ? "gold" : "muted"}>
                   debug {system?.app_debug ? "on" : "off"}
-                </span>
+                </Badge>
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Timezone
-              </dt>
+              <dt class="font-medium ui-title">Timezone</dt>
               <dd class="mt-1 ui-muted">{system?.app_timezone}</dd>
             </div>
           </dl>
         </Card>
 
-        <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <SectionHeading
             eyebrow="Registry identity"
             title={system?.branding?.name || "Packio"}
@@ -394,9 +369,7 @@
           />
           <dl class="mt-6 grid gap-3 text-sm">
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                App URL
-              </dt>
+              <dt class="font-medium ui-title">App URL</dt>
               <dd class="mt-1 break-all ui-muted">
                 {system?.branding?.appBaseUrl ||
                   system?.branding?.domain ||
@@ -404,39 +377,29 @@
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Registry endpoint
-              </dt>
+              <dt class="font-medium ui-title">Registry endpoint</dt>
               <dd class="mt-1 break-all ui-muted">{registryEndpoint}</dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Composer alias
-              </dt>
+              <dt class="font-medium ui-title">Composer alias</dt>
               <dd class="mt-1 ui-muted">
                 {system?.branding?.composerRepositoryAlias || "Unavailable"}
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Token prefix
-              </dt>
+              <dt class="font-medium ui-title">Token prefix</dt>
               <dd class="mt-1 ui-muted">
                 {system?.branding?.registryTokenPrefix || "Unavailable"}
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Auth realm
-              </dt>
+              <dt class="font-medium ui-title">Auth realm</dt>
               <dd class="mt-1 ui-muted">
                 {system?.branding?.registryAuthRealm || "Unavailable"}
               </dd>
             </div>
             <div>
-              <dt class="font-medium" style="color: var(--page-ink);">
-                Metadata format
-              </dt>
+              <dt class="font-medium ui-title">Metadata format</dt>
               <dd class="mt-1 ui-muted">
                 {system?.registry_metadata_format}, cache {system?.registry_cache_ttl}s
               </dd>

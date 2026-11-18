@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { router } from "@/test/inertia";
 import AdminOrganizations from "./Organizations.svelte";
@@ -39,26 +39,86 @@ describe("Admin organizations page", () => {
     total: 21,
   };
 
-  it("lists organizations and marks the one being deleted", () => {
-    render(AdminOrganizations, { props: { organizations, pagination } });
+  const filters = { search: "acme" };
+  const stats = { organizations_count: 42 };
 
-    expect(screen.getByText("Acme")).toBeInTheDocument();
-    expect(screen.getByText("3 members")).toBeInTheDocument();
-    expect(screen.getAllByText("deleting")).toHaveLength(1);
-    expect(screen.getAllByRole("link", { name: "View" })[0]).toHaveAttribute(
+  it("renders organizations table", () => {
+    render(AdminOrganizations, {
+      props: { filters, organizations, pagination, stats },
+    });
+
+    const table = screen.getByRole("table", { name: "Admin organizations" });
+    for (const name of [
+      "Name",
+      "Members",
+      "Invitations",
+      "Status",
+      "Created",
+    ]) {
+      expect(
+        within(table).getByRole("columnheader", { name }),
+      ).toBeInTheDocument();
+    }
+    expect(within(table).getByRole("link", { name: "Acme" })).toHaveAttribute(
       "href",
       "/admin/organizations/org-acme",
     );
+    expect(screen.queryByRole("link", { name: "View" })).toBeNull();
+    expect(screen.getByText("42")).toBeInTheDocument();
   });
 
-  it("requests another page from the server", async () => {
+  it("shows deleting badge", () => {
     render(AdminOrganizations, { props: { organizations, pagination } });
 
-    await fireEvent.click(screen.getByRole("button", { name: "2" }));
+    expect(screen.getAllByText("deleting").length).toBeGreaterThan(0);
+    expect(screen.queryAllByText("active")).toHaveLength(0);
+  });
+
+  it("submits search", async () => {
+    render(AdminOrganizations, { props: { organizations, pagination } });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.input(screen.getByLabelText("Search"), {
+      target: { value: "acme" },
+    });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Apply filters" }),
+    );
 
     expect(router.get).toHaveBeenCalledWith(
       "/admin/organizations",
-      { page: 2, per_page: 20 },
+      { page: 1, per_page: 20, search: "acme" },
+      { preserveScroll: true },
+    );
+  });
+
+  it("keeps search when paging", async () => {
+    render(AdminOrganizations, {
+      props: { filters, organizations, pagination },
+    });
+
+    await fireEvent.click(screen.getAllByRole("button", { name: "2" })[0]);
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/admin/organizations",
+      { page: 2, per_page: 20, search: "acme" },
+      { preserveScroll: true },
+    );
+  });
+
+  it("resets to the first page when the page size changes", async () => {
+    render(AdminOrganizations, {
+      props: { filters, organizations, pagination },
+    });
+
+    expect(screen.getAllByText("Per page:")).toHaveLength(2);
+    await fireEvent.change(screen.getAllByDisplayValue("20")[0], {
+      target: { value: "50" },
+    });
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/admin/organizations",
+      { page: 1, per_page: 50, search: "acme" },
       { preserveScroll: true },
     );
   });

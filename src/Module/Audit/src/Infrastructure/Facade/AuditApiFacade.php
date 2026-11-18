@@ -70,6 +70,17 @@ final readonly class AuditApiFacade implements AuditApiFacadeInterface
     /**
      * @return list<AuditEntryDto>
      */
+    public function recent(int $limit = 15): array
+    {
+        return array_map(
+            fn (AuditEntry $auditEntry): AuditEntryDto => $this->objectMapper->map($auditEntry, AuditEntryDto::class),
+            $this->auditQueryService->recent($limit),
+        );
+    }
+
+    /**
+     * @return list<AuditEntryDto>
+     */
     public function recentByOrganization(string $organizationId, int $limit = 10): array
     {
         return array_map(

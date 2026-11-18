@@ -16,6 +16,7 @@
   import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import ListViewToggle from "@/Components/ui/ListViewToggle.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
@@ -771,18 +772,20 @@
         </div>
       </Card>
 
-      <Pagination
-        currentPage={pagination.current_page}
-        lastPage={pagination.last_page}
-        hasMorePages={pagination.has_more_pages}
-        hasPreviousPages={pagination.has_previous_pages}
-        from={pagination.from}
-        to={pagination.to}
-        total={pagination.total}
-        perPage={pagination.per_page}
-        onPageChange={handlePageChange}
-        onPerPageChange={handlePerPageChange}
-      />
+      {#if sources.length > 0}
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+        />
+      {/if}
 
       {#if sources.length === 0}
         <p class="text-sm ui-muted">No sources match current filters.</p>
@@ -879,13 +882,10 @@
           {/each}
         </section>
       {:else}
-        <TableFrame
-          ariaLabel="Admin sources"
-          tableClassName="min-w-[1320px] xl:min-w-0 xl:table-fixed"
-        >
+        <TableFrame ariaLabel="Admin sources" tableClassName="min-w-[920px]">
           <thead>
             <tr>
-              <th class="w-[24%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Source"
                   field="name"
@@ -894,7 +894,7 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[13%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Organization"
                   field="organization"
@@ -903,7 +903,7 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[8%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Provider"
                   field="provider"
@@ -912,16 +912,7 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[7%] px-4 py-3">
-                <TableSortButton
-                  label="Visibility"
-                  field="visibility"
-                  {currentSort}
-                  {currentDirection}
-                  onSort={sortSources}
-                />
-              </th>
-              <th class="w-[8%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Status"
                   field="logical_status"
@@ -930,8 +921,7 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[13%] px-4 py-3 text-left">Delete state</th>
-              <th class="w-[12%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Sync"
                   field="last_sync_status"
@@ -940,7 +930,7 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[9%] px-4 py-3">
+              <th class="px-4 py-3">
                 <TableSortButton
                   label="Created"
                   field="created_at"
@@ -949,46 +939,53 @@
                   onSort={sortSources}
                 />
               </th>
-              <th class="w-[6%] px-4 py-3 text-left">Actions</th>
+              <th class="px-4 py-3 text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {#each sources as item (item.id)}
               <tr class="align-top">
                 <td class="min-w-0 px-4 py-3">
-                  <p class="break-words font-semibold ui-title">
-                    {item.name}
-                  </p>
-                  <p class="mt-1 break-all text-xs ui-muted line-clamp-2">
+                  <div class="flex max-w-[20rem] items-center gap-2">
+                    <p
+                      class="min-w-0 truncate font-semibold ui-title"
+                      title={item.name}
+                    >
+                      {item.name}
+                    </p>
+                    <Badge
+                      className="shrink-0"
+                      tone={item.visibility === "private" ? "danger" : "accent"}
+                    >
+                      {item.visibility}
+                    </Badge>
+                  </div>
+                  <p
+                    class="mt-1 max-w-[20rem] truncate text-xs ui-muted"
+                    title={item.url}
+                  >
                     {item.url}
                   </p>
                 </td>
-                <td class="min-w-0 px-4 py-3">
-                  <p class="break-words font-medium ui-title">
-                    {item.organization?.name ?? "unknown"}
-                  </p>
-                  <p class="text-xs ui-muted">
+                <td class="px-4 py-3 text-sm ui-title">
+                  <span title={item.organization?.name ?? "unknown"}>
                     {item.organization?.slug ?? "-"}
-                  </p>
+                  </span>
                 </td>
                 <td class="px-4 py-3">
-                  <Badge tone="neutral">{item.provider_label}</Badge>
+                  <span class="inline-flex items-center gap-2">
+                    <OAuthIcon provider={item.provider} className="size-4" />
+                    <span class="text-xs whitespace-nowrap">
+                      {item.provider_label}
+                    </span>
+                  </span>
                 </td>
                 <td class="px-4 py-3">
-                  <Badge
-                    tone={item.visibility === "private" ? "danger" : "accent"}
-                  >
-                    {item.visibility}
-                  </Badge>
-                </td>
-                <td class="px-4 py-3">
-                  <Badge tone={statusTone(item.logical_status)}>
-                    {item.logical_status}
-                  </Badge>
-                </td>
-                <td class="px-4 py-3">
-                  {#if item.recovery}
-                    <div class="grid gap-1">
+                  <div class="grid justify-items-start gap-1">
+                    <Badge tone={statusTone(item.logical_status)}>
+                      {item.logical_status}
+                    </Badge>
+                    {#if item.recovery}
                       <Badge
                         className="max-w-full whitespace-normal break-words"
                         tone={deleteHealthTone(item.recovery.health)}
@@ -999,10 +996,8 @@
                         {item.recovery.linked_packages_count} packages,
                         {item.recovery.related_jobs_count} jobs
                       </p>
-                    </div>
-                  {:else}
-                    <span class="text-sm ui-muted">-</span>
-                  {/if}
+                    {/if}
+                  </div>
                 </td>
                 <td class="px-4 py-3">
                   <div class="grid gap-1">
@@ -1016,7 +1011,7 @@
                     </p>
                   </div>
                 </td>
-                <td class="px-4 py-3 text-sm ui-muted">
+                <td class="px-4 py-3 text-sm whitespace-nowrap ui-muted">
                   {item.created_at ? formatDate(item.created_at) : "-"}
                 </td>
                 <td class="min-w-0 px-4 py-3">
@@ -1025,50 +1020,46 @@
                       {#if item.recovery?.can_requeue}
                         <Button
                           aria-label="Requeue delete"
-                          className="gap-2 rounded-full xl:h-9 xl:w-9 xl:justify-center xl:gap-0 xl:px-0"
+                          className="h-9 w-9 justify-center rounded-full px-0"
                           title="Requeue delete"
                           type="button"
                           variant="primary"
                           onclick={() => openRecoveryModal(item, "requeue")}
                         >
                           <RefreshCw aria-hidden="true" size={15} />
-                          <span class="inline xl:hidden">Requeue</span>
                         </Button>
                       {/if}
                       {#if item.recovery?.related_jobs_count}
                         <Link
                           aria-label="Jobs"
-                          class="ui-button-secondary inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm font-medium transition xl:h-9 xl:w-9 xl:justify-center xl:gap-0 xl:px-0 xl:py-0"
+                          class="ui-button-secondary inline-flex h-9 w-9 items-center justify-center rounded-full border text-sm font-medium transition"
                           href={deleteJobsUrl(item)}
                           title="Jobs"
                         >
                           <ExternalLink aria-hidden="true" size={15} />
-                          <span class="inline xl:hidden">Jobs</span>
                         </Link>
                       {/if}
                       <Button
                         aria-label="Recovery details"
-                        className="gap-2 rounded-full xl:h-9 xl:w-9 xl:justify-center xl:gap-0 xl:px-0"
+                        className="h-9 w-9 justify-center rounded-full px-0"
                         title="Recovery details"
                         type="button"
                         variant="soft"
                         onclick={() => openRecoveryModal(item, "details")}
                       >
                         <Info aria-hidden="true" size={15} />
-                        <span class="inline xl:hidden">Details</span>
                       </Button>
                     </div>
                   {:else}
                     <Button
                       aria-label="Delete source"
-                      className="gap-2 rounded-full xl:h-9 xl:w-9 xl:justify-center xl:gap-0 xl:px-0"
+                      className="h-9 w-9 justify-center rounded-full px-0"
                       title="Delete source"
                       type="button"
                       variant="dangerSoft"
                       onclick={() => openRecoveryModal(item, "delete")}
                     >
                       <Trash2 aria-hidden="true" size={15} />
-                      <span class="inline xl:hidden">Delete</span>
                     </Button>
                   {/if}
                 </td>
@@ -1078,18 +1069,20 @@
         </TableFrame>
       {/if}
 
-      <Pagination
-        currentPage={pagination.current_page}
-        lastPage={pagination.last_page}
-        hasMorePages={pagination.has_more_pages}
-        hasPreviousPages={pagination.has_previous_pages}
-        from={pagination.from}
-        to={pagination.to}
-        total={pagination.total}
-        perPage={pagination.per_page}
-        onPageChange={handlePageChange}
-        onPerPageChange={handlePerPageChange}
-      />
+      {#if sources.length > 0}
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+        />
+      {/if}
     </div>
   </div>
 </AdminShell>

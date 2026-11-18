@@ -93,7 +93,10 @@
               >
                 {section.source.name}
               </Link>
-              <p class="max-w-[18rem] break-all text-xs ui-muted line-clamp-2">
+              <p
+                class="max-w-[18rem] truncate text-xs ui-muted"
+                title={section.source.url}
+              >
                 {section.source.url}
               </p>
               <div class="flex flex-wrap gap-2">

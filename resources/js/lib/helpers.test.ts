@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { browserBranding, defaultBranding, mergeBranding } from "./branding";
-import { formatDate } from "./date";
+import { formatDate, formatDuration } from "./date";
 import { jobStatusTone, jobTypeLabel } from "./job";
 import { providerIconKey } from "./providerPresentation";
 
@@ -9,6 +9,13 @@ describe("small frontend helpers", () => {
     expect(formatDate(null)).toBe("—");
     expect(formatDate("not-a-date")).toBe("not-a-date");
     expect(formatDate("2024-01-02T03:04:05")).toBe("2024-01-02 03:04:05");
+  });
+
+  it("formats durations", () => {
+    expect(formatDuration(null)).toBe("—");
+    expect(formatDuration(45)).toBe("45s");
+    expect(formatDuration(725)).toBe("12m 5s");
+    expect(formatDuration(5400)).toBe("1h 30m");
   });
 
   it("maps job labels and tones", () => {

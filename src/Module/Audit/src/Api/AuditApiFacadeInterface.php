@@ -42,6 +42,11 @@ interface AuditApiFacadeInterface
     /**
      * @return list<AuditEntryDto>
      */
+    public function recent(int $limit = 15): array;
+
+    /**
+     * @return list<AuditEntryDto>
+     */
     public function recentByOrganization(string $organizationId, int $limit = 10): array;
 
     /**

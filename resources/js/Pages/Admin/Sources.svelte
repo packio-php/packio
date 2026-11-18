@@ -772,18 +772,20 @@
         </div>
       </Card>
 
-      <Pagination
-        currentPage={pagination.current_page}
-        lastPage={pagination.last_page}
-        hasMorePages={pagination.has_more_pages}
-        hasPreviousPages={pagination.has_previous_pages}
-        from={pagination.from}
-        to={pagination.to}
-        total={pagination.total}
-        perPage={pagination.per_page}
-        onPageChange={handlePageChange}
-        onPerPageChange={handlePerPageChange}
-      />
+      {#if sources.length > 0}
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+        />
+      {/if}
 
       {#if sources.length === 0}
         <p class="text-sm ui-muted">No sources match current filters.</p>
@@ -1067,18 +1069,20 @@
         </TableFrame>
       {/if}
 
-      <Pagination
-        currentPage={pagination.current_page}
-        lastPage={pagination.last_page}
-        hasMorePages={pagination.has_more_pages}
-        hasPreviousPages={pagination.has_previous_pages}
-        from={pagination.from}
-        to={pagination.to}
-        total={pagination.total}
-        perPage={pagination.per_page}
-        onPageChange={handlePageChange}
-        onPerPageChange={handlePerPageChange}
-      />
+      {#if sources.length > 0}
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+        />
+      {/if}
     </div>
   </div>
 </AdminShell>

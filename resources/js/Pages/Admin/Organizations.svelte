@@ -80,6 +80,18 @@
       { preserveScroll: true },
     );
   }
+
+  function handlePerPageChange(perPage: number): void {
+    router.get(
+      "/admin/organizations",
+      cleanQuery({
+        search: filters?.search ?? "",
+        page: 1,
+        per_page: perPage,
+      }),
+      { preserveScroll: true },
+    );
+  }
 </script>
 
 <svelte:head>
@@ -209,7 +221,7 @@
           total={pagination.total}
           perPage={pagination.per_page}
           onPageChange={handlePageChange}
-          showPerPageSelector={false}
+          onPerPageChange={handlePerPageChange}
         />
 
         <div class="hidden md:block">
@@ -288,6 +300,19 @@
             </Card>
           {/each}
         </section>
+
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          onPerPageChange={handlePerPageChange}
+        />
       {/if}
     </div>
   </div>

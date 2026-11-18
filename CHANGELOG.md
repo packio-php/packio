@@ -10,9 +10,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - The admin jobs page has a "Refresh" button that reloads the jobs, counts and queue health with the current filters.
+- The admin dashboard shows queue health, failed syncs and recent audit events.
+- The admin organizations page has a search field.
 
 ### Changed
 
+- The admin Users and Organizations pages look like the other admin sections: a section heading without a card, and badges for statuses and roles. Organizations are listed in a table.
+- The admin Sources table is compact: the source URL stays on one line, there are fewer columns, and the actions are icon buttons.
+- Table headers are no longer uppercase across the app.
+- The admin detail and settings cards follow the admin style, and the side cards on the settings page no longer stretch to the height of the main column.
 - The admin jobs page shows one "Queue health" card instead of "Queue progress" and "System auth mail", which repeated the status counts. It shows retrying, stuck and oldest ready age for the whole queue and pending, failed and oldest ready age for auth mail, and highlights stuck jobs, failed auth mail and a ready age above five minutes. The status counts are in a "Statuses" card that says whether the page filters apply.
 - Source URLs in package and source cards and tables stay on one line and end with an ellipsis when they do not fit, instead of breaking mid-word. The full URL is shown on hover.
 

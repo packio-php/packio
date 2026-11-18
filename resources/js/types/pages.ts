@@ -167,6 +167,7 @@ export interface AdminUsersPageProps extends AppPageProps {
   users?: AdminUserListItem[];
   pagination?: AdminUsersPaginationMeta;
   filters?: AdminUsersFilters;
+  stats?: { users_count: number; admins_count: number };
 }
 
 export interface AdminUsersFilters {

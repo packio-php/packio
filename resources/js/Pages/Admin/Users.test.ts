@@ -82,50 +82,88 @@ describe("Admin users page", () => {
     expect(headers.indexOf("Status")).toBeLessThan(headers.indexOf("Verified"));
   });
 
-  it("requests a server-side status filter from the first page", async () => {
-    render(AdminUsers, { props: { filters, pagination, users } });
-
-    await fireEvent.change(screen.getByLabelText("Account status"), {
-      target: { value: "banned" },
-    });
-
-    expect(router.get).toHaveBeenCalledWith(
-      "/admin/users",
-      { ...filters, page: 1, status: "banned" },
-      { preserveScroll: true },
-    );
-  });
-
-  it("resets pagination when applying an email or display-name search", async () => {
+  it("renders stat tiles", () => {
     render(AdminUsers, {
       props: {
-        filters: { ...filters, page: 2, per_page: 50, status: "active" },
-        pagination: { ...pagination, current_page: 2, per_page: 50 },
+        filters,
+        pagination,
+        stats: { admins_count: 3, users_count: 12 },
         users,
       },
     });
 
-    await fireEvent.input(screen.getByLabelText("Search users"), {
+    expect(screen.getByText("12")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.getAllByText("Admins").length).toBeGreaterThan(0);
+  });
+
+  it("filters are collapsed by default and apply on submit", async () => {
+    render(AdminUsers, { props: { filters, pagination, users } });
+
+    expect(screen.queryByLabelText("Account status")).not.toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.change(screen.getByLabelText("Account status"), {
+      target: { value: "banned" },
+    });
+    expect(router.get).not.toHaveBeenCalled();
+
+    await fireEvent.input(screen.getByLabelText("Search"), {
       target: { value: "active@example.test" },
     });
-    const submitEvent = new Event("submit", {
-      bubbles: true,
-      cancelable: true,
-    });
-    await fireEvent(
-      screen.getByRole("button", { name: "Apply" }).closest("form")!,
-      submitEvent,
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Apply filters" }),
     );
 
-    expect(submitEvent.defaultPrevented).toBe(true);
     expect(router.get).toHaveBeenCalledWith(
       "/admin/users",
       {
         page: 1,
-        per_page: 50,
+        per_page: 20,
         search: "active@example.test",
-        status: "active",
+        status: "banned",
       },
+      { preserveScroll: true },
+    );
+  });
+
+  it("uses badges for status, verification and roles", () => {
+    render(AdminUsers, {
+      props: {
+        filters,
+        pagination,
+        users: [
+          { ...users[0], email_verified: true, roles: ["admin"] },
+          { ...users[1], email_verified: false },
+        ],
+      },
+    });
+
+    expect(screen.getAllByText("Banned")[0]).toHaveClass("ui-badge-danger");
+    expect(screen.getAllByText("Active")[0]).toHaveClass("ui-badge-accent");
+    expect(
+      screen.getAllByText("Verified", { selector: "span" })[0],
+    ).toHaveClass("ui-badge-accent");
+    expect(screen.getAllByText("Unverified")[0]).toHaveClass("ui-badge-gold");
+    expect(screen.getAllByText("admin")[0]).toHaveClass("ui-badge-gold");
+    expect(screen.getAllByText("user")[0]).toHaveClass("ui-badge-muted");
+  });
+
+  it("clear resets filters", async () => {
+    render(AdminUsers, {
+      props: {
+        filters: { ...filters, search: "x", per_page: 50 },
+        pagination: { ...pagination, per_page: 50 },
+        users,
+      },
+    });
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Clear filters" }),
+    );
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/admin/users",
+      { per_page: 50 },
       { preserveScroll: true },
     );
   });

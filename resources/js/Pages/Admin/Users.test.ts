@@ -198,11 +198,32 @@ describe("Admin users page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "2" }));
+    await fireEvent.click(screen.getAllByRole("button", { name: "2" })[0]);
 
     expect(router.get).toHaveBeenCalledWith(
       "/admin/users",
       { ...filters, page: 2, search: "example", status: "active" },
+      { preserveScroll: true },
+    );
+  });
+
+  it("resets to the first page when the page size changes", async () => {
+    render(AdminUsers, {
+      props: {
+        filters: { ...filters, page: 2, search: "example" },
+        pagination,
+        users,
+      },
+    });
+
+    expect(screen.getAllByText("Per page:")).toHaveLength(2);
+    await fireEvent.change(screen.getAllByDisplayValue("20")[0], {
+      target: { value: "50" },
+    });
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/admin/users",
+      { ...filters, page: 1, per_page: 50, search: "example" },
       { preserveScroll: true },
     );
   });

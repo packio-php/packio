@@ -798,18 +798,20 @@
       </Card>
 
       <div class="grid min-w-0 gap-4">
-        <Pagination
-          currentPage={pagination.current_page}
-          lastPage={pagination.last_page}
-          hasMorePages={pagination.has_more_pages}
-          hasPreviousPages={pagination.has_previous_pages}
-          from={pagination.from}
-          to={pagination.to}
-          total={pagination.total}
-          perPage={pagination.per_page}
-          onPageChange={handlePageChange}
-          onPerPageChange={handlePerPageChange}
-        />
+        {#if jobs.length > 0}
+          <Pagination
+            currentPage={pagination.current_page}
+            lastPage={pagination.last_page}
+            hasMorePages={pagination.has_more_pages}
+            hasPreviousPages={pagination.has_previous_pages}
+            from={pagination.from}
+            to={pagination.to}
+            total={pagination.total}
+            perPage={pagination.per_page}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+          />
+        {/if}
 
         <TableFrame ariaLabel="Admin jobs" tableClassName="min-w-[1080px]">
           <thead>
@@ -983,18 +985,20 @@
           </tbody>
         </TableFrame>
 
-        <Pagination
-          currentPage={pagination.current_page}
-          lastPage={pagination.last_page}
-          hasMorePages={pagination.has_more_pages}
-          hasPreviousPages={pagination.has_previous_pages}
-          from={pagination.from}
-          to={pagination.to}
-          total={pagination.total}
-          perPage={pagination.per_page}
-          onPageChange={handlePageChange}
-          onPerPageChange={handlePerPageChange}
-        />
+        {#if jobs.length > 0}
+          <Pagination
+            currentPage={pagination.current_page}
+            lastPage={pagination.last_page}
+            hasMorePages={pagination.has_more_pages}
+            hasPreviousPages={pagination.has_previous_pages}
+            from={pagination.from}
+            to={pagination.to}
+            total={pagination.total}
+            perPage={pagination.per_page}
+            onPageChange={handlePageChange}
+            onPerPageChange={handlePerPageChange}
+          />
+        {/if}
       </div>
     </div>
   </div>

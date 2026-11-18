@@ -139,6 +139,13 @@ describe("Admin jobs page", () => {
     expect(button).toBeEnabled();
   });
 
+  it("hides pagination when there are no jobs", () => {
+    render(AdminJobs);
+
+    expect(screen.getByText("No jobs found.")).toBeInTheDocument();
+    expect(screen.queryByText("Per page:")).not.toBeInTheDocument();
+  });
+
   it("trims text filters before navigating", async () => {
     render(AdminJobs);
 

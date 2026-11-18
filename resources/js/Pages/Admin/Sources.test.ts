@@ -240,6 +240,15 @@ describe("Admin sources page", () => {
     );
   });
 
+  it("hides pagination only when there are no sources", () => {
+    renderPage();
+    expect(screen.getAllByText("Per page:")).toHaveLength(2);
+
+    cleanup();
+    render(AdminSources);
+    expect(screen.queryByText("Per page:")).not.toBeInTheDocument();
+  });
+
   it("renders seven table columns", () => {
     renderPage();
 

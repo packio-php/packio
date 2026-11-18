@@ -97,11 +97,28 @@ describe("Admin organizations page", () => {
       props: { filters, organizations, pagination },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "2" }));
+    await fireEvent.click(screen.getAllByRole("button", { name: "2" })[0]);
 
     expect(router.get).toHaveBeenCalledWith(
       "/admin/organizations",
       { page: 2, per_page: 20, search: "acme" },
+      { preserveScroll: true },
+    );
+  });
+
+  it("resets to the first page when the page size changes", async () => {
+    render(AdminOrganizations, {
+      props: { filters, organizations, pagination },
+    });
+
+    expect(screen.getAllByText("Per page:")).toHaveLength(2);
+    await fireEvent.change(screen.getAllByDisplayValue("20")[0], {
+      target: { value: "50" },
+    });
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/admin/organizations",
+      { page: 1, per_page: 50, search: "acme" },
       { preserveScroll: true },
     );
   });

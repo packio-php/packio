@@ -20,6 +20,7 @@ final readonly class AuditEntryDto
         public string $actorId = '',
         public string $subjectType = '',
         public string $subjectId = '',
+        public string $organizationId = '',
     ) {
         if (! Uuid::isValid($this->id)) {
             throw new InvalidArgumentException('Audit entry ID must be a valid UUID.');

@@ -53,6 +53,10 @@ final readonly class AdminUsersHandler implements RequestHandlerInterface
                 $paginatedResultDto->items,
             ),
             'pagination' => $paginatedResultDto->toArray(),
+            'stats'      => [
+                'users_count'  => $this->identityApiFacade->usersCount(),
+                'admins_count' => $this->identityApiFacade->adminsCount(),
+            ],
             'filters'    => [
                 'search'   => $paginationCriteria->search ?? '',
                 'status'   => $userListFilterDto->status instanceof UserListStatus ? $userListFilterDto->status->value : '',

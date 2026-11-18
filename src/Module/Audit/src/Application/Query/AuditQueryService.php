@@ -14,6 +14,14 @@ final readonly class AuditQueryService
     /**
      * @return list<AuditEntry>
      */
+    public function recent(int $limit): array
+    {
+        return $this->auditRepository->recent($limit);
+    }
+
+    /**
+     * @return list<AuditEntry>
+     */
     public function recentByOrganization(string $organizationId, int $limit = 10): array
     {
         return $this->auditRepository->recentByOrganization($organizationId, $limit);

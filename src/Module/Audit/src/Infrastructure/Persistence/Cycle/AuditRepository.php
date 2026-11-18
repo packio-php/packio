@@ -52,6 +52,20 @@ final class AuditRepository extends AbstractWriteRepository implements AuditRepo
         return true;
     }
 
+    public function recent(int $limit): array
+    {
+        return iterator_to_array(
+            $this->select()
+                ->orderBy([
+                    'occurredAt' => 'DESC',
+                    'uuid'       => 'DESC',
+                ])
+                ->limit($limit)
+                ->fetchAll(),
+            false,
+        );
+    }
+
     public function recentByOrganization(string $organizationId, int $limit = 10): array
     {
         return iterator_to_array(

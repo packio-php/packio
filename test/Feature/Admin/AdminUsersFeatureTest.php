@@ -80,6 +80,26 @@ final class AdminUsersFeatureTest extends FeatureTestCase
         self::assertTrue($props['pagination']['has_more_pages'] ?? false);
     }
 
+    #[Test]
+    public function itExposesStats(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $this->createUser('member');
+
+        $this->logIn($userDto->email);
+
+        $testResponse = $this->get('/admin/users', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ]);
+
+        $props = $testResponse->json()['props'] ?? [];
+        self::assertSame([
+            'users_count'  => 2,
+            'admins_count' => 1,
+        ], $props['stats'] ?? null);
+    }
+
     /**
      * @param list<string> $roles
      */

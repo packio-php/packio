@@ -114,8 +114,36 @@ export interface AdminDashboardStats {
   users_count: number;
 }
 
+export interface AdminDashboardOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+}
+
+export interface AdminFailedSource {
+  id: string;
+  name: string;
+  organization: AdminDashboardOrganization | null;
+  last_failed_sync_at: string | null;
+  last_sync_error: string | null;
+}
+
+export interface AdminRecentEvent {
+  id: string;
+  event: string;
+  occurred_at: string;
+  actor_name: string;
+  organization: AdminDashboardOrganization | null;
+}
+
 export interface AdminDashboardPageProps extends AppPageProps {
   stats?: AdminDashboardStats;
+  queue_progress?: QueueProgress;
+  auth_mail_progress?: QueueProgress;
+  failed_sources?: AdminFailedSource[];
+  failed_sources_count?: number;
+  recent_events?: AdminRecentEvent[];
 }
 
 export interface AdminUserListItem {
@@ -139,6 +167,7 @@ export interface AdminUsersPageProps extends AppPageProps {
   users?: AdminUserListItem[];
   pagination?: AdminUsersPaginationMeta;
   filters?: AdminUsersFilters;
+  stats?: { users_count: number; admins_count: number };
 }
 
 export interface AdminUsersFilters {
@@ -224,8 +253,10 @@ export interface AdminOrganizationListItem {
 }
 
 export interface AdminOrganizationsPageProps extends AppPageProps {
+  filters?: { search: string };
   organizations?: AdminOrganizationListItem[];
   pagination?: AdminUsersPaginationMeta;
+  stats?: { organizations_count: number };
 }
 
 export interface AdminOrganizationDetailsPageProps extends AppPageProps {
@@ -717,4 +748,13 @@ export interface SourcePackagePayload {
   release_count: number;
   releases: SourcePackageReleaseTagPayload[];
   visibility: "private" | "public";
+}
+
+export interface QueueProgress {
+  pending: number;
+  running: number;
+  failed: number;
+  retrying: number;
+  stuck: number;
+  oldest_ready_age_seconds: number | null;
 }

@@ -1,5 +1,7 @@
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
+  import { FilterX, ListFilter, Search } from "@lucide/svelte";
+  import Badge from "@/Components/ui/Badge.svelte";
   import Link from "@/Components/core/Link.svelte";
   import AdminShell from "@/Layouts/AdminShell.svelte";
   import Button from "@/Components/ui/Button.svelte";
@@ -9,6 +11,7 @@
   import Select from "@/Components/ui/Select.svelte";
   import TableFrame from "@/Components/ui/TableFrame.svelte";
   import { formatDate } from "@/lib/date";
+  import { cleanQuery } from "@/lib/queryFilters";
   import { apiClient, Endpoints } from "@/lib/api";
   import { toast } from "@/lib/toast";
   import type { AuthPayload } from "@/types/auth";
@@ -23,6 +26,7 @@
     users?: AdminUsersPageProps["users"];
     filters?: AdminUsersPageProps["filters"];
     pagination?: AdminUsersPageProps["pagination"];
+    stats?: AdminUsersPageProps["stats"];
   }
 
   const defaultFilters: AdminUsersFilters = {
@@ -47,9 +51,10 @@
     users = [],
     filters = defaultFilters,
     pagination = defaultPagination,
+    stats = { users_count: 0, admins_count: 0 },
   }: Props = $props();
 
-  let verifyingUserIds = new Set<string>();
+  let verifyingUserIds = $state(new Set<string>());
 
   function currentQuery(
     overrides: Partial<AdminUsersFilters> = {},
@@ -57,30 +62,32 @@
     return { ...filters, ...overrides };
   }
 
-  function applyFilters(
-    event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
-  ): void {
-    event.preventDefault();
+  let filtersOpen = $state(false);
+  let activeFilterCount = $derived(
+    (filters.search !== "" ? 1 : 0) + (filters.status !== "" ? 1 : 0),
+  );
 
-    const formData = new FormData(event.currentTarget);
+  function applyFilters(event: SubmitEvent): void {
+    const formData = new FormData(event.currentTarget as HTMLFormElement);
 
     router.get(
       "/admin/users",
-      currentQuery({
+      cleanQuery({
         search: String(formData.get("search") ?? ""),
-        status: String(
-          formData.get("status") ?? "",
-        ) as AdminUsersFilters["status"],
+        status: String(formData.get("status") ?? ""),
         page: 1,
+        per_page: pagination.per_page,
       }),
       { preserveScroll: true },
     );
   }
 
-  function updateStatus(status: AdminUsersFilters["status"]): void {
-    router.get("/admin/users", currentQuery({ status, page: 1 }), {
-      preserveScroll: true,
-    });
+  function clearFilters(): void {
+    router.get(
+      "/admin/users",
+      { per_page: pagination.per_page },
+      { preserveScroll: true },
+    );
   }
 
   function handlePageChange(page: number): void {
@@ -90,7 +97,7 @@
   }
 
   function hasFilters(): boolean {
-    return filters.search !== "" || filters.status !== "";
+    return activeFilterCount > 0;
   }
 
   function isVerifying(userId: string): boolean {
@@ -128,255 +135,276 @@
   <div
     class="admin-content-inner mx-auto w-full max-w-[80rem] px-4 py-6 sm:px-6 sm:py-8 xl:px-8 xl:py-10"
   >
-    <Card className="rounded-xl p-4 sm:rounded-[1.75rem] sm:p-6">
+    <div class="grid min-w-0 gap-6">
       <SectionHeading
         eyebrow="Administration"
         title="Users"
         description="Local operator accounts provisioned for this Packio installation."
       />
 
-      <form class="mt-6 flex flex-wrap items-end gap-3" onsubmit={applyFilters}>
-        <label class="grid gap-2 text-sm ui-muted">
-          <span>Search users</span>
-          <input
-            aria-label="Search users"
-            class="rounded-lg border bg-transparent px-3 py-2 text-sm theme-border"
-            name="search"
-            placeholder="Email or display name"
-            value={filters.search}
-          />
-        </label>
-        <label class="grid gap-2 text-sm ui-muted">
-          <span>Account status</span>
-          <Select
-            aria-label="Account status"
-            className="rounded-lg px-3 py-2 text-sm"
-            name="status"
-            value={filters.status}
-            onchange={(event) =>
-              updateStatus(
-                event.currentTarget.value as AdminUsersFilters["status"],
-              )}
-          >
-            <option value="">All</option>
-            <option value="active">Active</option>
-            <option value="banned">Banned</option>
-          </Select>
-        </label>
-        <Button type="submit" variant="secondary">Apply</Button>
-      </form>
+      <div class="grid gap-3 md:grid-cols-4">
+        <div class="ui-inset rounded-xl border p-4 theme-border">
+          <p class="text-xs uppercase tracking-[0.18em] ui-muted">Users</p>
+          <p class="mt-2 text-2xl font-semibold ui-title">
+            {stats.users_count}
+          </p>
+        </div>
+        <div class="ui-inset rounded-xl border p-4 theme-border">
+          <p class="text-xs uppercase tracking-[0.18em] ui-muted">Admins</p>
+          <p class="mt-2 text-2xl font-semibold ui-title">
+            {stats.admins_count}
+          </p>
+        </div>
+      </div>
+
+      <Card className="rounded-[1.25rem] p-4">
+        <div class="grid gap-4">
+          <div class="flex items-center gap-2">
+            <div class="relative">
+              <Button
+                aria-controls="admin-user-filters"
+                aria-expanded={filtersOpen}
+                aria-label={filtersOpen ? "Hide filters" : "Show filters"}
+                className="rounded-full"
+                title={filtersOpen ? "Hide filters" : "Show filters"}
+                type="button"
+                variant="icon"
+                onclick={() => {
+                  filtersOpen = !filtersOpen;
+                }}
+              >
+                <ListFilter aria-hidden="true" size={18} />
+              </Button>
+              {#if activeFilterCount > 0}
+                <span
+                  class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[0.65rem] font-bold"
+                  style="background-color: var(--accent); color: var(--button-primary-text);"
+                >
+                  {activeFilterCount}
+                </span>
+              {/if}
+            </div>
+
+            {#if activeFilterCount > 0}
+              <Button
+                aria-label="Clear filters"
+                className="rounded-full"
+                title="Clear filters"
+                type="button"
+                variant="icon"
+                onclick={clearFilters}
+              >
+                <FilterX aria-hidden="true" size={18} />
+              </Button>
+            {/if}
+          </div>
+
+          {#if filtersOpen}
+            <form
+              id="admin-user-filters"
+              class="grid gap-4"
+              onsubmit={(event) => {
+                event.preventDefault();
+                applyFilters(event);
+              }}
+            >
+              <div class="grid gap-4 lg:grid-cols-4">
+                <label class="grid gap-2 text-sm">
+                  <span class="font-medium ui-title">Search</span>
+                  <input
+                    class="ui-button-secondary rounded-xl px-3 py-2 text-sm"
+                    name="search"
+                    placeholder="Email or display name"
+                    type="search"
+                    value={filters.search}
+                  />
+                </label>
+                <label class="grid gap-2 text-sm">
+                  <span class="font-medium ui-title">Account status</span>
+                  <Select
+                    aria-label="Account status"
+                    className="rounded-xl px-3 py-2 text-sm"
+                    name="status"
+                    value={filters.status}
+                  >
+                    <option value="">All</option>
+                    <option value="active">Active</option>
+                    <option value="banned">Banned</option>
+                  </Select>
+                </label>
+              </div>
+
+              <div class="flex flex-wrap gap-3">
+                <Button
+                  className="gap-2 rounded-full px-5"
+                  type="submit"
+                  variant="primary"
+                >
+                  <Search aria-hidden="true" size={16} />
+                  Apply filters
+                </Button>
+                <Button
+                  className="gap-2 rounded-full px-5"
+                  type="button"
+                  variant="soft"
+                  onclick={clearFilters}
+                >
+                  <FilterX aria-hidden="true" size={16} />
+                  Clear
+                </Button>
+              </div>
+            </form>
+          {/if}
+        </div>
+      </Card>
 
       {#if users.length === 0}
-        <div
-          class="mt-6 rounded-2xl border px-4 py-3 text-sm ui-muted theme-border"
-        >
+        <p class="text-sm ui-muted">
           {hasFilters()
             ? "No users match the current filters."
             : "No users have been created yet."}
-        </div>
+        </p>
       {:else}
-        <div class="mt-6 grid gap-3 md:hidden">
+        <Pagination
+          currentPage={pagination.current_page}
+          lastPage={pagination.last_page}
+          hasMorePages={pagination.has_more_pages}
+          hasPreviousPages={pagination.has_previous_pages}
+          from={pagination.from}
+          to={pagination.to}
+          total={pagination.total}
+          perPage={pagination.per_page}
+          onPageChange={handlePageChange}
+          showPerPageSelector={false}
+        />
+
+        <div class="hidden md:block">
+          <TableFrame ariaLabel="Admin users" tableClassName="min-w-[720px]">
+            <thead>
+              <tr>
+                <th class="px-4 py-3">User</th>
+                <th class="px-4 py-3">Status</th>
+                <th class="px-4 py-3">Verified</th>
+                <th class="px-4 py-3">Roles</th>
+                <th class="px-4 py-3">Created</th>
+                <th class="px-4 py-3">Updated</th>
+                <th class="px-4 py-3 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {#each users as user (user.id)}
+                <tr class="align-top">
+                  <td class="px-4 py-3">
+                    <div class="font-semibold ui-title">
+                      {user.display_name}
+                    </div>
+                    <div class="mt-1 text-xs ui-muted">{user.email}</div>
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge tone={user.is_banned ? "danger" : "accent"}>
+                      {user.is_banned ? "Banned" : "Active"}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3">
+                    <Badge tone={user.email_verified ? "accent" : "gold"}>
+                      {user.email_verified ? "Verified" : "Unverified"}
+                    </Badge>
+                  </td>
+                  <td class="px-4 py-3">
+                    <div class="flex flex-wrap gap-2">
+                      {#each user.roles as role (role)}
+                        <Badge tone={role === "admin" ? "gold" : "muted"}>
+                          {role}
+                        </Badge>
+                      {/each}
+                    </div>
+                  </td>
+                  <td class="px-4 py-3 text-sm ui-muted">
+                    {formatDate(user.created_at)}
+                  </td>
+                  <td class="px-4 py-3 text-sm ui-muted">
+                    {formatDate(user.updated_at)}
+                  </td>
+                  <td class="px-4 py-3 text-right">
+                    <div class="flex justify-end gap-2">
+                      <Link
+                        class="ui-button-secondary inline-flex items-center rounded-full border px-3 py-2 text-sm font-medium transition"
+                        href={Endpoints.admin.user(user.id)}
+                      >
+                        Edit
+                      </Link>
+                      {#if !user.email_verified}
+                        <Button
+                          className="whitespace-nowrap rounded-full"
+                          disabled={isVerifying(user.id)}
+                          type="button"
+                          variant="soft"
+                          onclick={() => verifyUser(user.id)}
+                        >
+                          {isVerifying(user.id)
+                            ? "Verifying..."
+                            : "Verify email"}
+                        </Button>
+                      {/if}
+                    </div>
+                  </td>
+                </tr>
+              {/each}
+            </tbody>
+          </TableFrame>
+        </div>
+
+        <section class="grid gap-4 md:hidden">
           {#each users as user (user.id)}
-            <div
-              class="rounded-xl border p-4 theme-border"
-              style="background-color: var(--surface-muted);"
-            >
+            <Card as="article" className="rounded-[1.25rem] p-5">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
-                  <p class="break-words font-medium ui-title">
+                  <p class="break-words text-lg font-semibold ui-title">
                     {user.display_name}
                   </p>
-                  <p class="mt-1 break-all text-xs ui-muted">
-                    {user.email}
-                  </p>
+                  <p class="mt-1 break-all text-xs ui-muted">{user.email}</p>
                 </div>
-                {#if user.email_verified}
-                  <span
-                    class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-                    style="background-color: var(--accent-soft); color: var(--accent-ink);"
-                  >
-                    Yes
-                  </span>
-                {:else}
-                  <span
-                    class="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
-                    style="background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                  >
-                    No
-                  </span>
-                {/if}
+                <Badge tone={user.email_verified ? "accent" : "gold"}>
+                  {user.email_verified ? "Verified" : "Unverified"}
+                </Badge>
               </div>
-
               <div class="mt-4 flex flex-wrap gap-2">
-                <span
-                  class="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={user.is_banned
-                    ? "background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                    : "background-color: var(--accent-soft); color: var(--accent-ink);"}
-                >
+                <Badge tone={user.is_banned ? "danger" : "accent"}>
                   {user.is_banned ? "Banned" : "Active"}
-                </span>
+                </Badge>
                 {#each user.roles as role (role)}
-                  <span
-                    class="rounded-full px-3 py-1 text-xs font-semibold"
-                    style={role === "admin"
-                      ? "background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                      : "background-color: var(--accent-soft); color: var(--accent-ink);"}
-                  >
+                  <Badge tone={role === "admin" ? "gold" : "muted"}>
                     {role}
-                  </span>
+                  </Badge>
                 {/each}
               </div>
-
-              <dl class="mt-4 grid grid-cols-2 gap-3 text-xs ui-muted">
-                <div>
-                  <dt class="font-medium">Created</dt>
-                  <dd class="mt-1">{formatDate(user.created_at)}</dd>
-                </div>
-                <div>
-                  <dt class="font-medium">Updated</dt>
-                  <dd class="mt-1">{formatDate(user.updated_at)}</dd>
-                </div>
-              </dl>
-
-              <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+              <div class="mt-4 grid gap-2 text-sm ui-muted">
+                <p>Created: {formatDate(user.created_at)}</p>
+                <p>Updated: {formatDate(user.updated_at)}</p>
+              </div>
+              <div class="mt-4 flex flex-wrap gap-2">
                 <Link
-                  class="ui-button-primary inline-flex w-full items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold no-underline transition sm:w-fit"
+                  class="ui-button-secondary inline-flex items-center rounded-full border px-3 py-2 text-sm font-medium transition"
                   href={Endpoints.admin.user(user.id)}
                 >
                   Edit
                 </Link>
-
                 {#if !user.email_verified}
                   <Button
-                    type="button"
-                    variant="chip"
+                    className="rounded-full"
                     disabled={isVerifying(user.id)}
-                    className="w-full justify-center rounded-xl py-2 sm:w-fit"
+                    type="button"
+                    variant="soft"
                     onclick={() => verifyUser(user.id)}
                   >
                     {isVerifying(user.id) ? "Verifying..." : "Verify email"}
                   </Button>
                 {/if}
               </div>
-            </div>
+            </Card>
           {/each}
-        </div>
-
-        <TableFrame
-          ariaLabel="Admin users"
-          className="mt-6 hidden rounded-[1.5rem] md:block"
-          tableClassName="min-w-full"
-        >
-          <thead>
-            <tr>
-              <th class="px-4 py-3 text-left font-medium">User</th>
-              <th class="px-4 py-3 text-left font-medium">Status</th>
-              <th class="px-4 py-3 text-left font-medium">Verified</th>
-              <th class="px-4 py-3 text-left font-medium">Roles</th>
-              <th class="px-4 py-3 text-left font-medium">Created</th>
-              <th class="px-4 py-3 text-left font-medium">Updated</th>
-              <th class="px-4 py-3 text-right font-medium">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {#each users as user (user.id)}
-              <tr>
-                <td class="px-4 py-3 align-top">
-                  <div class="font-medium" style="color: var(--page-ink);">
-                    {user.display_name}
-                  </div>
-                  <div class="mt-1 text-xs ui-muted">{user.email}</div>
-                </td>
-                <td class="px-4 py-3 align-top">
-                  <span
-                    class="rounded-full px-3 py-1 text-xs font-semibold"
-                    style={user.is_banned
-                      ? "background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                      : "background-color: var(--accent-soft); color: var(--accent-ink);"}
-                  >
-                    {user.is_banned ? "Banned" : "Active"}
-                  </span>
-                </td>
-                <td class="px-4 py-3 align-top">
-                  {#if user.email_verified}
-                    <span
-                      class="rounded-full px-3 py-1 text-xs font-semibold"
-                      style="background-color: var(--accent-soft); color: var(--accent-ink);"
-                    >
-                      Yes
-                    </span>
-                  {:else}
-                    <span
-                      class="rounded-full px-3 py-1 text-xs font-semibold"
-                      style="background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                    >
-                      No
-                    </span>
-                  {/if}
-                </td>
-                <td class="px-4 py-3 align-top">
-                  <div class="flex flex-wrap gap-2">
-                    {#each user.roles as role (role)}
-                      <span
-                        class="rounded-full px-3 py-1 text-xs font-semibold"
-                        style={role === "admin"
-                          ? "background-color: var(--flash-error-bg); color: var(--flash-error-text);"
-                          : "background-color: var(--accent-soft); color: var(--accent-ink);"}
-                      >
-                        {role}
-                      </span>
-                    {/each}
-                  </div>
-                </td>
-                <td class="px-4 py-3 align-top ui-muted">
-                  {formatDate(user.created_at)}
-                </td>
-                <td class="px-4 py-3 align-top ui-muted">
-                  {formatDate(user.updated_at)}
-                </td>
-                <td class="px-4 py-3 text-right align-top">
-                  <div class="flex justify-end gap-2">
-                    <Link
-                      class="ui-button-primary inline-flex items-center justify-center rounded-full px-3 py-1.5 text-xs font-semibold no-underline transition"
-                      href={Endpoints.admin.user(user.id)}
-                    >
-                      Edit
-                    </Link>
-
-                    {#if !user.email_verified}
-                      <Button
-                        type="button"
-                        variant="chip"
-                        disabled={isVerifying(user.id)}
-                        className="whitespace-nowrap"
-                        onclick={() => verifyUser(user.id)}
-                      >
-                        {isVerifying(user.id) ? "Verifying..." : "Verify email"}
-                      </Button>
-                    {/if}
-                  </div>
-                </td>
-              </tr>
-            {/each}
-          </tbody>
-        </TableFrame>
-
-        <div class="mt-6">
-          <Pagination
-            currentPage={pagination.current_page}
-            lastPage={pagination.last_page}
-            hasMorePages={pagination.has_more_pages}
-            hasPreviousPages={pagination.has_previous_pages}
-            from={pagination.from}
-            to={pagination.to}
-            total={pagination.total}
-            perPage={pagination.per_page}
-            onPageChange={handlePageChange}
-            showPerPageSelector={false}
-          />
-        </div>
+        </section>
       {/if}
-    </Card>
+    </div>
   </div>
 </AdminShell>

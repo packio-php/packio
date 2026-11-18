@@ -240,6 +240,75 @@ describe("Admin sources page", () => {
     );
   });
 
+  it("renders seven table columns", () => {
+    renderPage();
+
+    const headers = screen.getAllByRole("columnheader");
+    const names = [
+      "Source",
+      "Organization",
+      "Provider",
+      "Status",
+      "Sync",
+      "Created",
+      "Actions",
+    ];
+    expect(headers).toHaveLength(names.length);
+    names.forEach((name, i) => expect(headers[i]).toHaveTextContent(name));
+  });
+
+  it("keeps source url on one line", () => {
+    renderPage();
+
+    const url = screen.getByText("https://example.com/acme/missing.git");
+    expect(url).toHaveClass("truncate");
+    expect(url).not.toHaveClass("line-clamp-2");
+    expect(url).toHaveAttribute(
+      "title",
+      "https://example.com/acme/missing.git",
+    );
+  });
+
+  it("shows visibility badge next to the source name", () => {
+    renderPage();
+
+    const cell = screen.getAllByText("acme/missing")[0].closest("td")!;
+    expect(within(cell).getByText("private")).toBeInTheDocument();
+  });
+
+  it("shows delete state inside status cell", () => {
+    renderPage();
+
+    const cell = screen.getAllByText("deleting")[0].closest("td")!;
+    expect(within(cell).getByText("delete job missing")).toBeInTheDocument();
+    expect(cell).toHaveTextContent("1 packages, 0 jobs");
+  });
+
+  it("renders icon-only actions", () => {
+    renderDeletePage();
+
+    expect(
+      screen.getByRole("button", { name: "Delete source" }),
+    ).not.toHaveTextContent("Delete");
+  });
+
+  it("caps a long source name so it truncates", () => {
+    const longName = "a".repeat(200);
+    render(AdminSources, {
+      props: {
+        filters,
+        initial_list_view_mode: "table",
+        organizations: [organization],
+        pagination,
+        sources: [{ ...activeSource, name: longName }],
+      },
+    });
+
+    const name = screen.getByText(longName);
+    expect(name).toHaveClass("truncate");
+    expect(name.parentElement).toHaveClass("max-w-[20rem]");
+  });
+
   it("posts a source delete requeue action with the current admin sources return URL", async () => {
     renderPage();
 

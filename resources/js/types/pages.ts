@@ -114,8 +114,36 @@ export interface AdminDashboardStats {
   users_count: number;
 }
 
+export interface AdminDashboardOrganization {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+}
+
+export interface AdminFailedSource {
+  id: string;
+  name: string;
+  organization: AdminDashboardOrganization | null;
+  last_failed_sync_at: string | null;
+  last_sync_error: string | null;
+}
+
+export interface AdminRecentEvent {
+  id: string;
+  event: string;
+  occurred_at: string;
+  actor_name: string;
+  organization: AdminDashboardOrganization | null;
+}
+
 export interface AdminDashboardPageProps extends AppPageProps {
   stats?: AdminDashboardStats;
+  queue_progress?: QueueProgress;
+  auth_mail_progress?: QueueProgress;
+  failed_sources?: AdminFailedSource[];
+  failed_sources_count?: number;
+  recent_events?: AdminRecentEvent[];
 }
 
 export interface AdminUserListItem {

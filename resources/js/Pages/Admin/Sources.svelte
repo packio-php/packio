@@ -944,9 +944,9 @@
             {#each sources as item (item.id)}
               <tr class="align-top">
                 <td class="min-w-0 px-4 py-3">
-                  <div class="flex items-center gap-2">
+                  <div class="flex max-w-[20rem] items-center gap-2">
                     <p
-                      class="truncate font-semibold ui-title"
+                      class="min-w-0 truncate font-semibold ui-title"
                       title={item.name}
                     >
                       {item.name}
@@ -979,7 +979,7 @@
                   </span>
                 </td>
                 <td class="px-4 py-3">
-                  <div class="grid gap-1">
+                  <div class="grid justify-items-start gap-1">
                     <Badge tone={statusTone(item.logical_status)}>
                       {item.logical_status}
                     </Badge>
@@ -1018,7 +1018,7 @@
                       {#if item.recovery?.can_requeue}
                         <Button
                           aria-label="Requeue delete"
-                          className="gap-2 h-9 w-9 justify-center rounded-full px-0"
+                          className="h-9 w-9 justify-center rounded-full px-0"
                           title="Requeue delete"
                           type="button"
                           variant="primary"
@@ -1039,7 +1039,7 @@
                       {/if}
                       <Button
                         aria-label="Recovery details"
-                        className="gap-2 h-9 w-9 justify-center rounded-full px-0"
+                        className="h-9 w-9 justify-center rounded-full px-0"
                         title="Recovery details"
                         type="button"
                         variant="soft"
@@ -1051,7 +1051,7 @@
                   {:else}
                     <Button
                       aria-label="Delete source"
-                      className="gap-2 h-9 w-9 justify-center rounded-full px-0"
+                      className="h-9 w-9 justify-center rounded-full px-0"
                       title="Delete source"
                       type="button"
                       variant="dangerSoft"

@@ -292,6 +292,23 @@ describe("Admin sources page", () => {
     ).not.toHaveTextContent("Delete");
   });
 
+  it("caps a long source name so it truncates", () => {
+    const longName = "a".repeat(200);
+    render(AdminSources, {
+      props: {
+        filters,
+        initial_list_view_mode: "table",
+        organizations: [organization],
+        pagination,
+        sources: [{ ...activeSource, name: longName }],
+      },
+    });
+
+    const name = screen.getByText(longName);
+    expect(name).toHaveClass("truncate");
+    expect(name.parentElement).toHaveClass("max-w-[20rem]");
+  });
+
   it("posts a source delete requeue action with the current admin sources return URL", async () => {
     renderPage();
 

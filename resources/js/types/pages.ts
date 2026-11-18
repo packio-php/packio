@@ -718,3 +718,12 @@ export interface SourcePackagePayload {
   releases: SourcePackageReleaseTagPayload[];
   visibility: "private" | "public";
 }
+
+export interface QueueProgress {
+  pending: number;
+  running: number;
+  failed: number;
+  retrying: number;
+  stuck: number;
+  oldest_ready_age_seconds: number | null;
+}

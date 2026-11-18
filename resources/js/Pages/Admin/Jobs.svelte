@@ -18,10 +18,12 @@
   import TableFrame from "@/Components/ui/TableFrame.svelte";
   import TableSortButton from "@/Components/ui/TableSortButton.svelte";
   import { Endpoints } from "@/lib/api";
-  import { formatDate, formatDuration } from "@/lib/date";
+  import { formatDate } from "@/lib/date";
   import { jobStatusTone, jobTypeLabel } from "@/lib/job";
   import { cleanQuery, queryString, type QueryValue } from "@/lib/queryFilters";
   import type { AuthPayload } from "@/types/auth";
+  import type { QueueProgress } from "@/types/pages";
+  import QueueHealthCard from "./Partials/QueueHealthCard.svelte";
 
   interface Props {
     auth?: AuthPayload;
@@ -127,15 +129,6 @@
     audited: number;
   }
 
-  interface QueueProgress {
-    pending: number;
-    running: number;
-    failed: number;
-    retrying: number;
-    stuck: number;
-    oldest_ready_age_seconds: number | null;
-  }
-
   interface AdminJobFilters {
     organization_id: string;
     status: string[];
@@ -219,23 +212,6 @@
     if ((filters?.worker_id ?? "") !== "") count += 1;
 
     return count;
-  }
-
-  // Oldest ready job waiting longer than this is highlighted as a warning.
-  const staleReadyAgeSeconds = 5 * 60;
-
-  function readyAgeMetric(progress: QueueProgress | undefined): {
-    label: string;
-    value: string;
-    warn: boolean;
-  } {
-    const age = progress?.oldest_ready_age_seconds ?? null;
-
-    return {
-      label: "Oldest ready",
-      value: age === null ? "None" : formatDuration(age),
-      warn: age !== null && age > staleReadyAgeSeconds,
-    };
   }
 
   function refresh(): void {
@@ -508,36 +484,11 @@
         </section>
       </Card>
 
-      <Card className="rounded-[1.25rem] p-4">
-        <section aria-labelledby="queue-health">
-          <h2 id="queue-health" class="text-base font-semibold ui-title">
-            Queue health
-          </h2>
-          <p class="mt-1 text-sm ui-muted">
-            All organizations, ignores filters
-          </p>
-          <div class="mt-4 grid gap-3">
-            {#each [{ label: "Queue", metrics: [{ label: "Retrying", value: queue_progress?.retrying ?? 0, warn: false }, { label: "Stuck", value: queue_progress?.stuck ?? 0, warn: (queue_progress?.stuck ?? 0) > 0 }, readyAgeMetric(queue_progress)] }, { label: "Auth mail", metrics: [{ label: "Pending", value: auth_mail_progress?.pending ?? 0, warn: false }, { label: "Failed", value: auth_mail_progress?.failed ?? 0, warn: (auth_mail_progress?.failed ?? 0) > 0 }, readyAgeMetric(auth_mail_progress)] }] as row (row.label)}
-              <div class="grid items-center gap-3 sm:grid-cols-[7rem_1fr]">
-                <h3 class="text-sm font-semibold ui-title">{row.label}</h3>
-                <dl class="grid grid-cols-3 gap-3" aria-label={row.label}>
-                  {#each row.metrics as metric (metric.label)}
-                    <div
-                      class={`rounded-xl border p-3 theme-border ${metric.warn ? "ui-badge-gold" : "ui-inset"}`}
-                      data-warning={metric.warn ? "true" : undefined}
-                    >
-                      <dt class="text-xs ui-muted">{metric.label}</dt>
-                      <dd class="mt-1 font-semibold ui-title">
-                        {metric.value}
-                      </dd>
-                    </div>
-                  {/each}
-                </dl>
-              </div>
-            {/each}
-          </div>
-        </section>
-      </Card>
+      <QueueHealthCard
+        queueProgress={queue_progress}
+        authMailProgress={auth_mail_progress}
+        description="All organizations, ignores filters"
+      />
 
       <Card className="rounded-[1.25rem] p-4">
         <div class="grid gap-4">

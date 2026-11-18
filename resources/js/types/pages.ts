@@ -252,8 +252,10 @@ export interface AdminOrganizationListItem {
 }
 
 export interface AdminOrganizationsPageProps extends AppPageProps {
+  filters?: { search: string };
   organizations?: AdminOrganizationListItem[];
   pagination?: AdminUsersPaginationMeta;
+  stats?: { organizations_count: number };
 }
 
 export interface AdminOrganizationDetailsPageProps extends AppPageProps {

@@ -27,7 +27,8 @@ final readonly class AdminOrganizationsHandler implements RequestHandlerInterfac
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $inertia            = $request->getAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE);
-        $paginatedResultDto = $this->organizationApiFacade->organizationSummaries(PaginationCriteria::fromArray($request->getQueryParams()));
+        $paginationCriteria = PaginationCriteria::fromArray($request->getQueryParams());
+        $paginatedResultDto = $this->organizationApiFacade->organizationSummaries($paginationCriteria);
         $pagination         = $paginatedResultDto->toArray();
         unset($pagination['items']);
 
@@ -49,6 +50,12 @@ final readonly class AdminOrganizationsHandler implements RequestHandlerInterfac
                 $paginatedResultDto->items,
             ),
             'pagination'    => $pagination,
+            'filters'       => [
+                'search' => $paginationCriteria->search ?? '',
+            ],
+            'stats'         => [
+                'organizations_count' => $this->organizationApiFacade->countOrganizations(),
+            ],
         ]);
     }
 }

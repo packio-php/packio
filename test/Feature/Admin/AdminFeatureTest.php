@@ -570,6 +570,42 @@ final class AdminFeatureTest extends FeatureTestCase
     }
 
     #[Test]
+    public function itFiltersAdminOrganizationsBySearch(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $this->createOrganization($userDto, 'findme-alpha');
+        $this->createOrganization($userDto, 'other-beta');
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin/organizations?search=findme', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json()['props'] ?? [];
+
+        self::assertCount(1, $props['organizations'] ?? []);
+        self::assertSame('findme-alpha', $props['organizations'][0]['name'] ?? null);
+        self::assertSame([
+            'search' => 'findme',
+        ], $props['filters'] ?? null);
+        self::assertSame(2, $props['stats']['organizations_count'] ?? null);
+    }
+
+    #[Test]
+    public function itTreatsAdminOrganizationSearchWildcardsLiterally(): void
+    {
+        $userDto = $this->createUser('admin', ['admin']);
+        $this->createOrganization($userDto, 'plain-one');
+        $this->logIn($userDto->email);
+
+        $props = $this->get('/admin/organizations?search=%25', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json()['props'] ?? [];
+
+        self::assertCount(0, $props['organizations'] ?? []);
+    }
+
+    #[Test]
     public function itPaginatesAdminOrganizations(): void
     {
         $userDto = $this->createUser('admin', ['admin']);

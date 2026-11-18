@@ -42,8 +42,6 @@
   .ui-table-frame :global(.ui-data-table thead th) {
     font-size: 0.75rem;
     font-weight: 600;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
   }
 
   .ui-table-frame :global(.ui-data-table tbody tr) {

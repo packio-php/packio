@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-11-19
+
+### Security
+
+- The Docker images run PHP 8.5.13 instead of 8.5.11. PHP 8.5.13 fixes security issues in the engine, sessions, dates, DOM, Phar, HTTPS stream wrappers and the URI extension.
+
 ## [0.5.0] - 2026-11-18
 
 ### Added

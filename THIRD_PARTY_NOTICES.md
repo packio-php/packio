@@ -113,7 +113,7 @@ Swagger `LICENSE`, `NOTICE`, and bundle-specific license notices in distributed
 images. The app and worker images retain the Composer package license files
 under `vendor/`. Production builds are made from a Git checkout.
 
-Packio does not redistribute the source of third-party components. PHP 8.5.11
+Packio does not redistribute the source of third-party components. PHP 8.5.13
 (including bundled libmbfl) and PECL protobuf 5.36.2 are compiled from the
 official upstream archives, which the Docker recipe
 (`.docker/Dockerfile.roadrunner`) verifies by SHA-256, with the build options in
@@ -359,7 +359,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ## Runtime binary notices
 
-The PHP 8.5.11 and RoadRunner v2025.1.15 license texts below accompany the
+The PHP 8.5.13 and RoadRunner v2025.1.15 license texts below accompany the
 runtime binaries copied into the app and worker images. PHP is compiled with
 the extensions selected in `.docker/Dockerfile.roadrunner`; RoadRunner's
 upstream binary is copied without modification. PHP includes this required
@@ -375,9 +375,9 @@ redistributing images. The Docker recipe's floating PHP and PECL inputs must
 be checked against the actual built versions before distribution; these
 notices do not pin those inputs or certify a rebuilt image.
 
-### PHP License v3.01 — PHP 8.5.11
+### PHP License v3.01 — PHP 8.5.13
 
-Source: php-src tag [`php-8.5.11`](https://github.com/php/php-src/tree/php-8.5.11), `LICENSE`.
+Source: php-src tag [`php-8.5.13`](https://github.com/php/php-src/tree/php-8.5.13), `LICENSE`.
 
 ```text
 --------------------------------------------------------------------
@@ -7318,11 +7318,11 @@ SOFTWARE.
 
 ## PHP and bundled components
 
-The app and worker runtime includes PHP 8.5.11, compiled from the official
-[PHP 8.5.11 source](https://www.php.net/distributions/php-8.5.11.tar.xz) with
+The app and worker runtime includes PHP 8.5.13, compiled from the official
+[PHP 8.5.13 source](https://www.php.net/distributions/php-8.5.13.tar.xz) with
 the configure options in [the Docker recipe](.docker/Dockerfile.roadrunner).
 The source archive SHA-256 is
-`d9be75c08e8c316f4c8f4194d8fbe1750a15f6a6d9d4e3fe72082abeeb800360`.
+`607602acaf0c3061818e9916ec44a058e8b3d43959a83862b9cd3ec7bf5b785f`.
 The runtime enables GNU Readline 8.2 (Debian 8.2-1.3, GPL-3-or-later) and
 mbstring with its bundled libmbfl 1.3.2 (LGPL-2.1).
 
@@ -7360,7 +7360,7 @@ distribution section above.
 
 ### PHP License 3.01 (legacy source terms; §5 successor clause)
 
-Upstream path `php-8.5.11/LICENSE`; SHA-256 `b42e4df5e50e6ecda1047d503d6d91d71032d09ed1027ba1ef29eed26f890c5a`.
+Upstream path `php-8.5.13/LICENSE`; SHA-256 `b42e4df5e50e6ecda1047d503d6d91d71032d09ed1027ba1ef29eed26f890c5a`.
 
 ~~~text
 --------------------------------------------------------------------
@@ -7435,7 +7435,7 @@ PHP includes the Zend Engine, freely available at
 
 ### TSRM bundled license
 
-Upstream path `php-8.5.11/TSRM/LICENSE`; SHA-256 `fe97b8423e34199f7df3e65fd53c4df067a56ab6fe0f2296474ba7da0656460c`.
+Upstream path `php-8.5.13/TSRM/LICENSE`; SHA-256 `fe97b8423e34199f7df3e65fd53c4df067a56ab6fe0f2296474ba7da0656460c`.
 
 ~~~text
 Copyright (c) 1999-2006, Andi Gutmans, Sascha Schumann, Zeev Suraski.
@@ -7468,7 +7468,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ### Zend Engine License 2.00 (legacy source terms; §4 successor clause)
 
-Upstream path `php-8.5.11/Zend/LICENSE`; SHA-256 `509aeb3be64e428d7e0004ce224620ab01bf94adaacefbb449611939df56bc5b`.
+Upstream path `php-8.5.13/Zend/LICENSE`; SHA-256 `509aeb3be64e428d7e0004ce224620ab01bf94adaacefbb449611939df56bc5b`.
 
 ~~~text
 --------------------------------------------------------------------
@@ -7531,7 +7531,7 @@ SUCH DAMAGE.
 
 ### Zend asm Boost Software License 1.0
 
-Upstream path `php-8.5.11/Zend/asm/LICENSE`; SHA-256 `c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566`.
+Upstream path `php-8.5.13/Zend/asm/LICENSE`; SHA-256 `c9bff75738922193e67fa726fa225535870d2aa1059f91452c411736284ad566`.
 
 ~~~text
 Boost Software License - Version 1.0 - August 17th, 2003
@@ -7561,7 +7561,7 @@ DEALINGS IN THE SOFTWARE.
 
 ### timelib license
 
-Upstream path `php-8.5.11/ext/date/lib/LICENSE.rst`; SHA-256 `2120d029e7c67b9d08c1f665f1c3ed581206f00970b664cccdebe1419bf566e9`.
+Upstream path `php-8.5.13/ext/date/lib/LICENSE.rst`; SHA-256 `2120d029e7c67b9d08c1f665f1c3ed581206f00970b664cccdebe1419bf566e9`.
 
 ~~~text
 The MIT License (MIT)
@@ -7590,7 +7590,7 @@ THE SOFTWARE.
 
 ### libmagic license
 
-Upstream path `php-8.5.11/ext/fileinfo/libmagic/LICENSE`; SHA-256 `0bfa856a9930bddadbef95d1be1cf4e163c0be618e76ea3275caaf255283e274`.
+Upstream path `php-8.5.13/ext/fileinfo/libmagic/LICENSE`; SHA-256 `0bfa856a9930bddadbef95d1be1cf4e163c0be618e76ea3275caaf255283e274`.
 
 ~~~text
 $File: COPYING,v 1.2 2018/09/09 20:33:28 christos Exp $
@@ -7626,7 +7626,7 @@ SUCH DAMAGE.
 
 ### Lexbor Apache license
 
-Upstream path `php-8.5.11/ext/lexbor/LICENSE`; SHA-256 `0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594`.
+Upstream path `php-8.5.13/ext/lexbor/LICENSE`; SHA-256 `0d542e0c8804e39aa7f37eb00da5a762149dc682d7829451287e11b938e94594`.
 
 ~~~text
 
@@ -7810,7 +7810,7 @@ Upstream path `php-8.5.11/ext/lexbor/LICENSE`; SHA-256 `0d542e0c8804e39aa7f37eb0
 
 ### Lexbor NOTICE
 
-Upstream path `php-8.5.11/ext/lexbor/NOTICE`; SHA-256 `b87f965fd2eba846a0a502d633dd7e7a680b93de5c514c404c948ccf1e5c9dc7`.
+Upstream path `php-8.5.13/ext/lexbor/NOTICE`; SHA-256 `b87f965fd2eba846a0a502d633dd7e7a680b93de5c514c404c948ccf1e5c9dc7`.
 
 ~~~text
 
@@ -7833,7 +7833,7 @@ Upstream path `php-8.5.11/ext/lexbor/NOTICE`; SHA-256 `b87f965fd2eba846a0a502d63
 
 ### libmbfl GNU LGPL v2.1
 
-Upstream path `php-8.5.11/ext/mbstring/libmbfl/LICENSE`; SHA-256 `31d9cadcc63c15b79fc59c70f043956104a34c75f23f0ac0ada53c1edfeb88ca`.
+Upstream path `php-8.5.13/ext/mbstring/libmbfl/LICENSE`; SHA-256 `31d9cadcc63c15b79fc59c70f043956104a34c75f23f0ac0ada53c1edfeb88ca`.
 
 ~~~text
                   GNU LESSER GENERAL PUBLIC LICENSE
@@ -8356,7 +8356,7 @@ Web: http://happysize.com/
 
 ### OPcache JIT IR license
 
-Upstream path `php-8.5.11/ext/opcache/jit/ir/LICENSE`; SHA-256 `852f2a779458e30d09852bdf6b9a775eabfd4c9f8ac9e5a4b182a2942ae4c9e9`.
+Upstream path `php-8.5.13/ext/opcache/jit/ir/LICENSE`; SHA-256 `852f2a779458e30d09852bdf6b9a775eabfd4c9f8ac9e5a4b182a2942ae4c9e9`.
 
 ~~~text
 MIT License
@@ -8385,7 +8385,7 @@ SOFTWARE.
 
 ### libavifinfo BSD 2-Clause license
 
-Upstream path `php-8.5.11/ext/standard/libavifinfo/LICENSE`; SHA-256 `5d40dcb72f934c3d08e10ddb8ba4844de17bf6f9aabc1a382aacf8a8bf4567f8`.
+Upstream path `php-8.5.13/ext/standard/libavifinfo/LICENSE`; SHA-256 `5d40dcb72f934c3d08e10ddb8ba4844de17bf6f9aabc1a382aacf8a8bf4567f8`.
 
 ~~~text
 Copyright (c) 2021, Alliance for Open Media. All rights reserved.
@@ -8418,7 +8418,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Alliance for Open Media Patent License 1.0 text
 
-Upstream path `php-8.5.11/ext/standard/libavifinfo/PATENTS`; SHA-256 `aef98cc6105f279463c37ec8c46dec5f2d133b6a91531ae9ec274e80fece9a88`.
+Upstream path `php-8.5.13/ext/standard/libavifinfo/PATENTS`; SHA-256 `aef98cc6105f279463c37ec8c46dec5f2d133b6a91531ae9ec274e80fece9a88`.
 
 ~~~text
 Alliance for Open Media Patent License 1.0
@@ -8532,7 +8532,7 @@ Alliance for Open Media Patent License 1.0
 
 ### uriparser BSD 3-Clause license
 
-Upstream path `php-8.5.11/ext/uri/uriparser/COPYING.BSD-3-Clause`; SHA-256 `287f09e6546a9610f949f89e8fb937cacfeabd7bfaa8c8a0c18312193bf04ad3`.
+Upstream path `php-8.5.13/ext/uri/uriparser/COPYING.BSD-3-Clause`; SHA-256 `287f09e6546a9610f949f89e8fb937cacfeabd7bfaa8c8a0c18312193bf04ad3`.
 
 ~~~text
 uriparser - RFC 3986 URI parsing library
@@ -8579,7 +8579,7 @@ The following distinct legal comment blocks are reproduced from enabled or bundl
 
 ### Embedded notice 1
 
-Source paths: `php-8.5.11/Zend/zend_strtod.c`. SHA-256 of comment bytes `45a0b19676f406b6aaeb9ebc04961ba711d38b13003a15b38ff7174b2568b0c4`.
+Source paths: `php-8.5.13/Zend/zend_strtod.c`. SHA-256 of comment bytes `45a0b19676f406b6aaeb9ebc04961ba711d38b13003a15b38ff7174b2568b0c4`.
 
 ~~~text
 /****************************************************************
@@ -8604,7 +8604,7 @@ Source paths: `php-8.5.11/Zend/zend_strtod.c`. SHA-256 of comment bytes `45a0b19
 
 ### Embedded notice 2
 
-Source paths: `php-8.5.11/ext/hash/hash_sha3.c`. SHA-256 of comment bytes `688ecb692687de22ee84f919e35c0014117ac76fc4d74399fba5de36109aa9a1`.
+Source paths: `php-8.5.13/ext/hash/hash_sha3.c`. SHA-256 of comment bytes `688ecb692687de22ee84f919e35c0014117ac76fc4d74399fba5de36109aa9a1`.
 
 ~~~text
 /*
@@ -8626,7 +8626,7 @@ Source paths: `php-8.5.11/ext/hash/hash_sha3.c`. SHA-256 of comment bytes `688ec
 
 ### Embedded notice 3
 
-Source paths: `php-8.5.11/ext/hash/hash_sha_ni.c`. SHA-256 of comment bytes `0a9b3af0bee4d8bc51a73824956f0cc4985114f2dc124f749e0a518232765c66`.
+Source paths: `php-8.5.13/ext/hash/hash_sha_ni.c`. SHA-256 of comment bytes `0a9b3af0bee4d8bc51a73824956f0cc4985114f2dc124f749e0a518232765c66`.
 
 ~~~text
 /*-
@@ -8658,7 +8658,7 @@ Source paths: `php-8.5.11/ext/hash/hash_sha_ni.c`. SHA-256 of comment bytes `0a9
 
 ### Embedded notice 4
 
-Source paths: `php-8.5.11/ext/hash/hash_sha_sse2.c`. SHA-256 of comment bytes `61b704adde0c640f99e14885083b1c3f9b8755ca452ca2bec41a7602f4933a85`.
+Source paths: `php-8.5.13/ext/hash/hash_sha_sse2.c`. SHA-256 of comment bytes `61b704adde0c640f99e14885083b1c3f9b8755ca452ca2bec41a7602f4933a85`.
 
 ~~~text
 /*-
@@ -8690,7 +8690,7 @@ Source paths: `php-8.5.11/ext/hash/hash_sha_sse2.c`. SHA-256 of comment bytes `6
 
 ### Embedded notice 5
 
-Source paths: `php-8.5.11/ext/hash/murmur/PMurHash.c`. SHA-256 of comment bytes `806a80f441c41dea76eaaf3789d03778fef24efc41325123fad6c7c5261c7114`.
+Source paths: `php-8.5.13/ext/hash/murmur/PMurHash.c`. SHA-256 of comment bytes `806a80f441c41dea76eaaf3789d03778fef24efc41325123fad6c7c5261c7114`.
 
 ~~~text
 /*-----------------------------------------------------------------------------
@@ -8706,7 +8706,7 @@ Source paths: `php-8.5.11/ext/hash/murmur/PMurHash.c`. SHA-256 of comment bytes 
 
 ### Embedded notice 6
 
-Source paths: `php-8.5.11/ext/hash/murmur/PMurHash.h`. SHA-256 of comment bytes `988f0e67216d2ee83bc23256dee47a19e6a837ef4ca43b719b5e09e98c837e8c`.
+Source paths: `php-8.5.13/ext/hash/murmur/PMurHash.h`. SHA-256 of comment bytes `988f0e67216d2ee83bc23256dee47a19e6a837ef4ca43b719b5e09e98c837e8c`.
 
 ~~~text
 /*-----------------------------------------------------------------------------
@@ -8721,7 +8721,7 @@ Source paths: `php-8.5.11/ext/hash/murmur/PMurHash.h`. SHA-256 of comment bytes 
 
 ### Embedded notice 7
 
-Source paths: `php-8.5.11/ext/hash/sha3/generic64lc/KeccakHash.c`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakHash.h`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakP-1600-SnP.h`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakP-1600-opt64.c`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakSponge.c`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakSponge.h`, `php-8.5.11/ext/hash/sha3/generic64lc/KeccakSponge.inc`, `php-8.5.11/ext/hash/sha3/generic64lc/SnP-Relaned.h`, `php-8.5.11/ext/hash/sha3/generic64lc/align.h`. SHA-256 of comment bytes `76895f5604a15dd91466c6a8beac504d6c35b56088e4fe1be399f41572a8c86e`.
+Source paths: `php-8.5.13/ext/hash/sha3/generic64lc/KeccakHash.c`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakHash.h`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakP-1600-SnP.h`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakP-1600-opt64.c`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakSponge.c`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakSponge.h`, `php-8.5.13/ext/hash/sha3/generic64lc/KeccakSponge.inc`, `php-8.5.13/ext/hash/sha3/generic64lc/SnP-Relaned.h`, `php-8.5.13/ext/hash/sha3/generic64lc/align.h`. SHA-256 of comment bytes `76895f5604a15dd91466c6a8beac504d6c35b56088e4fe1be399f41572a8c86e`.
 
 ~~~text
 /*
@@ -8742,7 +8742,7 @@ http://creativecommons.org/publicdomain/zero/1.0/
 
 ### Embedded notice 8
 
-Source paths: `php-8.5.11/ext/hash/sha3/generic64lc/brg_endian.h`. SHA-256 of comment bytes `63297bc6a7dab3aacdc5a758d26c5f69cb34fe243500aa69d58b1eb1a174e861`.
+Source paths: `php-8.5.13/ext/hash/sha3/generic64lc/brg_endian.h`. SHA-256 of comment bytes `63297bc6a7dab3aacdc5a758d26c5f69cb34fe243500aa69d58b1eb1a174e861`.
 
 ~~~text
 /*
@@ -8776,7 +8776,7 @@ Source paths: `php-8.5.11/ext/hash/sha3/generic64lc/brg_endian.h`. SHA-256 of co
 
 ### Embedded notice 9
 
-Source paths: `php-8.5.11/ext/hash/xxhash/xxhash.h`. SHA-256 of comment bytes `680ae7d3902bd5235334f2bb1f7102671a5b957bcc70f6e986e8c848eac542a2`.
+Source paths: `php-8.5.13/ext/hash/xxhash/xxhash.h`. SHA-256 of comment bytes `680ae7d3902bd5235334f2bb1f7102671a5b957bcc70f6e986e8c848eac542a2`.
 
 ~~~text
 /*
@@ -8817,7 +8817,7 @@ Source paths: `php-8.5.11/ext/hash/xxhash/xxhash.h`. SHA-256 of comment bytes `6
 
 ### Embedded notice 10
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/cp932_table.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_7bit.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_7bit.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_base64.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_base64.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_cp51932.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_iso2022jp_2004.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_qprint.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_qprint.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_ucs2.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_ucs2.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_ucs4.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_ucs4.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf16.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf16.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf32.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf32.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf7.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf7.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf7imap.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf7imap.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf8.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_utf8.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_uuencode.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_uuencode.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_8bit.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_8bit.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_pass.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_pass.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_wchar.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter_wchar.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_consts.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_convert.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_convert.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_defs.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_encoding.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_encoding.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_filter_output.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_filter_output.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_language.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_language.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_memory_device.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_memory_device.h`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_string.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfl_string.h`. SHA-256 of comment bytes `00268def36f8b0eee8215b2c0dd868cde83d046e1183f98b7a23f3b0d3ea0a73`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/cp932_table.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_7bit.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_7bit.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_base64.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_base64.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_cp51932.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_iso2022jp_2004.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_qprint.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_qprint.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_ucs2.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_ucs2.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_ucs4.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_ucs4.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf16.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf16.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf32.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf32.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf7.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf7.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf7imap.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf7imap.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf8.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_utf8.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_uuencode.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_uuencode.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_8bit.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_8bit.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_pass.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_pass.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_wchar.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter_wchar.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_consts.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_convert.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_convert.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_defs.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_encoding.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_encoding.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_filter_output.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_filter_output.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_language.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_language.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_memory_device.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_memory_device.h`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_string.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfl_string.h`. SHA-256 of comment bytes `00268def36f8b0eee8215b2c0dd868cde83d046e1183f98b7a23f3b0d3ea0a73`.
 
 ~~~text
 /*
@@ -8847,7 +8847,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/cp932_table.h`, `php-8.5.
 
 ### Embedded notice 11
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/html_entities.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/html_entities.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_htmlent.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_htmlent.h`. SHA-256 of comment bytes `c8854443f9faa0c3cd8f6297bc2c205ad659a851707d461b0a95ebde3a13c6e9`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/html_entities.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/html_entities.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_htmlent.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_htmlent.h`. SHA-256 of comment bytes `c8854443f9faa0c3cd8f6297bc2c205ad659a851707d461b0a95ebde3a13c6e9`.
 
 ~~~text
 /*
@@ -8877,7 +8877,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/html_entities.c`, `php-8.
 
 ### Embedded notice 12
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_singlebyte.c`, `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_singlebyte.h`. SHA-256 of comment bytes `f6ac0d423a2f2d3a7f9812f2108545f2d84465ebea87ff954834a73000536352`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_singlebyte.c`, `php-8.5.13/ext/mbstring/libmbfl/filters/mbfilter_singlebyte.h`. SHA-256 of comment bytes `f6ac0d423a2f2d3a7f9812f2108545f2d84465ebea87ff954834a73000536352`.
 
 ~~~text
 /*
@@ -8897,7 +8897,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/mbfilter_singlebyte.c`, `
 
 ### Embedded notice 13
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/translit_kana_jisx0201_jisx0208.h`. SHA-256 of comment bytes `24afaa88df9ed778d8f9fa0d4fb1524401a8b732fccc12e4397f6b4f43cce5db`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/translit_kana_jisx0201_jisx0208.h`. SHA-256 of comment bytes `24afaa88df9ed778d8f9fa0d4fb1524401a8b732fccc12e4397f6b4f43cce5db`.
 
 ~~~text
 /*
@@ -8927,7 +8927,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/translit_kana_jisx0201_ji
 
 ### Embedded notice 14
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_prop.h`. SHA-256 of comment bytes `8d1d9d6eb7e67e9ff89504ff80f17d96fab4f67ac1167893c0c32087bbe8279c`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_prop.h`. SHA-256 of comment bytes `8d1d9d6eb7e67e9ff89504ff80f17d96fab4f67ac1167893c0c32087bbe8279c`.
 
 ~~~text
 /*
@@ -8956,7 +8956,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_prop.h`. SHA-256 
 
 ### Embedded notice 15
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_big5.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cns11643.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cp932_ext.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_gb18030.h`, `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_uhc.h`. SHA-256 of comment bytes `94afaaec30dd4556ce9cbea981023135389ae0614d1f6dbdba1b6a9dca5c173a`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_big5.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_cns11643.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_cp932_ext.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_gb18030.h`, `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_uhc.h`. SHA-256 of comment bytes `94afaaec30dd4556ce9cbea981023135389ae0614d1f6dbdba1b6a9dca5c173a`.
 
 ~~~text
 /*
@@ -8986,7 +8986,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_big5.h`, `p
 
 ### Embedded notice 16
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cp1252.h`. SHA-256 of comment bytes `074a7b00bca70a39926b2a0822e2d75889da616e9baf40795a9a493f67545794`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_cp1252.h`. SHA-256 of comment bytes `074a7b00bca70a39926b2a0822e2d75889da616e9baf40795a9a493f67545794`.
 
 ~~~text
 /*
@@ -9017,7 +9017,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cp1252.h`. 
 
 ### Embedded notice 17
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cp936.h`. SHA-256 of comment bytes `6975a0a8f85be2c5fad3497cdd7b17d98b3b2f4fd698a00a297f2c26c811c612`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_cp936.h`. SHA-256 of comment bytes `6975a0a8f85be2c5fad3497cdd7b17d98b3b2f4fd698a00a297f2c26c811c612`.
 
 ~~~text
 /*
@@ -9046,7 +9046,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_cp936.h`. S
 
 ### Embedded notice 18
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_jis.h`. SHA-256 of comment bytes `b4b93840e2ba54b92be33d112d0e1957118f98aab6b62674295c5d043c199dee`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_jis.h`. SHA-256 of comment bytes `b4b93840e2ba54b92be33d112d0e1957118f98aab6b62674295c5d043c199dee`.
 
 ~~~text
 /*
@@ -9077,7 +9077,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_jis.h`. SHA
 
 ### Embedded notice 19
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_jis2004.h`. SHA-256 of comment bytes `e050f374352fd4bc53846e070251127ed2c4c187aa7822611f9a06c1879b6c13`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/filters/unicode_table_jis2004.h`. SHA-256 of comment bytes `e050f374352fd4bc53846e070251127ed2c4c187aa7822611f9a06c1879b6c13`.
 
 ~~~text
 /*
@@ -9106,7 +9106,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/filters/unicode_table_jis2004.h`.
 
 ### Embedded notice 20
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.h`. SHA-256 of comment bytes `3cf17cbbc29536b088122dc65e1e294dbd8a72905ce740e72c345005b2a71ef8`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter.h`. SHA-256 of comment bytes `3cf17cbbc29536b088122dc65e1e294dbd8a72905ce740e72c345005b2a71ef8`.
 
 ~~~text
 /*
@@ -9181,7 +9181,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.11/ext
 
 ### Embedded notice 21
 
-Source paths: `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.h`. SHA-256 of comment bytes `f34c78aef16b2fd39ee2a7128a34825ebe2c135c830864b0fe248e7300e48795`.
+Source paths: `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.13/ext/mbstring/libmbfl/mbfl/mbfilter.h`. SHA-256 of comment bytes `f34c78aef16b2fd39ee2a7128a34825ebe2c135c830864b0fe248e7300e48795`.
 
 ~~~text
 /*
@@ -9195,7 +9195,7 @@ Source paths: `php-8.5.11/ext/mbstring/libmbfl/mbfl/mbfilter.c`, `php-8.5.11/ext
 
 ### Embedded notice 22
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2.h`. SHA-256 of comment bytes `db65dc7d019845f32b88dcf952f8b59f48c5da36a540cd7a2ccc7672f2513a3e`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2.h`. SHA-256 of comment bytes `db65dc7d019845f32b88dcf952f8b59f48c5da36a540cd7a2ccc7672f2513a3e`.
 
 ~~~text
 /* This is the public header file for the PCRE library, second API, to be
@@ -9235,7 +9235,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 23
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_auto_possess.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_convert.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_match_data.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_substitute.c`. SHA-256 of comment bytes `84fa7975de402fc1460b645dbd145b8a79fb398ec5a1b385d9bf351309a14238`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_auto_possess.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_convert.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_match_data.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_substitute.c`. SHA-256 of comment bytes `84fa7975de402fc1460b645dbd145b8a79fb398ec5a1b385d9bf351309a14238`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9277,7 +9277,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 24
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_chkdint.c`. SHA-256 of comment bytes `e4fa0fc6c69fd249fae1d6fbbcefea8f46f2e0a1a4c65df90928a642afef70fd`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_chkdint.c`. SHA-256 of comment bytes `e4fa0fc6c69fd249fae1d6fbbcefea8f46f2e0a1a4c65df90928a642afef70fd`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9318,7 +9318,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 25
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_compile.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_context.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_error.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_extuni.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_intmodedep.h`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_tables.c`. SHA-256 of comment bytes `9564526977f8ea8bdb3ff6c4cf95f20a4c8def1a3c3115c2d20495b049375b8b`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_compile.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_context.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_error.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_extuni.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_intmodedep.h`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_tables.c`. SHA-256 of comment bytes `9564526977f8ea8bdb3ff6c4cf95f20a4c8def1a3c3115c2d20495b049375b8b`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9360,7 +9360,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 26
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_config.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_maketables.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_serialize.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_valid_utf.c`. SHA-256 of comment bytes `beca3f7e40f15c77da58156cfaf35f93b2dcfc9d820fb8408446595c053faf92`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_config.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_maketables.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_serialize.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_valid_utf.c`. SHA-256 of comment bytes `beca3f7e40f15c77da58156cfaf35f93b2dcfc9d820fb8408446595c053faf92`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9402,7 +9402,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 27
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_dfa_match.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_find_bracket.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_jit_match.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_printint.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_study.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_substring.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_xclass.c`. SHA-256 of comment bytes `e7121284655d30976977060bb0e9c57fcdf5c2194947c56316808008be82b6f5`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_dfa_match.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_find_bracket.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_jit_match.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_printint.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_study.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_substring.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_xclass.c`. SHA-256 of comment bytes `e7121284655d30976977060bb0e9c57fcdf5c2194947c56316808008be82b6f5`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9444,7 +9444,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 28
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_internal.h`. SHA-256 of comment bytes `e6792454e410117765f52775f64cfee1a32c1dfe8af651d6776cf69eb5862f41`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_internal.h`. SHA-256 of comment bytes `e6792454e410117765f52775f64cfee1a32c1dfe8af651d6776cf69eb5862f41`.
 
 ~~~text
 /* PCRE2 is a library of functions to support regular expressions whose syntax
@@ -9486,7 +9486,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 29
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_jit_compile.c`. SHA-256 of comment bytes `66f7ad3161311cab00c413b172b470ee4983a591ea234c97c4ac2f8d3297ecec`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_jit_compile.c`. SHA-256 of comment bytes `66f7ad3161311cab00c413b172b470ee4983a591ea234c97c4ac2f8d3297ecec`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9529,7 +9529,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 30
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_jit_misc.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_newline.c`, `php-8.5.11/ext/pcre/pcre2lib/pcre2_ord2utf.c`. SHA-256 of comment bytes `61fcf6e0379f20e4af03671d3ace07585f6ac00c102ee3de8aa283e27a44ecc0`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_jit_misc.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_newline.c`, `php-8.5.13/ext/pcre/pcre2lib/pcre2_ord2utf.c`. SHA-256 of comment bytes `61fcf6e0379f20e4af03671d3ace07585f6ac00c102ee3de8aa283e27a44ecc0`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9571,7 +9571,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 31
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_jit_neon_inc.h`. SHA-256 of comment bytes `2441e695d5bc2afd0f5b893aa8ae3c5ab4b436f65365962fddb3219f72f0b72f`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_jit_neon_inc.h`. SHA-256 of comment bytes `2441e695d5bc2afd0f5b893aa8ae3c5ab4b436f65365962fddb3219f72f0b72f`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9614,7 +9614,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 32
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_jit_simd_inc.h`. SHA-256 of comment bytes `865ce6e3edfde1c54a8029200788fff85fe9e0ea7ddd12f82aba73b60b6f8c69`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_jit_simd_inc.h`. SHA-256 of comment bytes `865ce6e3edfde1c54a8029200788fff85fe9e0ea7ddd12f82aba73b60b6f8c69`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9657,7 +9657,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 33
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_match.c`. SHA-256 of comment bytes `c716ed84ce1dcdd31406ef21f054f865d4de1207e2b92fc8f6de847f9e39cb86`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_match.c`. SHA-256 of comment bytes `c716ed84ce1dcdd31406ef21f054f865d4de1207e2b92fc8f6de847f9e39cb86`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9699,7 +9699,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 34
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_pattern_info.c`. SHA-256 of comment bytes `efbffba03857b39bf59f147071ed20b62bdcba36a27e8f3ef96be67aeffe4a97`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_pattern_info.c`. SHA-256 of comment bytes `efbffba03857b39bf59f147071ed20b62bdcba36a27e8f3ef96be67aeffe4a97`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9741,7 +9741,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 35
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_script_run.c`. SHA-256 of comment bytes `6fd45672ba016bd0a7647b711646debeec1723383fc831adda8acaef2760dad5`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_script_run.c`. SHA-256 of comment bytes `6fd45672ba016bd0a7647b711646debeec1723383fc831adda8acaef2760dad5`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9783,7 +9783,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 36
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_string_utils.c`. SHA-256 of comment bytes `2fd2d99686d8b3afb36b7ff28c85e09751dc1c95048b13759b1b9afc90eefd83`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_string_utils.c`. SHA-256 of comment bytes `2fd2d99686d8b3afb36b7ff28c85e09751dc1c95048b13759b1b9afc90eefd83`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9825,7 +9825,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 37
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_ucd.c`. SHA-256 of comment bytes `fc252e21ef6bc6f05d93334ead3b979f3dfb5eedb7e50078acad7d13e0f488fc`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_ucd.c`. SHA-256 of comment bytes `fc252e21ef6bc6f05d93334ead3b979f3dfb5eedb7e50078acad7d13e0f488fc`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9871,7 +9871,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 38
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_ucp.h`. SHA-256 of comment bytes `3f98d80eecaebce48c3d58940616046cb1b24318d8b2920515d088c3c5172b43`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_ucp.h`. SHA-256 of comment bytes `3f98d80eecaebce48c3d58940616046cb1b24318d8b2920515d088c3c5172b43`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9917,7 +9917,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 39
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/pcre2_ucptables.c`. SHA-256 of comment bytes `b88089095cb09d68a9eede02203869c7d145bc5811753e8560930695d68c4427`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/pcre2_ucptables.c`. SHA-256 of comment bytes `b88089095cb09d68a9eede02203869c7d145bc5811753e8560930695d68c4427`.
 
 ~~~text
 /* PCRE is a library of functions to support regular expressions whose syntax
@@ -9963,7 +9963,7 @@ POSSIBILITY OF SUCH DAMAGE.
 
 ### Embedded notice 40
 
-Source paths: `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorApple.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorCore.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorFreeBSD.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorPosix.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorWindows.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitProtExecAllocatorNetBSD.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitProtExecAllocatorPosix.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitWXExecAllocatorPosix.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitWXExecAllocatorWindows.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitConfig.h`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitConfigCPU.h`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitConfigInternal.h`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitLir.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitLir.h`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeARM_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeARM_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeARM_T2_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeLOONGARCH_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_common.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativePPC_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativePPC_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativePPC_common.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_common.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeS390X.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeX86_32.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeX86_64.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitNativeX86_common.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitSerialize.c`, `php-8.5.11/ext/pcre/pcre2lib/sljit/sljitUtils.c`. SHA-256 of comment bytes `79cf721079325247058a340de8dd7e4b219d2135856d67c6714c16db338ddf7a`.
+Source paths: `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorApple.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorCore.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorFreeBSD.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorPosix.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocatorWindows.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitProtExecAllocatorNetBSD.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitProtExecAllocatorPosix.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitWXExecAllocatorPosix.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/allocator_src/sljitWXExecAllocatorWindows.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitConfig.h`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitConfigCPU.h`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitConfigInternal.h`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitLir.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitLir.h`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeARM_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeARM_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeARM_T2_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeLOONGARCH_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeMIPS_common.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativePPC_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativePPC_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativePPC_common.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeRISCV_common.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeS390X.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeX86_32.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeX86_64.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitNativeX86_common.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitSerialize.c`, `php-8.5.13/ext/pcre/pcre2lib/sljit/sljitUtils.c`. SHA-256 of comment bytes `79cf721079325247058a340de8dd7e4b219d2135856d67c6714c16db338ddf7a`.
 
 ~~~text
 /*
@@ -9995,7 +9995,7 @@ Source paths: `php-8.5.11/ext/pcre/pcre2lib/sljit/allocator_src/sljitExecAllocat
 
 ### Embedded notice 41
 
-Source paths: `php-8.5.11/ext/standard/crypt_blowfish.c`. SHA-256 of comment bytes `888be4b79e497ad6d84c9bfca61c3e5890d562ceeadeef0202d8fbe6f8bd61f2`.
+Source paths: `php-8.5.13/ext/standard/crypt_blowfish.c`. SHA-256 of comment bytes `888be4b79e497ad6d84c9bfca61c3e5890d562ceeadeef0202d8fbe6f8bd61f2`.
 
 ~~~text
 /*
@@ -10046,7 +10046,7 @@ Source paths: `php-8.5.11/ext/standard/crypt_blowfish.c`. SHA-256 of comment byt
 
 ### Embedded notice 42
 
-Source paths: `php-8.5.11/ext/standard/crypt_blowfish.h`. SHA-256 of comment bytes `5c57e94820d093b466858e73066b01be8442044694880a095cf4cfd92bb05e6b`.
+Source paths: `php-8.5.13/ext/standard/crypt_blowfish.h`. SHA-256 of comment bytes `5c57e94820d093b466858e73066b01be8442044694880a095cf4cfd92bb05e6b`.
 
 ~~~text
 /*
@@ -10068,7 +10068,7 @@ Source paths: `php-8.5.11/ext/standard/crypt_blowfish.h`. SHA-256 of comment byt
 
 ### Embedded notice 43
 
-Source paths: `php-8.5.11/ext/standard/crypt_freesec.c`. SHA-256 of comment bytes `d34efa7ae33cf16ccadf640b521337b94e64b15e2a9533b1de846ced319bce5c`.
+Source paths: `php-8.5.13/ext/standard/crypt_freesec.c`. SHA-256 of comment bytes `d34efa7ae33cf16ccadf640b521337b94e64b15e2a9533b1de846ced319bce5c`.
 
 ~~~text
 /*
@@ -10125,7 +10125,7 @@ Source paths: `php-8.5.11/ext/standard/crypt_freesec.c`. SHA-256 of comment byte
 
 ### Embedded notice 44
 
-Source paths: `php-8.5.11/ext/standard/crypt_sha256.c`. SHA-256 of comment bytes `b49c5b34448604cb98b52c2ab06d2fbbb6264568c4ec7f79c0e309b277523a46`.
+Source paths: `php-8.5.13/ext/standard/crypt_sha256.c`. SHA-256 of comment bytes `b49c5b34448604cb98b52c2ab06d2fbbb6264568c4ec7f79c0e309b277523a46`.
 
 ~~~text
 /* SHA256-based Unix crypt implementation.
@@ -10134,7 +10134,7 @@ Source paths: `php-8.5.11/ext/standard/crypt_sha256.c`. SHA-256 of comment bytes
 
 ### Embedded notice 45
 
-Source paths: `php-8.5.11/ext/standard/crypt_sha512.c`. SHA-256 of comment bytes `96bca70d154b4ced8c94d110537f7693ca821f3e6bfb28457c22af797035b559`.
+Source paths: `php-8.5.13/ext/standard/crypt_sha512.c`. SHA-256 of comment bytes `96bca70d154b4ced8c94d110537f7693ca821f3e6bfb28457c22af797035b559`.
 
 ~~~text
 /* SHA512-based Unix crypt implementation.
@@ -10143,7 +10143,7 @@ Source paths: `php-8.5.11/ext/standard/crypt_sha512.c`. SHA-256 of comment bytes
 
 ### Embedded notice 46
 
-Source paths: `php-8.5.11/ext/standard/libavifinfo/avifinfo.c`, `php-8.5.11/ext/standard/libavifinfo/avifinfo.h`. SHA-256 of comment bytes `53a7584df661a3555cf0e5eb86b2349282d80e1f08b801e663d5570ddfa28b34`.
+Source paths: `php-8.5.13/ext/standard/libavifinfo/avifinfo.c`, `php-8.5.13/ext/standard/libavifinfo/avifinfo.h`. SHA-256 of comment bytes `53a7584df661a3555cf0e5eb86b2349282d80e1f08b801e663d5570ddfa28b34`.
 
 ~~~text
 // Copyright (c) 2021, Alliance for Open Media. All rights reserved
@@ -10158,7 +10158,7 @@ Source paths: `php-8.5.11/ext/standard/libavifinfo/avifinfo.c`, `php-8.5.11/ext/
 
 ### Embedded notice 47
 
-Source paths: `php-8.5.11/ext/standard/strnatcmp.c`. SHA-256 of comment bytes `fa87d5f5aaee20966db871cbf68aa3cae390e560d37cff66d7a40d9bad94ac3f`.
+Source paths: `php-8.5.13/ext/standard/strnatcmp.c`. SHA-256 of comment bytes `fa87d5f5aaee20966db871cbf68aa3cae390e560d37cff66d7a40d9bad94ac3f`.
 
 ~~~text
 /*
@@ -10188,7 +10188,7 @@ Source paths: `php-8.5.11/ext/standard/strnatcmp.c`. SHA-256 of comment bytes `f
 
 ### Embedded notice 48
 
-Source paths: `php-8.5.11/main/charclass.h`. SHA-256 of comment bytes `e3e75961042f5ae1788de480e363b4ad6d2afda3cfa0e709fc281e6997ca2a08`.
+Source paths: `php-8.5.13/main/charclass.h`. SHA-256 of comment bytes `e3e75961042f5ae1788de480e363b4ad6d2afda3cfa0e709fc281e6997ca2a08`.
 
 ~~~text
 /*
@@ -10200,7 +10200,7 @@ Source paths: `php-8.5.11/main/charclass.h`. SHA-256 of comment bytes `e3e759610
 
 ### Embedded notice 49
 
-Source paths: `php-8.5.11/main/php_glob.c`. SHA-256 of comment bytes `23ff386cce478ddcf444cbfbf00d96caaaf0e21e06ed444c87a8a00ba051ad52`.
+Source paths: `php-8.5.13/main/php_glob.c`. SHA-256 of comment bytes `23ff386cce478ddcf444cbfbf00d96caaaf0e21e06ed444c87a8a00ba051ad52`.
 
 ~~~text
 /*
@@ -10238,7 +10238,7 @@ Source paths: `php-8.5.11/main/php_glob.c`. SHA-256 of comment bytes `23ff386cce
 
 ### Embedded notice 50
 
-Source paths: `php-8.5.11/main/php_glob.c`. SHA-256 of comment bytes `b40d1c66ea7f0073f92bd78f34beb5535c1b8a3d1dadfb1b723d9751bcd22e45`.
+Source paths: `php-8.5.13/main/php_glob.c`. SHA-256 of comment bytes `b40d1c66ea7f0073f92bd78f34beb5535c1b8a3d1dadfb1b723d9751bcd22e45`.
 
 ~~~text
 /*
@@ -10260,7 +10260,7 @@ Source paths: `php-8.5.11/main/php_glob.c`. SHA-256 of comment bytes `b40d1c66ea
 
 ### Embedded notice 51
 
-Source paths: `php-8.5.11/main/php_glob.h`. SHA-256 of comment bytes `c5cd90901d0dde5192562e6c4035109b26c9d7db285979b72cde97441271ac7c`.
+Source paths: `php-8.5.13/main/php_glob.h`. SHA-256 of comment bytes `c5cd90901d0dde5192562e6c4035109b26c9d7db285979b72cde97441271ac7c`.
 
 ~~~text
 /*

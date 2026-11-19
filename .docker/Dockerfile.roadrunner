@@ -2,7 +2,7 @@
 # spiral/roadrunner v2025.1.15 PHP package selected in composer.lock.
 FROM ghcr.io/roadrunner-server/roadrunner:2025.1.15@sha256:18378c1313a71ce1c3cfc493c99e75c189ef5fb2eaf85290b8a99080fcb0f64f AS roadrunner
 
-FROM php:8.5-cli-bookworm@sha256:819080ed413631f6ec564184dd9acd08d9425bd863b9f8b5876b5ea2147d55e7 AS php-build
+FROM php:8.5-cli-bookworm@sha256:d6991172c4282d2a09d6418073923a81664173bb0a0e07a16663a9a645746092 AS php-build
 
 ENV SOURCE_DATE_EPOCH=1790083926
 
@@ -18,7 +18,7 @@ RUN set -eux; \
         libxml2-dev \
         libsodium-dev \
         zlib1g-dev; \
-    echo 'd9be75c08e8c316f4c8f4194d8fbe1750a15f6a6d9d4e3fe72082abeeb800360  /usr/src/php.tar.xz' | sha256sum --check -; \
+    echo '607602acaf0c3061818e9916ec44a058e8b3d43959a83862b9cd3ec7bf5b785f  /usr/src/php.tar.xz' | sha256sum --check -; \
     docker-php-source extract; \
     cd /usr/src/php; \
     ./configure \

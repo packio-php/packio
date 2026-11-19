@@ -496,8 +496,8 @@ the source maps shipped in the npm package do not describe the current bundles.
 Changing Swagger requires verifying the new emitted inventory and terms, then
 updating the supplement.
 
-The images do not ship third-party sources. PHP 8.5.11 (including bundled
-libmbfl) is built from the official `php-8.5.11.tar.xz` and protobuf from the
+The images do not ship third-party sources. PHP 8.5.13 (including bundled
+libmbfl) is built from the official `php-8.5.13.tar.xz` and protobuf from the
 PECL archive; the `php-build` stage of `.docker/Dockerfile.roadrunner` verifies
 both by SHA-256. The Debian packages are unmodified: `dpkg-query -W` in an image
 lists them, and `apt-get source <package>=<version>` or snapshot.debian.org
@@ -510,7 +510,7 @@ and edit `ext/mbstring/libmbfl/`. Use the build dependencies, configure options,
 separate copy of that stage, supply your source in `/usr/src/php` in place of
 `docker-php-source extract`. For an unmodified source rebuild, place the pinned
 PHP archive in an isolated build context and add
-`COPY php-8.5.11.tar.xz /usr/src/php.tar.xz` immediately after the stage's `FROM`;
+`COPY php-8.5.13.tar.xz /usr/src/php.tar.xz` immediately after the stage's `FROM`;
 then its existing extraction and compilation commands consume that exact
 source. The resulting `mbstring.so` contains the rebuilt libmbfl and can be
 used in a derivative runtime in place of the original extension. The existing

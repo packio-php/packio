@@ -240,7 +240,7 @@ class Job implements EntityInterface
 
     public function durationSeconds(): ?int
     {
-        if (! $this->startedAt || ! $this->completedAt) {
+        if (! $this->startedAt instanceof Chronos || ! $this->completedAt instanceof Chronos) {
             return null;
         }
 

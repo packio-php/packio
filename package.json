@@ -24,7 +24,7 @@
     "format:check": "prettier \"resources/**/*.{js,ts,svelte,css}\" package.json package-lock.json tsconfig.json svelte.config.js eslint.config.js prettier.config.js vite.config.js vitest.config.ts --check"
   },
   "devDependencies": {
-    "@eslint/js": "^9.39.5",
+    "@eslint/js": "^10.0.1",
     "@inertiajs/svelte": "^3.11.0",
     "@lucide/svelte": "^1.77.0",
     "@playwright/test": "^1.65.1",
@@ -37,10 +37,10 @@
     "@types/node": "^24.19.2",
     "@vitest/coverage-v8": "^5.1.1",
     "esbuild": "^0.28.2",
-    "eslint": "^9.39.5",
+    "eslint": "^10.15.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-svelte": "^3.24.1",
-    "globals": "^16.4.0",
+    "globals": "^17.14.0",
     "jsdom": "^31.0.1",
     "prettier": "^3.10.1",
     "prettier-plugin-svelte": "^3.4.0",

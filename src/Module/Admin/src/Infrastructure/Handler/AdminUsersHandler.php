@@ -43,13 +43,13 @@ final readonly class AdminUsersHandler implements RequestHandlerInterface
         return $inertia->render('Admin/Users', [
             'users'      => array_map(
                 fn (UserDto $userDto): array => [
-                    'last_sign_in_at' => $lastSignInAt[$userDto->id] ?? null,
                     'id'              => $userDto->id,
                     'email'           => $userDto->email,
                     'display_name'    => $userDto->displayName,
                     'roles'           => $userDto->roles,
                     'created_at'      => $userDto->createdAt,
                     'updated_at'      => $userDto->updatedAt,
+                    'last_sign_in_at' => $lastSignInAt[$userDto->id] ?? null,
                     'is_admin'        => in_array('admin', $userDto->roles, true),
                     'email_verified'  => $userDto->isEmailVerified,
                     'is_banned'       => $userDto->isBanned,

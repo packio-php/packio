@@ -46,4 +46,26 @@ final class AdminUsersHandlerTest extends TestCase
             new ServerRequest()->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia),
         );
     }
+
+    #[Test]
+    public function emptyPageSkipsTheLastSignInLookup(): void
+    {
+        $facade = $this->createMock(IdentityApiFacadeInterface::class);
+        $facade->method('findUsersPaginated')->willReturn(new PaginatedResultDto([], 0, 1, 20));
+        $facade->expects(self::never())->method('lastSignInAtByUserIds');
+
+        $inertia = $this->createMock(InertiaInterface::class);
+        $inertia->expects(self::once())->method('render')->with(
+            'Admin/Users',
+            self::callback(static function(array $props): bool {
+                self::assertSame([], $props['users']);
+
+                return true;
+            }),
+        )->willReturn(new EmptyResponse());
+
+        new AdminUsersHandler($facade)->handle(
+            new ServerRequest()->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia),
+        );
+    }
 }

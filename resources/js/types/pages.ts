@@ -343,11 +343,21 @@ export interface ApiAccessTokenPayload {
   updated_at?: string | null;
 }
 
+export interface SignInHistoryEntry {
+  id: string;
+  ip: string | null;
+  method: string;
+  method_label: string;
+  occurred_at: string;
+  user_agent: string | null;
+}
+
 export interface ProfilePageProps extends AppPageProps {
   api_tokens?: ApiAccessTokenPayload[];
   branding?: Partial<Branding>;
   oauth_accounts?: ProfileOAuthAccountPayload[];
   profile?: ProfilePayload | null;
+  sign_in_history?: SignInHistoryEntry[];
 }
 
 export interface OrganizationMemberListItem {

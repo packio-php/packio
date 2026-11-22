@@ -11,6 +11,7 @@
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import SignInHistoryList from "@/Components/ui/SignInHistoryList.svelte";
   import { mergeBranding } from "@/lib/branding";
   import { formatDate } from "@/lib/date";
   import type { AuthPayload } from "@/types/auth";
@@ -19,6 +20,7 @@
     ProfileOAuthAccountPayload,
     ProfilePageProps,
     ProfilePayload,
+    SignInHistoryEntry,
   } from "@/types/pages";
 
   interface Props {
@@ -27,6 +29,7 @@
     branding?: ProfilePageProps["branding"];
     oauth_accounts?: ProfileOAuthAccountPayload[];
     api_tokens?: ApiAccessTokenPayload[];
+    sign_in_history?: SignInHistoryEntry[];
   }
 
   let {
@@ -35,6 +38,7 @@
     branding = {},
     oauth_accounts = [],
     api_tokens = [],
+    sign_in_history = [],
   }: Props = $props();
 
   let resolvedBranding = $derived(mergeBranding(branding ?? {}));
@@ -415,6 +419,18 @@
             <p class="text-sm ui-muted">No OAuth sign-in methods connected.</p>
           </div>
         {/if}
+      </div>
+    </Card>
+
+    <Card className="rounded-[1.75rem] p-6 xl:col-span-2">
+      <SectionHeading
+        eyebrow="Security"
+        title="Sign-in history"
+        description="Your 20 most recent successful sign-ins."
+      />
+
+      <div class="mt-6">
+        <SignInHistoryList entries={sign_in_history} />
       </div>
     </Card>
 

@@ -97,6 +97,7 @@ final readonly class ChangePasswordHandler implements RequestHandlerInterface
             $userDto,
             $this->identityQueryService->findOAuthAccountsByUserId($userDto->id),
             $this->identityApiFacade->apiAccessTokensForUser($userDto->id),
+            $this->identityApiFacade->recentSignIns($userDto->id),
         );
     }
 }

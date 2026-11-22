@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "72423e33073975faa84787b071a5e045",
+    "content-hash": "b1558ca4d8a0e914d037f8eb141c64c3",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -5248,16 +5248,16 @@
         },
         {
             "name": "phpstan/phpdoc-parser",
-            "version": "2.3.6",
+            "version": "2.4.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/phpstan/phpdoc-parser.git",
-                "reference": "1427af4647235b4a73b13940b1f1258d3584f36e"
+                "reference": "af8e840551031d254cfdb3a18a62c3470a309c10"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/1427af4647235b4a73b13940b1f1258d3584f36e",
-                "reference": "1427af4647235b4a73b13940b1f1258d3584f36e",
+                "url": "https://api.github.com/repos/phpstan/phpdoc-parser/zipball/af8e840551031d254cfdb3a18a62c3470a309c10",
+                "reference": "af8e840551031d254cfdb3a18a62c3470a309c10",
                 "shasum": ""
             },
             "require": {
@@ -5289,9 +5289,10 @@
             "description": "PHPDoc parser with support for nullable, intersection and generic types",
             "support": {
                 "issues": "https://github.com/phpstan/phpdoc-parser/issues",
-                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.3.6"
+                "source": "https://github.com/phpstan/phpdoc-parser/tree/2.4.1"
             },
-            "time": "2026-09-27T20:07:45+00:00"
+            "time": "2026-10-30T19:36:28+00:00",
+            "published-time": "2026-10-30T19:37:11+00:00"
         },
         {
             "name": "psr/cache",
@@ -5880,32 +5881,33 @@
         },
         {
             "name": "radebatz/type-info-extras",
-            "version": "1.0.9",
+            "version": "1.0.16",
             "source": {
                 "type": "git",
                 "url": "https://github.com/DerManoMann/type-info-extras.git",
-                "reference": "2d9f01d60d642f890d9f170c0d8fde1f75ab17fb"
+                "reference": "f2415d2abbf014d1f511c37a87243c80e3da0547"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/DerManoMann/type-info-extras/zipball/2d9f01d60d642f890d9f170c0d8fde1f75ab17fb",
-                "reference": "2d9f01d60d642f890d9f170c0d8fde1f75ab17fb",
+                "url": "https://api.github.com/repos/DerManoMann/type-info-extras/zipball/f2415d2abbf014d1f511c37a87243c80e3da0547",
+                "reference": "f2415d2abbf014d1f511c37a87243c80e3da0547",
                 "shasum": ""
             },
             "require": {
                 "php": ">=8.2",
                 "phpstan/phpdoc-parser": "^2.0",
-                "symfony/type-info": "^7.3.8 || ^7.4.1 || ^8.0 || ^8.1-@dev"
+                "symfony/type-info": "^7.3.8 || ^7.4.1 || >=8.0 <8.3@dev"
             },
             "require-dev": {
                 "friendsofphp/php-cs-fixer": "^3.70",
                 "phpstan/phpstan": "^2.1",
-                "phpunit/phpunit": "^11.0"
+                "phpunit/phpunit": "^11.0",
+                "rector/rector": "^2.0"
             },
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "1.x-dev"
+                    "dev-main": "1.x-dev"
                 }
             },
             "autoload": {
@@ -5936,9 +5938,10 @@
             ],
             "support": {
                 "issues": "https://github.com/DerManoMann/type-info-extras/issues",
-                "source": "https://github.com/DerManoMann/type-info-extras/tree/1.0.9"
+                "source": "https://github.com/DerManoMann/type-info-extras/tree/1.0.16"
             },
-            "time": "2026-09-29T22:04:31+00:00"
+            "time": "2026-11-19T23:35:25+00:00",
+            "published-time": "2026-11-19T23:44:22+00:00"
         },
         {
             "name": "ramsey/collection",
@@ -11039,16 +11042,16 @@
         },
         {
             "name": "symfony/type-info",
-            "version": "v8.1.8",
+            "version": "v8.1.11",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/type-info.git",
-                "reference": "18e1d891f0b8776141f281f7b6f5e67e4df9d9cd"
+                "reference": "9fd1414061c4bbf953bcfc183b133cbfa0a73c73"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/type-info/zipball/18e1d891f0b8776141f281f7b6f5e67e4df9d9cd",
-                "reference": "18e1d891f0b8776141f281f7b6f5e67e4df9d9cd",
+                "url": "https://api.github.com/repos/symfony/type-info/zipball/9fd1414061c4bbf953bcfc183b133cbfa0a73c73",
+                "reference": "9fd1414061c4bbf953bcfc183b133cbfa0a73c73",
                 "shasum": ""
             },
             "require": {
@@ -11097,7 +11100,7 @@
                 "type"
             ],
             "support": {
-                "source": "https://github.com/symfony/type-info/tree/v8.1.8"
+                "source": "https://github.com/symfony/type-info/tree/v8.1.11"
             },
             "funding": [
                 {
@@ -11117,7 +11120,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-09-28T19:13:15+00:00"
+            "time": "2026-11-02T10:58:30+00:00",
+            "published-time": "2026-11-04T11:31:29+00:00"
         },
         {
             "name": "symfony/yaml",
@@ -12232,38 +12236,40 @@
         },
         {
             "name": "zircote/swagger-php",
-            "version": "6.12.0",
+            "version": "7.8.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/zircote/swagger-php.git",
-                "reference": "f7c0fc65cb9cdb84bdf0e4e21460d348888b41a2"
+                "reference": "503f9d14b5cdd9055ef5361c5a3de3a1dba243ed"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/zircote/swagger-php/zipball/f7c0fc65cb9cdb84bdf0e4e21460d348888b41a2",
-                "reference": "f7c0fc65cb9cdb84bdf0e4e21460d348888b41a2",
+                "url": "https://api.github.com/repos/zircote/swagger-php/zipball/503f9d14b5cdd9055ef5361c5a3de3a1dba243ed",
+                "reference": "503f9d14b5cdd9055ef5361c5a3de3a1dba243ed",
                 "shasum": ""
             },
             "require": {
-                "nikic/php-parser": "^4.19 || ^5.0",
+                "nikic/php-parser": "^5.0",
                 "php": ">=8.2",
                 "phpstan/phpdoc-parser": "^2.0",
                 "psr/log": "^1.1 || ^2.0 || ^3.0",
-                "radebatz/type-info-extras": "^1.0.2",
-                "symfony/console": "^6.4 || ^7.0 || ^8.0",
+                "radebatz/type-info-extras": "^1.0.11",
+                "symfony/console": "^5.4 || ^6.4 || ^7.0 || ^8.0",
                 "symfony/deprecation-contracts": "^2 || ^3",
-                "symfony/finder": "^5.0 || ^6.0 || ^7.0 || ^8.0",
-                "symfony/yaml": "^5.4 || ^6.0 || ^7.0 || ^8.0"
+                "symfony/finder": "^5.4 || ^6.4 || ^7.0 || ^8.0",
+                "symfony/yaml": "^5.4 || ^6.4 || ^7.0 || ^8.0"
             },
             "conflict": {
-                "symfony/process": ">=6, <6.4.14"
+                "symfony/console": "<5.4.35",
+                "symfony/string": "<5.4.41"
             },
             "require-dev": {
                 "doctrine/annotations": "^2.0",
-                "friendsofphp/php-cs-fixer": "3.95.23",
-                "phpstan/phpstan": "2.2.12",
+                "friendsofphp/php-cs-fixer": "3.95.30",
+                "phpbench/phpbench": "^1.7",
+                "phpstan/phpstan": "2.3.5",
                 "phpunit/phpunit": "^11.5 || >=12.5.22",
-                "rector/rector": "2.6.5"
+                "rector/rector": "2.8.4"
             },
             "bin": [
                 "bin/openapi"
@@ -12271,12 +12277,13 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "6.x-dev"
+                    "dev-master": "7.x-dev"
                 }
             },
             "autoload": {
                 "psr-4": {
-                    "OpenApi\\": "src"
+                    "OpenApi\\": "src",
+                    "OpenApi\\Rector\\": "rector/src"
                 }
             },
             "notification-url": "https://packagist.org/downloads/",
@@ -12309,7 +12316,7 @@
             ],
             "support": {
                 "issues": "https://github.com/zircote/swagger-php/issues",
-                "source": "https://github.com/zircote/swagger-php/tree/6.12.0"
+                "source": "https://github.com/zircote/swagger-php/tree/7.8.0"
             },
             "funding": [
                 {
@@ -12317,7 +12324,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-06T03:39:01+00:00"
+            "time": "2026-11-18T02:22:37+00:00",
+            "published-time": "2026-11-18T02:33:58+00:00"
         }
     ],
     "packages-dev": [

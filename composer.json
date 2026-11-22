@@ -94,7 +94,7 @@
         "symfony/mime": "^8.1.10",
         "vlucas/phpdotenv": "^5.8",
         "yiisoft/validator": "^2.6.1",
-        "zircote/swagger-php": "^6.12"
+        "zircote/swagger-php": "^7.8"
     },
     "require-dev": {
         "bamarni/composer-bin-plugin": "^1.9.1",
@@ -202,7 +202,7 @@
             "@openapi-generate",
             "git diff --exit-code -- public/openapi.json"
         ],
-        "openapi-generate": "vendor/bin/openapi src/Module/Rest/src -o public/openapi.json --format json",
+        "openapi-generate": "vendor/bin/openapi src/Module/Rest/src -o public/openapi.json --format json -m classic",
         "phpstan": "php tools/phpstan/vendor/bin/phpstan analyse -c phpstan.neon --memory-limit=2G",
         "prune-aws-sdk": "Aws\\Script\\Composer\\Composer::removeUnusedServices",
         "rector": "php tools/rector/vendor/bin/rector process --dry-run --memory-limit=2G",

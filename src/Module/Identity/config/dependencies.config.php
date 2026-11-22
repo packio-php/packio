@@ -51,6 +51,7 @@ use Packio\Identity\Domain\Repository\PasswordResetTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\RegistryAccessTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserOAuthAccountRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserRepositoryInterface;
+use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use Packio\Identity\Infrastructure\Adapter\RegistrationPolicyAdapter;
 use Packio\Identity\Infrastructure\Adapter\Worker\AuthMailJobHandler;
 use Packio\Identity\Infrastructure\Adapter\Worker\AuthMailQueueAdapter;
@@ -117,6 +118,7 @@ use Packio\Identity\Infrastructure\Persistence\Cycle\PasswordResetTokenRepositor
 use Packio\Identity\Infrastructure\Persistence\Cycle\RegistryAccessTokenRepository;
 use Packio\Identity\Infrastructure\Persistence\Cycle\UserOAuthAccountRepository;
 use Packio\Identity\Infrastructure\Persistence\Cycle\UserRepository;
+use Packio\Identity\Infrastructure\Persistence\Cycle\UserSignInRepository;
 use Packio\Identity\Infrastructure\Support\OAuthCallbackStateValidator;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
@@ -145,6 +147,7 @@ return [
             UserOAuthAccountRepositoryInterface::class           => UserOAuthAccountRepository::class,
             EmailVerificationCodeRepositoryInterface::class      => EmailVerificationCodeRepository::class,
             PasswordResetTokenRepositoryInterface::class         => PasswordResetTokenRepository::class,
+            UserSignInRepositoryInterface::class                 => UserSignInRepository::class,
             IdentityApiFacadeInterface::class                    => IdentityApiFacade::class,
             OAuthApiFacadeInterface::class                       => OAuthApiFacade::class,
             OAuthProviderInterface::class                        => OAuthProviderGateway::class,
@@ -179,6 +182,7 @@ return [
             UserOAuthAccountRepository::class                       => RepositoryFactory::class,
             EmailVerificationCodeRepository::class                  => RepositoryFactory::class,
             PasswordResetTokenRepository::class                     => RepositoryFactory::class,
+            UserSignInRepository::class                             => RepositoryFactory::class,
 
             // --- Domain services ---
             ApiAccessTokenHasher::class                             => ConfigAbstractFactory::class,

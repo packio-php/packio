@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- The session gets a new ID when a user logs in, which protects against session fixation.
+
+### Changed
+
+- Outbound HTTPS requests to Git providers and webhook receivers now require TLS 1.2 or newer. Self-hosted upstreams that still use TLS 1.0 or 1.1 stop working.
+- PHP and JavaScript dependencies are updated to their latest major versions.
+
 ## [0.5.1] - 2026-11-19
 
 ### Security

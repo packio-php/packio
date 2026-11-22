@@ -1,12 +1,7 @@
 import { spawnSync } from "node:child_process";
 
 // shortcut: advisories without a patched release are skipped; drop each entry once a fix ships and is installed.
-const ignored = new Map([
-  [
-    "GHSA-fc5q-39xc-vjpf",
-    "picomatch <= 4.0.7 ReDoS, no patched version yet; only build and test tooling uses it",
-  ],
-]);
+const ignored = new Map();
 const failingSeverities = new Set(["high", "critical"]);
 
 const audit = spawnSync("npm", ["audit", "--json"], { encoding: "utf8" });

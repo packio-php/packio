@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- Outbound HTTPS requests to Git providers and webhook receivers now require TLS 1.2 or newer. Self-hosted upstreams that still use TLS 1.0 or 1.1 stop working.
-- PHP and JavaScript dependencies are updated to their latest major versions.
+- Outbound HTTPS requests (Git and OAuth providers, webhooks, dist downloads, S3-compatible storage) now require TLS 1.2 or newer. Self-hosted services that still use TLS 1.0 or 1.1 stop working.
+- PHP and JavaScript dependencies are updated, including Guzzle 8 and Symfony Mailer 8.
 
 ## [0.5.1] - 2026-11-19
 

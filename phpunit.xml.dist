@@ -20,7 +20,7 @@
     failOnRisky="true"
 >
     <php>
-        <!-- The base suite peaks near 128M (125M on Guzzle 7, 127M on Guzzle 8). -->
+        <!-- The base suite peaks at about 128M. -->
         <ini name="memory_limit" value="256M"/>
     </php>
 

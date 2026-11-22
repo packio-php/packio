@@ -72,9 +72,9 @@ final class PostgresSourceDeletionExecutionLeaseTest extends TestCase
         ;
 
         $leaseDatabase = $this->createMock(DatabaseInterface::class);
-        $leaseDatabase->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($leaseDriver);
+        $leaseDatabase->expects(self::atLeastOnce())->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($leaseDriver);
         $mutationDatabase = $this->createMock(DatabaseInterface::class);
-        $mutationDatabase->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($mutationDriver);
+        $mutationDatabase->expects(self::atLeastOnce())->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($mutationDriver);
 
         $databaseProvider = $this->createStub(DatabaseProviderInterface::class);
         $databaseProvider->method('database')->willReturnCallback(
@@ -159,9 +159,9 @@ final class PostgresSourceDeletionExecutionLeaseTest extends TestCase
         ;
 
         $leaseDatabase = $this->createMock(DatabaseInterface::class);
-        $leaseDatabase->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($leaseDriver);
+        $leaseDatabase->expects(self::atLeastOnce())->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($leaseDriver);
         $mutationDatabase = $this->createMock(DatabaseInterface::class);
-        $mutationDatabase->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($mutationDriver);
+        $mutationDatabase->expects(self::atLeastOnce())->method('getDriver')->with(DatabaseInterface::WRITE)->willReturn($mutationDriver);
 
         $databaseProvider = $this->createStub(DatabaseProviderInterface::class);
         $databaseProvider->method('database')->willReturnCallback(

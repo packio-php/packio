@@ -102,7 +102,7 @@
         "filp/whoops": "^2.19.3",
         "laminas/laminas-development-mode": "^3.15.0",
         "league/event": "^3.0.3",
-        "phpunit/phpunit": "^12.5.38",
+        "phpunit/phpunit": "^13.4",
         "sentry/sentry": "^4.38",
         "symfony/event-dispatcher": "^8.1.5"
     },

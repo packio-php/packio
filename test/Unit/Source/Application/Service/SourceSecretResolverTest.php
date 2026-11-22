@@ -229,14 +229,14 @@ final class SourceSecretResolverTest extends TestCase
 
     private function authorization(string $secret, ?string $sourceOAuthAccountId = 'soa-1'): ProviderAuthorization
     {
-        $providerAuthorization = $this->createMock(ProviderAuthorization::class);
+        $providerAuthorization = $this->createStub(ProviderAuthorization::class);
         $providerAuthorization->method('getIdentifier')
             ->willReturn(Uuid::fromString('00000000-0000-0000-0000-000000000001'))
         ;
         $providerAuthorization->method('sourceOAuthAccountId')->willReturn($sourceOAuthAccountId);
         $providerAuthorization->method('provider')->willReturn('github');
         $providerAuthorization->method('organizationId')->willReturn('org-1');
-        $providerAuthorization->method('secret')->with('token')->willReturn($secret);
+        $providerAuthorization->method('secret')->willReturn($secret);
 
         return $providerAuthorization;
     }

@@ -38,7 +38,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
         $source = $this->source(status: 'active');
 
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)->willReturn($source);
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)->willReturn($source);
         $sourceApiFacade->expects(self::once())
             ->method('initiateSourceDelete')
             ->with(self::ORGANIZATION_ID, self::SOURCE_ID, 'admin-source-delete-initiation')
@@ -92,7 +92,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
     public function initiateDeletionResumesAnAlreadyDeletingSourceLifecycle(): void
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)
             ->willReturn($this->source(status: 'deleting'))
         ;
         $sourceApiFacade->expects(self::once())
@@ -126,7 +126,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
     public function initiateDeletionRejectsAMissingSourceWithoutSideEffects(): void
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)->willReturn(null);
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)->willReturn(null);
         $sourceApiFacade->expects(self::never())->method('initiateSourceDelete');
 
         $auditApiFacade = $this->createMock(AuditApiFacadeInterface::class);
@@ -146,7 +146,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
     public function initiateDeletionRejectsWhenTheAtomicOutcomeReportsAlreadyDeleting(): void
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)
             ->willReturn($this->source(status: 'active'))
         ;
         $sourceApiFacade->method('initiateSourceDelete')
@@ -170,7 +170,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
     public function initiateDeletionRejectsWhenTheAtomicOutcomeReportsNotFound(): void
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)
             ->willReturn($this->source(status: 'active'))
         ;
         $sourceApiFacade->method('initiateSourceDelete')
@@ -194,7 +194,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
     public function initiateDeletionCompensatesTheInitiationWhenTheAuditWriteFails(): void
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)
             ->willReturn($this->source(status: 'active'))
         ;
         $sourceApiFacade->method('initiateSourceDelete')
@@ -268,7 +268,7 @@ final class SourceDeletionRecoveryServiceInitiateDeletionTest extends TestCase
         $packageApiFacade->method('packagesForOrganization')->willReturn([$packageDto]);
 
         $releaseApiFacade = $this->createMock(ReleaseApiFacadeInterface::class);
-        $releaseApiFacade->method('releasesForPackage')
+        $releaseApiFacade->expects(self::atLeastOnce())->method('releasesForPackage')
             ->with('acme/repo', true, self::ORGANIZATION_ID)
             ->willReturn(['release-1', 'release-2'])
         ;

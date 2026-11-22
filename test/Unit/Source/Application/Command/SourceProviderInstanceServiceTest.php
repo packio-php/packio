@@ -280,8 +280,8 @@ final class SourceProviderInstanceServiceTest extends TestCase
         $source->assignProviderInstance('instance-1');
         $source->assignProviderAuthorization($providerAuthorization->getIdentifier()->toString());
 
-        $this->sourceProviderInstanceRepository->method('findByIdInOrganization')->with('instance-1', 'org-1')->willReturn($sourceProviderInstance);
-        $this->providerAuthorizationRepository->method('findByProviderInstance')->with('instance-1', 'org-1')->willReturn([$providerAuthorization]);
+        $this->sourceProviderInstanceRepository->expects(self::atLeastOnce())->method('findByIdInOrganization')->with('instance-1', 'org-1')->willReturn($sourceProviderInstance);
+        $this->providerAuthorizationRepository->expects(self::atLeastOnce())->method('findByProviderInstance')->with('instance-1', 'org-1')->willReturn([$providerAuthorization]);
         $this->sourceRepository->method('findByProviderInstance')->willReturn([$source]);
         $this->sourceRepository->method('findByProviderAuthorizationIds')->willReturn([$source]);
 

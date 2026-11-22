@@ -313,8 +313,8 @@ final class SourceOAuthTokenResolverTest extends TestCase
 
         $this->authRepo->expects(self::once())->method('findById')->willReturn($providerAuthorization);
         $this->oauthAccountRepo->expects(self::once())->method('findById')->willReturn($sourceOAuthAccount);
-        $this->secretEncryptor->method('isEncrypted')->with('enc_at')->willReturn(true);
-        $this->secretEncryptor->method('decrypt')->with('enc_at')->willReturn('plaintext-token');
+        $this->secretEncryptor->expects(self::atLeastOnce())->method('isEncrypted')->with('enc_at')->willReturn(true);
+        $this->secretEncryptor->expects(self::atLeastOnce())->method('decrypt')->with('enc_at')->willReturn('plaintext-token');
 
         $result = $this->createResolver()->resolveForAuthorization('auth-1');
 

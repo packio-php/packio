@@ -583,7 +583,10 @@
   {/if}
 {/snippet}
 
-<div class="flex min-h-screen flex-col bg-(--page-bg) text-(--page-ink)">
+<div
+  class="flex min-h-screen flex-col bg-(--page-bg) text-(--page-ink)"
+  style={headerHeight > 0 ? `--admin-header-h: ${headerHeight}px` : undefined}
+>
   <header
     bind:offsetHeight={headerHeight}
     class="sticky top-0 z-50 border-b theme-border"

@@ -79,7 +79,7 @@
 
 {#if visible}
   <div
-    class="pointer-events-none fixed inset-x-0 top-24 z-40 hidden justify-center md:flex"
+    class="pointer-events-none fixed inset-x-0 top-[calc(var(--admin-header-h,5rem)+0.75rem)] z-40 hidden justify-center md:flex"
   >
     <button
       aria-label="Scroll to top"

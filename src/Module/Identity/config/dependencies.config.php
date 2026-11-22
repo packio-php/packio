@@ -61,6 +61,7 @@ use Packio\Identity\Infrastructure\Authentication\DatabaseUserActorProvider;
 use Packio\Identity\Infrastructure\Cli\EmailVerificationCleanupCommand;
 use Packio\Identity\Infrastructure\Cli\MakeUserAdminCommand;
 use Packio\Identity\Infrastructure\Cli\PasswordResetCleanupCommand;
+use Packio\Identity\Infrastructure\Cli\SignInHistoryPruneCommand;
 use Packio\Identity\Infrastructure\Facade\IdentityApiFacade;
 use Packio\Identity\Infrastructure\Facade\OAuthApiFacade;
 use Packio\Identity\Infrastructure\Handler\BannedAccountPageHandler;
@@ -263,6 +264,7 @@ return [
             EmailVerificationCleanupCommand::class                  => ConfigAbstractFactory::class,
             MakeUserAdminCommand::class                             => ConfigAbstractFactory::class,
             PasswordResetCleanupCommand::class                      => ConfigAbstractFactory::class,
+            SignInHistoryPruneCommand::class                        => ConfigAbstractFactory::class,
         ],
     ],
     ConfigAbstractFactory::class => [
@@ -637,6 +639,10 @@ return [
         ],
         PasswordResetCleanupCommand::class                      => [
             IdentityApiFacadeInterface::class,
+        ],
+        SignInHistoryPruneCommand::class                        => [
+            UserSignInRepositoryInterface::class,
+            'config',
         ],
     ],
     'worker'                     => [

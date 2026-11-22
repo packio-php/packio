@@ -319,6 +319,7 @@ In the development Compose, the `workers` container runs RoadRunner with `config
 | `WORKER_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Old job/log cleanup interval |
 | `WORKER_CLEANUP_RETENTION_DAYS` | `30` days | Retention for jobs and job logs |
 | `AUDIT_LOG_RETENTION_DAYS` | `180` days | Retention for audit log entries; `worker-cleanup` prunes them in the same loop |
+| `SIGN_IN_HISTORY_RETENTION_DAYS` | `90` days | Retention for sign-in history; `worker-cleanup` prunes it in the same loop |
 | `EMAIL_VERIFICATION_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Expired verification-code cleanup interval |
 | `PASSWORD_RESET_CLEANUP_INTERVAL_SECONDS` | `3600` seconds | Password-reset cleanup interval |
 | `SOURCE_OAUTH_REFRESH_INTERVAL_SECONDS` | `86400` seconds | Source OAuth maintenance interval |

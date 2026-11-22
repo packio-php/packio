@@ -19,6 +19,11 @@
     failOnPhpunitDeprecation="true"
     failOnRisky="true"
 >
+    <php>
+        <!-- The base suite peaks near 128M (125M on Guzzle 7, 127M on Guzzle 8). -->
+        <ini name="memory_limit" value="256M"/>
+    </php>
+
     <testsuites>
         <testsuite name="unit">
             <directory>./test/Unit</directory>

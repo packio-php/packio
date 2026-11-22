@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "71aed9b8e9012cef3aacb2f730b110f4",
+    "content-hash": "ed111f0c459bc4bb07f13c07d19d94ee",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -7083,22 +7083,22 @@
         },
         {
             "name": "sirix/mezzio-eventdispatcher",
-            "version": "0.1.0",
+            "version": "0.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-eventdispatcher.git",
-                "reference": "3fbad97c469a5e253342aefbde3fe89b8fbc3465"
+                "reference": "dcb97b7d66a847bd9ca13b1776de8994861839ec"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-eventdispatcher/zipball/3fbad97c469a5e253342aefbde3fe89b8fbc3465",
-                "reference": "3fbad97c469a5e253342aefbde3fe89b8fbc3465",
+                "url": "https://api.github.com/repos/sirix777/mezzio-eventdispatcher/zipball/dcb97b7d66a847bd9ca13b1776de8994861839ec",
+                "reference": "dcb97b7d66a847bd9ca13b1776de8994861839ec",
                 "shasum": ""
             },
             "require": {
                 "beberlei/assert": "^3.3",
                 "league/event": "^3.0",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^2.0"
             },
             "require-dev": {
@@ -7107,7 +7107,7 @@
                 "laminas/laminas-servicemanager": "^4.4",
                 "phpstan/phpstan": "^2.1",
                 "phpstan/phpstan-phpunit": "^2.0",
-                "phpunit/phpunit": "^11.5.42"
+                "phpunit/phpunit": "^12.5"
             },
             "suggest": {
                 "laminas/laminas-servicemanager": "Laminas\\ServiceManager component"
@@ -7151,8 +7151,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-27T18:23:41+00:00",
-            "published-time": "2026-08-27T18:28:35+00:00"
+            "time": "2026-11-21T23:07:32+00:00",
+            "published-time": "2026-11-21T23:08:50+00:00"
         },
         {
             "name": "sirix/mezzio-radixrouter",
@@ -7691,24 +7691,24 @@
         },
         {
             "name": "sirix/object-mapper",
-            "version": "0.10.0",
+            "version": "0.11.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/object-mapper.git",
-                "reference": "15689c754efe7b26adfc82e02ec33d6e331d9b69"
+                "reference": "df7bf9071f0217ecf7b7b7bf13d2711f86bb257e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/object-mapper/zipball/15689c754efe7b26adfc82e02ec33d6e331d9b69",
-                "reference": "15689c754efe7b26adfc82e02ec33d6e331d9b69",
+                "url": "https://api.github.com/repos/sirix777/object-mapper/zipball/df7bf9071f0217ecf7b7b7bf13d2711f86bb257e",
+                "reference": "df7bf9071f0217ecf7b7b7bf13d2711f86bb257e",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0"
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
-                "phpunit/phpunit": "^11.5"
+                "phpunit/phpunit": "^12.5"
             },
             "type": "library",
             "extra": {
@@ -7730,7 +7730,7 @@
             "description": "Framework-neutral object-to-object mapper with generated PHP mappers.",
             "support": {
                 "issues": "https://github.com/sirix777/object-mapper/issues",
-                "source": "https://github.com/sirix777/object-mapper/tree/0.10.0"
+                "source": "https://github.com/sirix777/object-mapper/tree/0.11.0"
             },
             "funding": [
                 {
@@ -7742,8 +7742,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-02T11:29:34+00:00",
-            "published-time": "2026-10-02T13:30:24+00:00"
+            "time": "2026-11-21T10:38:33+00:00",
+            "published-time": "2026-11-21T10:40:07+00:00"
         },
         {
             "name": "sirix/redaction",

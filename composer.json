@@ -90,7 +90,7 @@
         "spiral/roadrunner-http": "^4.1",
         "spiral/roadrunner-worker": "^3.6.2",
         "symfony/console": "^8.1.11",
-        "symfony/mailer": "^7.4.19",
+        "symfony/mailer": "^8.1",
         "symfony/mime": "^8.1.10",
         "vlucas/phpdotenv": "^5.8",
         "yiisoft/validator": "^2.6.1",

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Outbound HTTPS requests (Git and OAuth providers, webhooks, dist downloads, S3-compatible storage) now require TLS 1.2 or newer. Self-hosted services that still use TLS 1.0 or 1.1 stop working.
 - PHP and JavaScript dependencies are updated, including Guzzle 8 and Symfony Mailer 8.
+- The scroll-to-top button is now a small pill centred at the top of the page instead of a button in the bottom-right corner.
 
 ### Fixed
 

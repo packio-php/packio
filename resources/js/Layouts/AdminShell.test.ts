@@ -65,11 +65,10 @@ describe("AdminShell", () => {
     expect(jobsLink?.textContent?.trim()).toContain("Jobs");
   });
 
-  it("wires ScrollTopButton to the content scroll container without a content reference", () => {
+  it("wires ScrollTopButton to the content scroll container", () => {
     render(AdminShellHarness, { props: { auth } });
     const stub = screen.getByTestId("scroll-top-button-stub");
 
-    expect(stub.getAttribute("data-reference-selector")).toBe("");
     expect(stub.getAttribute("data-container-class") ?? "").toContain(
       "admin-content-scroll",
     );

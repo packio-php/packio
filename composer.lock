@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "f2f428a0843fc08f300c506abbe289cc",
+    "content-hash": "71aed9b8e9012cef3aacb2f730b110f4",
     "packages": [
         {
             "name": "aws/aws-crt-php",
@@ -224,7 +224,8 @@
                 "issues": "https://github.com/beberlei/assert/issues",
                 "source": "https://github.com/beberlei/assert/tree/v3.3.4"
             },
-            "time": "2026-06-10T19:47:05+00:00"
+            "time": "2026-06-10T19:47:05+00:00",
+            "published-time": "2026-06-10T19:57:42+00:00"
         },
         {
             "name": "brick/math",
@@ -1106,34 +1107,35 @@
         },
         {
             "name": "cycle/annotated",
-            "version": "v4.6.1",
+            "version": "v4.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/cycle/annotated.git",
-                "reference": "47f7e5ea9b3779dd284a9bb4a6cc60fe4dd1d13d"
+                "reference": "7cc8fd14ebed884e1a037dd09159de6ff81a5ce5"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/cycle/annotated/zipball/47f7e5ea9b3779dd284a9bb4a6cc60fe4dd1d13d",
-                "reference": "47f7e5ea9b3779dd284a9bb4a6cc60fe4dd1d13d",
+                "url": "https://api.github.com/repos/cycle/annotated/zipball/7cc8fd14ebed884e1a037dd09159de6ff81a5ce5",
+                "reference": "7cc8fd14ebed884e1a037dd09159de6ff81a5ce5",
                 "shasum": ""
             },
             "require": {
-                "cycle/database": "^2.20",
-                "cycle/orm": "^2.18",
-                "cycle/schema-builder": "^2.12",
+                "cycle/database": "^2.24",
+                "cycle/orm": "^2.19",
+                "cycle/schema-builder": "^2.13",
                 "doctrine/inflector": "^2.1",
-                "php": ">=8.1",
-                "spiral/attributes": "^2.8 || ^3.1",
-                "spiral/tokenizer": "^2.8 || ^3.17"
+                "php": ">=8.2",
+                "spiral/attributes": "^3.1",
+                "spiral/tokenizer": "^3.17"
             },
             "require-dev": {
-                "buggregator/trap": "^1.15",
-                "doctrine/annotations": "^1.14 || ^2.0",
-                "phpunit/phpunit": "^10.5",
-                "spiral/code-style": "^2.3",
-                "spiral/dumper": "^3.3",
-                "vimeo/psalm": "^5.26 || ^6.16"
+                "bamarni/composer-bin-plugin": "^1.8",
+                "buggregator/trap": "^1.20",
+                "cycle/testing": "^0.1.2",
+                "doctrine/annotations": "^2.0.2",
+                "llm/skills": "^1.20",
+                "roxblnfk/unpoly": "^1.8",
+                "testo/testo": "^0.10.60"
             },
             "suggest": {
                 "llm/skills": "To sync the cycle-orm-attributes AI skill into your project"
@@ -1150,6 +1152,11 @@
                             "package": "cycle/skills"
                         }
                     ]
+                },
+                "bamarni-bin": {
+                    "bin-links": true,
+                    "forward-command": false,
+                    "target-directory": "vendor-bin"
                 }
             },
             "autoload": {
@@ -1193,7 +1200,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-29T17:35:56+00:00"
+            "time": "2026-11-21T12:27:38+00:00",
+            "published-time": "2026-11-21T12:27:49+00:00"
         },
         {
             "name": "cycle/database",
@@ -2694,16 +2702,16 @@
         },
         {
             "name": "guzzlehttp/psr7",
-            "version": "2.13.5",
+            "version": "2.13.6",
             "source": {
                 "type": "git",
                 "url": "https://github.com/guzzle/psr7.git",
-                "reference": "5aa00c5418afbe3f435910af0e98cb03d659c49d"
+                "reference": "2bd3dccf56e99cdacf74b1ad5e06a08a5a7739f2"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/guzzle/psr7/zipball/5aa00c5418afbe3f435910af0e98cb03d659c49d",
-                "reference": "5aa00c5418afbe3f435910af0e98cb03d659c49d",
+                "url": "https://api.github.com/repos/guzzle/psr7/zipball/2bd3dccf56e99cdacf74b1ad5e06a08a5a7739f2",
+                "reference": "2bd3dccf56e99cdacf74b1ad5e06a08a5a7739f2",
                 "shasum": ""
             },
             "require": {
@@ -2793,7 +2801,7 @@
             ],
             "support": {
                 "issues": "https://github.com/guzzle/psr7/issues",
-                "source": "https://github.com/guzzle/psr7/tree/2.13.5"
+                "source": "https://github.com/guzzle/psr7/tree/2.13.6"
             },
             "funding": [
                 {
@@ -2809,8 +2817,8 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-11-19T20:34:53+00:00",
-            "published-time": "2026-11-19T20:36:04+00:00"
+            "time": "2026-11-21T23:48:40+00:00",
+            "published-time": "2026-11-21T23:49:39+00:00"
         },
         {
             "name": "jean85/pretty-package-versions",
@@ -5329,7 +5337,8 @@
             "support": {
                 "source": "https://github.com/php-fig/cache/tree/3.0.0"
             },
-            "time": "2021-02-03T23:26:27+00:00"
+            "time": "2021-02-03T23:26:27+00:00",
+            "published-time": "2021-02-03T23:27:34+00:00"
         },
         {
             "name": "psr/clock",
@@ -5863,7 +5872,8 @@
             "support": {
                 "source": "https://github.com/php-fig/simple-cache/tree/3.0.0"
             },
-            "time": "2021-10-29T13:26:27+00:00"
+            "time": "2021-10-29T13:26:27+00:00",
+            "published-time": "2021-10-29T13:27:19+00:00"
         },
         {
             "name": "radebatz/type-info-extras",
@@ -6595,25 +6605,25 @@
         },
         {
             "name": "sirix/container-resolver",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/container-resolver.git",
-                "reference": "eaea0504ad8bbc96752737107e3d1867e0428fc8"
+                "reference": "6108ae42fa9d2ee20f929db2fca0cfd3db0886bb"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/container-resolver/zipball/eaea0504ad8bbc96752737107e3d1867e0428fc8",
-                "reference": "eaea0504ad8bbc96752737107e3d1867e0428fc8",
+                "url": "https://api.github.com/repos/sirix777/container-resolver/zipball/6108ae42fa9d2ee20f929db2fca0cfd3db0886bb",
+                "reference": "6108ae42fa9d2ee20f929db2fca0cfd3db0886bb",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
-                "phpunit/phpunit": "^11.5"
+                "phpunit/phpunit": "^12.5"
             },
             "type": "library",
             "extra": {
@@ -6649,7 +6659,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/container-resolver/issues",
-                "source": "https://github.com/sirix777/container-resolver/tree/1.0.0"
+                "source": "https://github.com/sirix777/container-resolver/tree/1.1.0"
             },
             "funding": [
                 {
@@ -6661,25 +6671,26 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-13T08:22:41+00:00"
+            "time": "2026-11-21T11:35:41+00:00",
+            "published-time": "2026-11-21T11:43:27+00:00"
         },
         {
             "name": "sirix/cycle-orm-extensions",
-            "version": "5.0.0",
+            "version": "5.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/cycle-orm-extensions.git",
-                "reference": "e27e06c35b406a7e4d1c48a2ab096d617077d7cd"
+                "reference": "612de6b85635778b3b629f5c6b3fbf86adcc0ca7"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/cycle-orm-extensions/zipball/e27e06c35b406a7e4d1c48a2ab096d617077d7cd",
-                "reference": "e27e06c35b406a7e4d1c48a2ab096d617077d7cd",
+                "url": "https://api.github.com/repos/sirix777/cycle-orm-extensions/zipball/612de6b85635778b3b629f5c6b3fbf86adcc0ca7",
+                "reference": "612de6b85635778b3b629f5c6b3fbf86adcc0ca7",
                 "shasum": ""
             },
             "require": {
                 "cycle/orm": "^2.10",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "ramsey/uuid": "^4.7"
             },
             "require-dev": {
@@ -6688,7 +6699,7 @@
                 "cakephp/chronos": "^3.1",
                 "cycle/annotated": "^4.2",
                 "cycle/entity-behavior": "^1.4",
-                "phpunit/phpunit": "^10.5",
+                "phpunit/phpunit": "^12.5",
                 "sirix/money": "^2.0.1"
             },
             "suggest": {
@@ -6718,7 +6729,7 @@
             "description": "Practical extensions for Cycle ORM: base repositories, entity traits, typecasts and more",
             "support": {
                 "issues": "https://github.com/sirix777/cycle-orm-extensions/issues",
-                "source": "https://github.com/sirix777/cycle-orm-extensions/tree/5.0.0"
+                "source": "https://github.com/sirix777/cycle-orm-extensions/tree/5.1.0"
             },
             "funding": [
                 {
@@ -6730,27 +6741,28 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-27T13:57:41+00:00"
+            "time": "2026-11-21T16:32:24+00:00",
+            "published-time": "2026-11-21T17:48:41+00:00"
         },
         {
             "name": "sirix/cycle-orm-factory",
-            "version": "5.0.1",
+            "version": "5.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/cycle-orm-factory.git",
-                "reference": "4a1530fb69eaf597a37e630d8c234ea0801930a8"
+                "reference": "ac7b90a1eaf20b8b91d2022aa1d57830c607dc86"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/cycle-orm-factory/zipball/4a1530fb69eaf597a37e630d8c234ea0801930a8",
-                "reference": "4a1530fb69eaf597a37e630d8c234ea0801930a8",
+                "url": "https://api.github.com/repos/sirix777/cycle-orm-factory/zipball/ac7b90a1eaf20b8b91d2022aa1d57830c607dc86",
+                "reference": "ac7b90a1eaf20b8b91d2022aa1d57830c607dc86",
                 "shasum": ""
             },
             "require": {
                 "cycle/annotated": "^4.4",
                 "cycle/database": "^2.15",
                 "cycle/orm": "^2.12.3",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "sirix/container-resolver": "^0.2 || ^1.0",
                 "spiral/tokenizer": "^2.14 || ^3.0"
@@ -6762,8 +6774,7 @@
                 "cycle/schema-migrations-generator": "^2.3",
                 "laminas/laminas-servicemanager": "^3.0 || ^4.0",
                 "mockery/mockery": "^1.6",
-                "phpstan/phpstan-mockery": "^1.1",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "symfony/console": "^7.3"
             },
             "suggest": {
@@ -6805,7 +6816,7 @@
             "description": "Cycle ORM Factories for Mezzio",
             "support": {
                 "issues": "https://github.com/sirix777/cycle-orm-factory/issues",
-                "source": "https://github.com/sirix777/cycle-orm-factory/tree/5.0.1"
+                "source": "https://github.com/sirix777/cycle-orm-factory/tree/5.1.0"
             },
             "funding": [
                 {
@@ -6817,36 +6828,37 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-01T07:12:59+00:00"
+            "time": "2026-11-21T16:23:14+00:00",
+            "published-time": "2026-11-21T16:24:28+00:00"
         },
         {
             "name": "sirix/inertia-psr15",
-            "version": "3.0.0",
+            "version": "3.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/inertia-psr15.git",
-                "reference": "7e05468e7332031282e79c8a41181d39fa0ebf5a"
+                "reference": "58b9fbbdf69643ad842dafa02c79c2027ccaab54"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/inertia-psr15/zipball/7e05468e7332031282e79c8a41181d39fa0ebf5a",
-                "reference": "7e05468e7332031282e79c8a41181d39fa0ebf5a",
+                "url": "https://api.github.com/repos/sirix777/inertia-psr15/zipball/58b9fbbdf69643ad842dafa02c79c2027ccaab54",
+                "reference": "58b9fbbdf69643ad842dafa02c79c2027ccaab54",
                 "shasum": ""
             },
             "require": {
                 "fig/http-message-util": "^1.1",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-factory": "^1.1",
                 "psr/http-server-middleware": "^1.0",
-                "sirix/container-resolver": "^1.0"
+                "sirix/container-resolver": "^1.1"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-diactoros": "^3.6.0",
                 "localheinz/diff": "^1.0",
-                "mezzio/mezzio-template": "^2.11",
-                "phpunit/phpunit": "^10.5 || ^11.5",
+                "mezzio/mezzio-template": "^2.11 || ^3.1",
+                "phpunit/phpunit": "^12.5",
                 "twig/twig": "^3.21"
             },
             "suggest": {
@@ -6885,7 +6897,7 @@
             ],
             "description": "InertiaJS server-side adapter for PSR-7 and PSR-15 applications",
             "support": {
-                "source": "https://github.com/sirix777/inertia-psr15/tree/3.0.0"
+                "source": "https://github.com/sirix777/inertia-psr15/tree/3.1.1"
             },
             "funding": [
                 {
@@ -6897,34 +6909,35 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-18T06:44:40+00:00"
+            "time": "2026-11-21T15:49:55+00:00",
+            "published-time": "2026-11-21T15:50:32+00:00"
         },
         {
             "name": "sirix/inertia-psr15-mezzio-flash",
-            "version": "1.0.0",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/inertia-psr15-mezzio-flash.git",
-                "reference": "b85c40e2a8775dcaa69512f5a2299ca662f7f41a"
+                "reference": "727f5f2def1bc6ab3f582bc3fda998b2e6c61d0b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/inertia-psr15-mezzio-flash/zipball/b85c40e2a8775dcaa69512f5a2299ca662f7f41a",
-                "reference": "b85c40e2a8775dcaa69512f5a2299ca662f7f41a",
+                "url": "https://api.github.com/repos/sirix777/inertia-psr15-mezzio-flash/zipball/727f5f2def1bc6ab3f582bc3fda998b2e6c61d0b",
+                "reference": "727f5f2def1bc6ab3f582bc3fda998b2e6c61d0b",
                 "shasum": ""
             },
             "require": {
                 "mezzio/mezzio-flash": "^1.10",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.1 || ^2.0",
-                "sirix/inertia-psr15": "^3.0"
+                "sirix/inertia-psr15": "^3.1"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-diactoros": "^3.6.0",
                 "mezzio/mezzio-session": "^1.0",
-                "phpunit/phpunit": "^10.5 || ^11.5"
+                "phpunit/phpunit": "^12.5"
             },
             "type": "library",
             "extra": {
@@ -6961,7 +6974,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/inertia-psr15-mezzio-flash/issues",
-                "source": "https://github.com/sirix777/inertia-psr15-mezzio-flash/tree/1.0.0"
+                "source": "https://github.com/sirix777/inertia-psr15-mezzio-flash/tree/1.1.0"
             },
             "funding": [
                 {
@@ -6973,24 +6986,25 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-18T06:47:16+00:00"
+            "time": "2026-11-21T15:44:07+00:00",
+            "published-time": "2026-11-21T15:44:56+00:00"
         },
         {
             "name": "sirix/mezzio-authentication",
-            "version": "2.1.0",
+            "version": "2.2.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-authentication.git",
-                "reference": "53e2ea6dcb3959ca1e041f290d45b957a76c7077"
+                "reference": "6bd2d22c7a487b57e65dccf63c6aa571c632244b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-authentication/zipball/53e2ea6dcb3959ca1e041f290d45b957a76c7077",
-                "reference": "53e2ea6dcb3959ca1e041f290d45b957a76c7077",
+                "url": "https://api.github.com/repos/sirix777/mezzio-authentication/zipball/6bd2d22c7a487b57e65dccf63c6aa571c632244b",
+                "reference": "6bd2d22c7a487b57e65dccf63c6aa571c632244b",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.1 || ^2.0",
                 "psr/http-server-handler": "^1.0",
@@ -7002,9 +7016,9 @@
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-diactoros": "^3.8",
                 "laminas/laminas-servicemanager": "^3.23",
-                "mezzio/mezzio-router": "^3.15 || ^4.1",
+                "mezzio/mezzio-router": "^3.17 || ^4.1",
                 "mezzio/mezzio-session": "^1.17",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "sirix/mezzio-routing-attributes": "^1.3"
             },
             "suggest": {
@@ -7052,7 +7066,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-authentication/issues",
-                "source": "https://github.com/sirix777/mezzio-authentication/tree/2.1.0"
+                "source": "https://github.com/sirix777/mezzio-authentication/tree/2.2.1"
             },
             "funding": [
                 {
@@ -7064,7 +7078,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-18T13:00:27+00:00"
+            "time": "2026-11-21T22:28:19+00:00",
+            "published-time": "2026-11-21T22:28:32+00:00"
         },
         {
             "name": "sirix/mezzio-eventdispatcher",
@@ -7136,26 +7151,27 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-27T18:23:41+00:00"
+            "time": "2026-08-27T18:23:41+00:00",
+            "published-time": "2026-08-27T18:28:35+00:00"
         },
         {
             "name": "sirix/mezzio-radixrouter",
-            "version": "4.0.0",
+            "version": "4.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-radixrouter.git",
-                "reference": "c0d230e81b1818014b986d0192de120378c5dc95"
+                "reference": "99595fbf6dc2807d179c76fa92777b62eed6ea4d"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-radixrouter/zipball/c0d230e81b1818014b986d0192de120378c5dc95",
-                "reference": "c0d230e81b1818014b986d0192de120378c5dc95",
+                "url": "https://api.github.com/repos/sirix777/mezzio-radixrouter/zipball/99595fbf6dc2807d179c76fa92777b62eed6ea4d",
+                "reference": "99595fbf6dc2807d179c76fa92777b62eed6ea4d",
                 "shasum": ""
             },
             "require": {
                 "fig/http-message-util": "^1.1.5",
                 "mezzio/mezzio-router": "^3.20 || ^4.1",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.0.1 || ^2.0.0",
                 "wilaak/radix-router": "^3.7.1"
@@ -7210,7 +7226,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-radixrouter/issues",
-                "source": "https://github.com/sirix777/mezzio-radixrouter/tree/4.0.0"
+                "source": "https://github.com/sirix777/mezzio-radixrouter/tree/4.1.0"
             },
             "funding": [
                 {
@@ -7222,25 +7238,26 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-16T13:16:57+00:00"
+            "time": "2026-11-21T11:09:42+00:00",
+            "published-time": "2026-11-21T11:11:27+00:00"
         },
         {
             "name": "sirix/mezzio-rbac",
-            "version": "2.0.0",
+            "version": "2.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-rbac.git",
-                "reference": "70cea396755d821f6d92946badf6ccfc55fda3da"
+                "reference": "7f492d7b5b904340c1c72c3bb596137b591a6481"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-rbac/zipball/70cea396755d821f6d92946badf6ccfc55fda3da",
-                "reference": "70cea396755d821f6d92946badf6ccfc55fda3da",
+                "url": "https://api.github.com/repos/sirix777/mezzio-rbac/zipball/7f492d7b5b904340c1c72c3bb596137b591a6481",
+                "reference": "7f492d7b5b904340c1c72c3bb596137b591a6481",
                 "shasum": ""
             },
             "require": {
-                "mezzio/mezzio-router": "^3.15 || ^4.1",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "mezzio/mezzio-router": "^3.17 || ^4.1",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.1 || ^2.0",
                 "psr/http-server-handler": "^1.0",
@@ -7251,7 +7268,7 @@
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-servicemanager": "^3.23",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "sirix/mezzio-routing-attributes": "^1.0"
             },
             "suggest": {
@@ -7298,7 +7315,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-rbac/issues",
-                "source": "https://github.com/sirix777/mezzio-rbac/tree/2.0.0"
+                "source": "https://github.com/sirix777/mezzio-rbac/tree/2.1.0"
             },
             "funding": [
                 {
@@ -7310,26 +7327,27 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-13T11:24:10+00:00"
+            "time": "2026-11-21T22:39:46+00:00",
+            "published-time": "2026-11-21T22:39:59+00:00"
         },
         {
             "name": "sirix/mezzio-routing-attributes",
-            "version": "1.4.3",
+            "version": "1.5.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-routing-attributes.git",
-                "reference": "5f8dff939cbb26e662d151fa66b2851f31b166f2"
+                "reference": "e78693cf6d35651049cd2318ef9274d1a23775d0"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-routing-attributes/zipball/5f8dff939cbb26e662d151fa66b2851f31b166f2",
-                "reference": "5f8dff939cbb26e662d151fa66b2851f31b166f2",
+                "url": "https://api.github.com/repos/sirix777/mezzio-routing-attributes/zipball/e78693cf6d35651049cd2318ef9274d1a23775d0",
+                "reference": "e78693cf6d35651049cd2318ef9274d1a23775d0",
                 "shasum": ""
             },
             "require": {
                 "ext-tokenizer": "*",
                 "mezzio/mezzio-router": "^3.15 || ^4.1",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-message": "^1.1 || ^2.0",
                 "psr/http-server-handler": "^1.0",
@@ -7341,9 +7359,9 @@
                 "laminas/laminas-cli": "^1.15",
                 "laminas/laminas-diactoros": "^3.8",
                 "laminas/laminas-servicemanager": "^3.23",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "psr/log": "^1.1 || ^2.0 || ^3.0",
-                "sirix/mezzio-radixrouter": "^3.2.3",
+                "sirix/mezzio-radixrouter": "^3.2.3 || ^4.1",
                 "symfony/console": "^6.4 || ^7.0"
             },
             "suggest": {
@@ -7394,7 +7412,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-routing-attributes/issues",
-                "source": "https://github.com/sirix777/mezzio-routing-attributes/tree/1.4.3"
+                "source": "https://github.com/sirix777/mezzio-routing-attributes/tree/1.5.0"
             },
             "funding": [
                 {
@@ -7406,30 +7424,31 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-14T14:29:23+00:00"
+            "time": "2026-11-21T20:13:04+00:00",
+            "published-time": "2026-11-21T20:13:11+00:00"
         },
         {
             "name": "sirix/mezzio-routing-contracts",
-            "version": "1.2.2",
+            "version": "1.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-routing-contracts.git",
-                "reference": "3cef67ff27a51253e1d22af3d1dd7b9695b14468"
+                "reference": "1db2ff9fd4fea30fe538fde92b09eb78b15c6735"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-routing-contracts/zipball/3cef67ff27a51253e1d22af3d1dd7b9695b14468",
-                "reference": "3cef67ff27a51253e1d22af3d1dd7b9695b14468",
+                "url": "https://api.github.com/repos/sirix777/mezzio-routing-contracts/zipball/1db2ff9fd4fea30fe538fde92b09eb78b15c6735",
+                "reference": "1db2ff9fd4fea30fe538fde92b09eb78b15c6735",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-server-middleware": "^1.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "psr/http-message": "^1.0 || ^2.0",
                 "psr/http-server-handler": "^1.0"
             },
@@ -7459,7 +7478,7 @@
             "description": "Contracts for sirix/mezzio-routing-attributes route attribute modifiers",
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-routing-contracts/issues",
-                "source": "https://github.com/sirix777/mezzio-routing-contracts/tree/1.2.2"
+                "source": "https://github.com/sirix777/mezzio-routing-contracts/tree/1.3.0"
             },
             "funding": [
                 {
@@ -7471,27 +7490,28 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-09-12T09:46:04+00:00"
+            "time": "2026-11-21T18:56:23+00:00",
+            "published-time": "2026-11-21T18:56:38+00:00"
         },
         {
             "name": "sirix/mezzio-valinor-request-mapper",
-            "version": "4.0.0",
+            "version": "4.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/mezzio-valinor-request-mapper.git",
-                "reference": "30571a83bd8136ef65e4a84d9b70c26b11a825f8"
+                "reference": "6abf13bf33530b5d90a9c35614e5581eb18a4e04"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/mezzio-valinor-request-mapper/zipball/30571a83bd8136ef65e4a84d9b70c26b11a825f8",
-                "reference": "30571a83bd8136ef65e4a84d9b70c26b11a825f8",
+                "url": "https://api.github.com/repos/sirix777/mezzio-valinor-request-mapper/zipball/6abf13bf33530b5d90a9c35614e5581eb18a4e04",
+                "reference": "6abf13bf33530b5d90a9c35614e5581eb18a4e04",
                 "shasum": ""
             },
             "require": {
                 "cuyz/valinor": "^2.4",
                 "fig/http-message-util": "^1.1",
-                "mezzio/mezzio-router": "^3.15 || ^4.1",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "mezzio/mezzio-router": "^3.17 || ^4.1",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0",
                 "psr/http-factory": "^1.0",
                 "psr/http-message": "^1.0 || ^2.0",
@@ -7509,7 +7529,7 @@
                 "laminas/laminas-stratigility": "^4.3",
                 "mezzio/mezzio": "^3.20",
                 "nyholm/psr7": "^1.8",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "sirix/mezzio-routing-attributes": "^1.4"
             },
             "suggest": {
@@ -7555,7 +7575,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/mezzio-valinor-request-mapper/issues",
-                "source": "https://github.com/sirix777/mezzio-valinor-request-mapper/tree/4.0.0"
+                "source": "https://github.com/sirix777/mezzio-valinor-request-mapper/tree/4.1.0"
             },
             "funding": [
                 {
@@ -7567,25 +7587,26 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-07T11:39:34+00:00"
+            "time": "2026-11-21T20:36:17+00:00",
+            "published-time": "2026-11-21T20:36:32+00:00"
         },
         {
             "name": "sirix/monolog",
-            "version": "2.0.3",
+            "version": "2.1.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/sirix-monolog.git",
-                "reference": "b51d264b49b183f6b057f486ff1f16c0b4763e65"
+                "reference": "b4350c9bba2df7bc2678a0d37d9a6ce854459903"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/sirix-monolog/zipball/b51d264b49b183f6b057f486ff1f16c0b4763e65",
-                "reference": "b51d264b49b183f6b057f486ff1f16c0b4763e65",
+                "url": "https://api.github.com/repos/sirix777/sirix-monolog/zipball/b4350c9bba2df7bc2678a0d37d9a6ce854459903",
+                "reference": "b4350c9bba2df7bc2678a0d37d9a6ce854459903",
                 "shasum": ""
             },
             "require": {
                 "monolog/monolog": "^3.10",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0.2",
                 "psr/log": "^2.0 || ^3.0.2",
                 "sirix/container-resolver": "^1.0"
@@ -7593,11 +7614,11 @@
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.9.1",
                 "ext-json": "*",
-                "graylog2/gelf-php": "^2.0.0-beta.1",
+                "graylog2/gelf-php": "^2.0.2",
                 "mongodb/mongodb": "^2.1.2",
-                "phpunit/phpunit": "^11.5.56",
+                "phpunit/phpunit": "^12.5",
                 "ruflin/elastica": "^7.3.2",
-                "sirix/redaction": "^2.1.2"
+                "sirix/redaction": "^2.2"
             },
             "suggest": {
                 "aws/aws-sdk-php": "Required when using the dynamo_db or sqs handlers",
@@ -7653,7 +7674,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/sirix-monolog/issues",
-                "source": "https://github.com/sirix777/sirix-monolog/tree/2.0.3"
+                "source": "https://github.com/sirix777/sirix-monolog/tree/2.1.1"
             },
             "funding": [
                 {
@@ -7665,7 +7686,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-13T19:38:14+00:00"
+            "time": "2026-11-21T15:09:02+00:00",
+            "published-time": "2026-11-21T15:10:14+00:00"
         },
         {
             "name": "sirix/object-mapper",
@@ -7720,32 +7742,33 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-10-02T11:29:34+00:00"
+            "time": "2026-10-02T11:29:34+00:00",
+            "published-time": "2026-10-02T13:30:24+00:00"
         },
         {
             "name": "sirix/redaction",
-            "version": "2.1.2",
+            "version": "2.2.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/redaction.git",
-                "reference": "ce8ad1f9875201d0aa107d9cae7cb9c7c1735a86"
+                "reference": "d9a64e8644d243d8eead74cb7501fa71b2c2697c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/redaction/zipball/ce8ad1f9875201d0aa107d9cae7cb9c7c1735a86",
-                "reference": "ce8ad1f9875201d0aa107d9cae7cb9c7c1735a86",
+                "url": "https://api.github.com/repos/sirix777/redaction/zipball/d9a64e8644d243d8eead74cb7501fa71b2c2697c",
+                "reference": "d9a64e8644d243d8eead74cb7501fa71b2c2697c",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.0 || ^2.0.2",
                 "sirix/container-resolver": "^1.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.9.1",
-                "monolog/monolog": "^3.10",
+                "monolog/monolog": "^3.13",
                 "phpbench/phpbench": "^1.7.0",
-                "phpunit/phpunit": "^11.5.56"
+                "phpunit/phpunit": "^12.5.45"
             },
             "suggest": {
                 "ext-intl": "Install to use UnicodeStartEndRule for grapheme-aware masking.",
@@ -7795,7 +7818,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/redaction/issues",
-                "source": "https://github.com/sirix777/redaction/tree/2.1.2"
+                "source": "https://github.com/sirix777/redaction/tree/2.2.0"
             },
             "funding": [
                 {
@@ -7807,24 +7830,25 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-08-13T19:11:20+00:00"
+            "time": "2026-11-21T11:47:04+00:00",
+            "published-time": "2026-11-21T11:47:53+00:00"
         },
         {
             "name": "sirix/sentry-psr",
-            "version": "2.2.0",
+            "version": "2.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/sentry-psr.git",
-                "reference": "e80ef6177fd11fdc7626cf296317e988f2e6aeea"
+                "reference": "fb2d03db486c92703dd5b2e5a2dcf7707eb9206f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/sentry-psr/zipball/e80ef6177fd11fdc7626cf296317e988f2e6aeea",
-                "reference": "e80ef6177fd11fdc7626cf296317e988f2e6aeea",
+                "url": "https://api.github.com/repos/sirix777/sentry-psr/zipball/fb2d03db486c92703dd5b2e5a2dcf7707eb9206f",
+                "reference": "fb2d03db486c92703dd5b2e5a2dcf7707eb9206f",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "psr/container": "^1.1 || ^2.0",
                 "psr/http-message": "^1.0 || ^2.0",
                 "psr/http-server-handler": "^1.0",
@@ -7838,7 +7862,7 @@
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-cli": "^1.13",
                 "monolog/monolog": "^3.10",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "psr/event-dispatcher": "^1.0",
                 "symfony/console": "^7.4",
                 "symfony/event-dispatcher": "^7.4"
@@ -7871,7 +7895,7 @@
             "license": [
                 "MIT"
             ],
-            "description": "PSR-compatible integration for Sentry — provides middleware for HTTP and error listener for console commands.",
+            "description": "PSR-compatible integration for Sentry - provides middleware for HTTP and error listener for console commands.",
             "homepage": "https://github.com/sirix777/sentry-psr",
             "keywords": [
                 "PSR-11",
@@ -7887,7 +7911,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/sentry-psr/issues",
-                "source": "https://github.com/sirix777/sentry-psr/tree/2.2.0"
+                "source": "https://github.com/sirix777/sentry-psr/tree/2.3.0"
             },
             "funding": [
                 {
@@ -7899,32 +7923,33 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-11-07T13:06:52+00:00"
+            "time": "2026-11-21T11:55:55+00:00",
+            "published-time": "2026-11-21T11:56:57+00:00"
         },
         {
             "name": "sirix/sirix-config",
-            "version": "3.0.0",
+            "version": "3.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/sirix-config.git",
-                "reference": "8855a750a84e4a0f120922e244290e128c7fcb43"
+                "reference": "32b838f6a6cbd72be939d8d205f198f140750c17"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/sirix-config/zipball/8855a750a84e4a0f120922e244290e128c7fcb43",
-                "reference": "8855a750a84e4a0f120922e244290e128c7fcb43",
+                "url": "https://api.github.com/repos/sirix777/sirix-config/zipball/32b838f6a6cbd72be939d8d205f198f140750c17",
+                "reference": "32b838f6a6cbd72be939d8d205f198f140750c17",
                 "shasum": ""
             },
             "require": {
                 "cuyz/valinor": "^2.3",
                 "laminas/laminas-servicemanager": "^3.22 || ^4.2",
                 "laminas/laminas-stdlib": "^3.20",
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0"
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
                 "devster/ubench": "^2.1",
-                "phpunit/phpunit": "^11.5",
+                "phpunit/phpunit": "^12.5",
                 "psr/simple-cache": "^2.0",
                 "roave/security-advisories": "dev-master",
                 "symfony/var-dumper": "^6.3"
@@ -7971,7 +7996,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/sirix-config/issues",
-                "source": "https://github.com/sirix777/sirix-config/tree/3.0.0"
+                "source": "https://github.com/sirix777/sirix-config/tree/3.1.0"
             },
             "funding": [
                 {
@@ -7983,32 +8008,32 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-10T08:38:07+00:00"
+            "time": "2026-11-21T18:09:55+00:00",
+            "published-time": "2026-11-21T18:10:52+00:00"
         },
         {
             "name": "sirix/twig-vite-extension",
-            "version": "1.0.1",
+            "version": "1.1.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sirix777/twig-vite-extension.git",
-                "reference": "2258ee9984fb9443ec45ad3246f54714ec1e684f"
+                "reference": "aebe889fc4c340b8d69a284926bc2ced630a5c7f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sirix777/twig-vite-extension/zipball/2258ee9984fb9443ec45ad3246f54714ec1e684f",
-                "reference": "2258ee9984fb9443ec45ad3246f54714ec1e684f",
+                "url": "https://api.github.com/repos/sirix777/twig-vite-extension/zipball/aebe889fc4c340b8d69a284926bc2ced630a5c7f",
+                "reference": "aebe889fc4c340b8d69a284926bc2ced630a5c7f",
                 "shasum": ""
             },
             "require": {
-                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0 || ~8.6.0",
                 "sirix/sirix-config": "^3.0"
             },
             "require-dev": {
                 "bamarni/composer-bin-plugin": "^1.8",
                 "laminas/laminas-diactoros": "^3.6.0",
                 "localheinz/diff": "^1.0",
-                "mezzio/mezzio-template": "^2.11",
-                "phpunit/phpunit": "^10.5 || ^11.5",
+                "phpunit/phpunit": "^12.5",
                 "psr/container": "^1.0 || ^2.0",
                 "twig/twig": "^3.21"
             },
@@ -8046,7 +8071,7 @@
             ],
             "support": {
                 "issues": "https://github.com/sirix777/twig-vite-extension/issues",
-                "source": "https://github.com/sirix777/twig-vite-extension/tree/1.0.1"
+                "source": "https://github.com/sirix777/twig-vite-extension/tree/1.1.0"
             },
             "funding": [
                 {
@@ -8058,7 +8083,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2026-05-11T17:56:21+00:00"
+            "time": "2026-11-21T18:24:43+00:00",
+            "published-time": "2026-11-21T18:25:40+00:00"
         },
         {
             "name": "spiral/attributes",
@@ -8140,7 +8166,8 @@
                     "type": "github"
                 }
             ],
-            "time": "2024-12-09T15:33:18+00:00"
+            "time": "2024-12-09T15:33:18+00:00",
+            "published-time": "2024-12-09T15:52:31+00:00"
         },
         {
             "name": "spiral/core",
@@ -11476,7 +11503,8 @@
                 "issues": "https://github.com/wilaak/radix-router/issues",
                 "source": "https://github.com/wilaak/radix-router"
             },
-            "time": "2026-10-08T09:44:16+00:00"
+            "time": "2026-10-08T09:44:16+00:00",
+            "published-time": "2026-10-08T09:44:59+00:00"
         },
         {
             "name": "yiisoft/arrays",

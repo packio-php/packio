@@ -121,6 +121,7 @@ use Packio\Identity\Infrastructure\Persistence\Cycle\UserRepository;
 use Packio\Identity\Infrastructure\Persistence\Cycle\UserSignInRepository;
 use Packio\Identity\Infrastructure\Support\OAuthCallbackStateValidator;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Packio\Organization\Api\Policy\OrganizationPolicy;
 use Packio\Source\Api\SourceApiFacadeInterface;
@@ -175,6 +176,7 @@ return [
             VerificationDispatch::class                             => ConfigAbstractFactory::class,
             BrowserOAuthWorkflow::class                             => ConfigAbstractFactory::class,
             OAuthOutcomePresenter::class                            => ConfigAbstractFactory::class,
+            SignInRecorder::class                                   => ConfigAbstractFactory::class,
             // --- Repositories ---
             ApiAccessTokenRepository::class                         => RepositoryFactory::class,
             UserRepository::class                                   => RepositoryFactory::class,
@@ -275,7 +277,8 @@ return [
         OAuthContinuationWorkflow::class                        => [OAuthCallbackUseCase::class, UserRepositoryInterface::class, EmailVerificationService::class, VerificationDispatch::class, OAuthCallbackTransaction::class],
         VerificationDispatch::class                             => [EventDispatcherInterface::class, LoggerInterface::class],
         BrowserOAuthWorkflow::class                             => [OAuthProviderInterface::class, OAuthCallbackUseCase::class],
-        OAuthOutcomePresenter::class                            => [AuthManagerInterface::class, OAuthSessionContext::class, PendingEmailVerificationSession::class, InertiaNotificationMessenger::class, IdentityQueryService::class],
+        SignInRecorder::class                                   => [UserSignInRepositoryInterface::class, ClientIpResolverInterface::class, LoggerInterface::class],
+        OAuthOutcomePresenter::class                            => [AuthManagerInterface::class, OAuthSessionContext::class, PendingEmailVerificationSession::class, InertiaNotificationMessenger::class, IdentityQueryService::class, SignInRecorder::class],
         // --- Domain services ---
         ApiAccessTokenHasher::class                             => [
             'config.security.secret_encryption_key',
@@ -446,6 +449,7 @@ return [
             PendingEmailVerificationSession::class,
             ValidationRedirectState::class,
             OAuthSessionContext::class,
+            SignInRecorder::class,
         ],
         RegisterHandler::class                                  => [
             RegistrationWorkflow::class,

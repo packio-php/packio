@@ -19,6 +19,7 @@ use Packio\Identity\Application\Query\IdentityQueryService;
 use Packio\Identity\Application\Result\SignInStatus;
 use Packio\Identity\Infrastructure\Request\LoginRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -57,6 +58,7 @@ final readonly class LoginHandler implements RequestHandlerInterface
         private PendingEmailVerificationSession $pendingEmailVerificationSession,
         private ValidationRedirectState $validationRedirectState,
         private OAuthSessionContext $oAuthSessionContext,
+        private SignInRecorder $signInRecorder,
     ) {}
 
     /**
@@ -99,7 +101,7 @@ final readonly class LoginHandler implements RequestHandlerInterface
         }
 
         if (SignInStatus::Banned === $signInResult->status) {
-            return $this->authManager->login(
+            $response = $this->authManager->login(
                 $request,
                 new RedirectResponse('/account/banned'),
                 [
@@ -107,6 +109,9 @@ final readonly class LoginHandler implements RequestHandlerInterface
                     'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
                 ],
             );
+            $this->signInRecorder->record($request, $signInResult->userId, SignInRecorder::METHOD_PASSWORD);
+
+            return $response;
         }
 
         // Email not verified - redirect to verification
@@ -119,7 +124,7 @@ final readonly class LoginHandler implements RequestHandlerInterface
             return new RedirectResponse('/auth/verification');
         }
 
-        return $this->authManager->login(
+        $response = $this->authManager->login(
             $request,
             new RedirectResponse('' !== $redirectTo ? $redirectTo : '/organizations'),
             [
@@ -127,5 +132,8 @@ final readonly class LoginHandler implements RequestHandlerInterface
                 'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
             ],
         );
+        $this->signInRecorder->record($request, $signInResult->userId, SignInRecorder::METHOD_PASSWORD);
+
+        return $response;
     }
 }

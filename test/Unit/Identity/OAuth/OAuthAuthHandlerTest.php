@@ -10,6 +10,7 @@ use Laminas\Diactoros\Response\RedirectResponse;
 use Laminas\Diactoros\ServerRequest;
 use Mezzio\Session\SessionInterface;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Security\Http\ClientIpResolverInterface;
 use Packio\Application\Security\Session\PendingEmailVerificationSession;
 use Packio\Application\Service\SafeRedirectTarget;
 use Packio\Identity\Api\OAuthApiFacadeInterface;
@@ -32,8 +33,10 @@ use Packio\Identity\Infrastructure\Handler\OAuthRedirectHandler;
 use Packio\Identity\Infrastructure\OAuth\OAuthProviderAvailabilityResolver;
 use Packio\Identity\Infrastructure\Support\OAuthCallbackStateValidator;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use PackioTest\Support\Fake\FallbackAvailabilityCollaborators;
 use PackioTest\Support\Fake\InMemorySession;
+use PackioTest\Support\Fake\RecordingUserSignInRepository;
 use PackioTest\Support\Fake\SecretEncryptorStub;
 use PackioTest\Unit\Application\Middleware\TestInertia;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -43,6 +46,7 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
+use Psr\Log\LoggerInterface;
 use RuntimeException;
 use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
@@ -70,6 +74,7 @@ final class OAuthAuthHandlerTest extends TestCase
     private TestInertia $testInertia;
     private OAuthCallbackHandler $oAuthCallbackHandler;
     private OAuthRedirectHandler $oAuthRedirectHandler;
+    private RecordingUserSignInRepository $signIns;
 
     protected function setUp(): void
     {
@@ -81,6 +86,7 @@ final class OAuthAuthHandlerTest extends TestCase
         $this->oAuthCallbackStateValidator        = new OAuthCallbackStateValidator();
         $this->safeRedirectTarget                 = new SafeRedirectTarget();
         $this->testInertia                        = new TestInertia();
+        $this->signIns                            = new RecordingUserSignInRepository();
 
         $config = [
             'github'    => [
@@ -105,7 +111,7 @@ final class OAuthAuthHandlerTest extends TestCase
 
         $this->oAuthCallbackHandler = new OAuthCallbackHandler(
             $this->workflow,
-            new OAuthOutcomePresenter($this->authManager, $this->oAuthSessionContext, new PendingEmailVerificationSession(), $this->inertiaNotificationMessenger, $this->identityQueryService()),
+            new OAuthOutcomePresenter($this->authManager, $this->oAuthSessionContext, new PendingEmailVerificationSession(), $this->inertiaNotificationMessenger, $this->identityQueryService(), $this->signInRecorder()),
             $this->oAuthSessionContext,
             $this->oAuthCallbackStateValidator,
             $this->oAuthProviderAvailabilityResolver,
@@ -459,6 +465,9 @@ final class OAuthAuthHandlerTest extends TestCase
         self::assertInstanceOf(RedirectResponse::class, $response);
         self::assertSame(302, $response->getStatusCode());
         self::assertSame('/organizations', $response->getHeaderLine('Location'));
+        self::assertCount(1, $this->signIns->saved);
+        self::assertSame('user-123', $this->signIns->saved[0]->userUuid());
+        self::assertSame('github', $this->signIns->saved[0]->method());
         // State should be cleared after successful callback
         self::assertEmpty($inMemorySession->get('oauth_state', ''));
     }
@@ -500,6 +509,8 @@ final class OAuthAuthHandlerTest extends TestCase
         $response = $this->oAuthCallbackHandler->handle($serverRequest);
 
         self::assertSame('/account/banned', $response->getHeaderLine('Location'));
+        self::assertCount(1, $this->signIns->saved);
+        self::assertSame('github', $this->signIns->saved[0]->method());
     }
 
     #[Test]
@@ -677,6 +688,11 @@ final class OAuthAuthHandlerTest extends TestCase
             ->withAttribute(SessionInterface::class, $session)
             ->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $this->testInertia)
         ;
+    }
+
+    private function signInRecorder(): SignInRecorder
+    {
+        return new SignInRecorder($this->signIns, $this->createStub(ClientIpResolverInterface::class), $this->createStub(LoggerInterface::class));
     }
 
     private function identityQueryService(): IdentityQueryService

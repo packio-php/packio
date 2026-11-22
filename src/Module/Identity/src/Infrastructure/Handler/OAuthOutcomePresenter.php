@@ -13,6 +13,7 @@ use Packio\Identity\Application\Result\OAuthCallbackResult;
 use Packio\Identity\Application\Result\OAuthCallbackStatus;
 use Packio\Identity\Infrastructure\Dto\PendingOAuthEmailContext;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
@@ -25,12 +26,14 @@ final readonly class OAuthOutcomePresenter
         private PendingEmailVerificationSession $pendingEmailVerificationSession,
         private InertiaNotificationMessenger $inertiaNotificationMessenger,
         private IdentityQueryService $identityQueryService,
+        private SignInRecorder $signInRecorder,
     ) {}
 
     public function present(
         ServerRequestInterface $serverRequest,
         OAuthCallbackResult $oAuthCallbackResult,
-        string $redirectTo
+        string $redirectTo,
+        string $signInMethod,
     ): ResponseInterface {
         $session = $serverRequest->getAttribute('session');
         if (OAuthCallbackStatus::EmailRequired === $oAuthCallbackResult->status && $oAuthCallbackResult->pendingOAuth instanceof ResolveOAuthCallbackCommand) {
@@ -58,10 +61,13 @@ final readonly class OAuthOutcomePresenter
                 $this->pendingEmailVerificationSession->clear($session);
             }
 
-            return $this->authManager->login($serverRequest, new RedirectResponse(OAuthCallbackStatus::Banned === $oAuthCallbackResult->status ? '/account/banned' : ($redirectTo ?: '/organizations')), [
+            $response = $this->authManager->login($serverRequest, new RedirectResponse(OAuthCallbackStatus::Banned === $oAuthCallbackResult->status ? '/account/banned' : ($redirectTo ?: '/organizations')), [
                 'user_id'                 => $oAuthCallbackResult->userId,
                 'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($oAuthCallbackResult->userId),
             ]);
+            $this->signInRecorder->record($serverRequest, $oAuthCallbackResult->userId, $signInMethod);
+
+            return $response;
         }
 
         if (OAuthCallbackStatus::SessionExpired === $oAuthCallbackResult->status) {

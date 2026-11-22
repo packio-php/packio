@@ -25,6 +25,8 @@ use Packio\Identity\Domain\Repository\UserRepositoryInterface;
 use Packio\Identity\Infrastructure\Handler\LoginHandler;
 use Packio\Identity\Infrastructure\Request\LoginRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
+use PackioTest\Support\Fake\RecordingUserSignInRepository;
 use PackioTest\Support\Fake\SecretEncryptorStub;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -64,6 +66,7 @@ final class LoginHandlerTest extends TestCase
             ))
         ;
 
+        $signIns             = new RecordingUserSignInRepository();
         $authManager         = $this->createMock(AuthManagerInterface::class);
         $redirectResponse    = new RedirectResponse('/response-from-auth-manager');
         $authManager->expects(self::once())
@@ -84,9 +87,85 @@ final class LoginHandlerTest extends TestCase
             new PendingEmailVerificationSession(),
             new ValidationRedirectState(),
             new OAuthSessionContext(new SecretEncryptorStub()),
+            $this->signInRecorder($signIns),
         );
 
         self::assertSame($redirectResponse, $loginHandler->handle($request));
+        self::assertCount(1, $signIns->saved);
+        self::assertSame('user-uuid', $signIns->saved[0]->userUuid());
+        self::assertSame('password', $signIns->saved[0]->method());
+    }
+
+    #[Test]
+    public function bannedUserLoginRecordsOneSignIn(): void
+    {
+        $signIns = new RecordingUserSignInRepository();
+
+        $this->handler($this->signInResult(isBanned: true), $signIns, true)->handle($this->request());
+
+        self::assertCount(1, $signIns->saved);
+        self::assertSame('password', $signIns->saved[0]->method());
+    }
+
+    #[Test]
+    public function verificationRequiredLoginRecordsNothing(): void
+    {
+        $signIns = new RecordingUserSignInRepository();
+
+        $this->handler($this->signInResult(isEmailVerified: false), $signIns, false)->handle($this->request());
+
+        self::assertSame([], $signIns->saved);
+    }
+
+    private function request(): ServerRequest
+    {
+        return new ServerRequest()->withAttribute(LoginRequest::class, new LoginRequest(
+            email: 'user@example.com',
+            password: 'Password1!',
+            redirectTo: '',
+        ));
+    }
+
+    private function signInResult(bool $isBanned = false, bool $isEmailVerified = true): IdentityUserResult
+    {
+        return new IdentityUserResult(
+            id: 'user-uuid',
+            email: 'user@example.com',
+            displayName: 'User',
+            roles: ['user'],
+            createdAt: '2026-08-13T00:00:00+00:00',
+            updatedAt: '',
+            hasPassword: true,
+            isEmailVerified: $isEmailVerified,
+            isBanned: $isBanned,
+        );
+    }
+
+    private function handler(IdentityUserResult $user, RecordingUserSignInRepository $signIns, bool $expectLogin): LoginHandler
+    {
+        $identityApi = $this->createStub(IdentityCredentialsInterface::class);
+        $identityApi->method('authenticateCredentials')->willReturn($user);
+        $authManager = $this->createMock(AuthManagerInterface::class);
+        $authManager->expects($expectLogin ? self::once() : self::never())->method('login')
+            ->willReturn(new RedirectResponse('/x'))
+        ;
+
+        return new LoginHandler(
+            new SignInWorkflow($identityApi, new VerificationDispatch($this->createStub(EventDispatcherInterface::class), $this->createStub(LoggerInterface::class))),
+            $authManager,
+            new SafeRedirectTarget(),
+            $this->disabledTurnstileGuard(),
+            $this->identityQueryService(),
+            new PendingEmailVerificationSession(),
+            new ValidationRedirectState(),
+            new OAuthSessionContext(new SecretEncryptorStub()),
+            $this->signInRecorder($signIns),
+        );
+    }
+
+    private function signInRecorder(RecordingUserSignInRepository $signIns): SignInRecorder
+    {
+        return new SignInRecorder($signIns, $this->createStub(ClientIpResolverInterface::class), $this->createStub(LoggerInterface::class));
     }
 
     private function disabledTurnstileGuard(): TurnstileRequestGuard

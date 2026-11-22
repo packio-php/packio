@@ -236,7 +236,7 @@ final class SourceSecretResolverTest extends TestCase
         $providerAuthorization->method('sourceOAuthAccountId')->willReturn($sourceOAuthAccountId);
         $providerAuthorization->method('provider')->willReturn('github');
         $providerAuthorization->method('organizationId')->willReturn('org-1');
-        $providerAuthorization->method('secret')->willReturn($secret);
+        $providerAuthorization->method('secret')->willReturnMap([['token', $secret]]);
 
         return $providerAuthorization;
     }

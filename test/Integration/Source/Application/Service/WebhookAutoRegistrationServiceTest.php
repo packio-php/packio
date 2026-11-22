@@ -141,7 +141,6 @@ final class WebhookAutoRegistrationServiceTest extends TestCase
         ;
 
         $source
-            ->expects(self::any())
             ->method('providerConfig')
             ->willReturn([])
         ;
@@ -206,7 +205,6 @@ final class WebhookAutoRegistrationServiceTest extends TestCase
         ;
 
         $source
-            ->expects(self::any())
             ->method('providerConfig')
             ->willReturn([])
         ;
@@ -358,7 +356,6 @@ final class WebhookAutoRegistrationServiceTest extends TestCase
     {
         $source = $this->createMock(Source::class);
         $source
-            ->expects(self::any())
             ->method('provider')
             ->willReturn(self::PROVIDER)
         ;

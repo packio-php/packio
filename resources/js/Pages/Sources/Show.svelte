@@ -369,27 +369,32 @@
                 className="mt-3 w-full rounded-xl px-3 py-2 text-sm"
                 name="visibility"
               >
-                <option value="public" selected={source.visibility === "public"}
-                  >Public</option
+                <option
+                  value="public"
+                  selected={source.visibility === "public"}
                 >
+                  Public
+                </option>
                 <option
                   value="private"
-                  selected={source.visibility === "private"}>Private</option
+                  selected={source.visibility === "private"}
                 >
+                  Private
+                </option>
               </Select>
               <label
                 class="ui-code mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm"
               >
                 <input type="hidden" name="active" value="0" />
                 <input type="checkbox" name="active" checked={source.active} />
-                <span
-                  >Source is active and {resolvedBranding.name} may synchronize it</span
-                >
+                <span>
+                  Source is active and {resolvedBranding.name} may synchronize it
+                </span>
               </label>
               <label class="mt-4 grid gap-2">
-                <span class="text-sm font-medium ui-title"
-                  >Keep last releases</span
-                >
+                <span class="text-sm font-medium ui-title">
+                  Keep last releases
+                </span>
                 <Input
                   className="w-full"
                   name="keep_last_releases"
@@ -547,9 +552,9 @@
                         {#if source.webhook_external_id}
                           <br />
                           External ID:
-                          <code class="ui-code"
-                            >{source.webhook_external_id}</code
-                          >
+                          <code class="ui-code">
+                            {source.webhook_external_id}
+                          </code>
                         {/if}
                       {:else}
                         Not yet registered at the upstream provider

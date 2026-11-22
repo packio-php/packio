@@ -68,7 +68,7 @@ final class SourceOAuthRefreshMaintenanceCommandTest extends TestCase
         $sourceOAuthRefreshCliOAuthProviderStub           = new SourceOAuthRefreshCliOAuthProviderStub();
         $sourceRepo                                       = $this->createMock(SourceRepositoryInterface::class);
         $orgPort                                          = $this->createMock(OrganizationQueryPort::class);
-        $orgPort->method('resolveOrganizationId')->with('acme')->willReturn('org-1');
+        $orgPort->expects(self::atLeastOnce())->method('resolveOrganizationId')->with('acme')->willReturn('org-1');
 
         $sourceOAuthService                   = new SourceOAuthService($sourceOAuthRefreshCliOAuthProviderStub, $sourceOAuthRefreshCliAccountRepositoryStub, new SourceOAuthAccountSecrets($sourceOAuthRefreshCliSecretEncryptorStub), $orgPort, $this->createStub(SourceProviderInstanceRepositoryInterface::class), $this->inertSourceProviderInstanceOAuthConfig());
         $sourceOAuthRefreshMaintenanceService = new SourceOAuthRefreshMaintenanceService(

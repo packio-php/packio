@@ -155,9 +155,9 @@
                   {user_record.email_verified ? "Verified" : "Unverified"}
                 </Badge>
                 {#each user_record.roles as role (role)}
-                  <Badge tone={role === "admin" ? "gold" : "muted"}
-                    >{role}</Badge
-                  >
+                  <Badge tone={role === "admin" ? "gold" : "muted"}>
+                    {role}
+                  </Badge>
                 {/each}
               </div>
             </div>
@@ -380,9 +380,9 @@
                       <p class="font-semibold ui-title">
                         {historyActionLabel(entry.action)}
                       </p>
-                      <time class="text-xs ui-muted"
-                        >{formatDate(entry.occurred_at)}</time
-                      >
+                      <time class="text-xs ui-muted">
+                        {formatDate(entry.occurred_at)}
+                      </time>
                     </div>
                     <p class="mt-2 break-all text-sm ui-muted">
                       {historyActorLabel(entry.actor_id)}
@@ -419,11 +419,10 @@
       id="ban-reason"
       maxlength={500}
       minlength={3}
-      required
-    ></textarea>
-    <span class="text-xs ui-muted"
-      >3–500 characters. This reason is shown to the user.</span
-    >
+      required></textarea>
+    <span class="text-xs ui-muted">
+      3–500 characters. This reason is shown to the user.
+    </span>
   </label>
 </ConfirmationModal>
 
@@ -446,10 +445,9 @@
       id="unban-note"
       maxlength={500}
       minlength={3}
-      required
-    ></textarea>
-    <span class="text-xs ui-muted"
-      >3–500 characters. This note is retained in moderation history.</span
-    >
+      required></textarea>
+    <span class="text-xs ui-muted">
+      3–500 characters. This note is retained in moderation history.
+    </span>
   </label>
 </ConfirmationModal>

@@ -256,7 +256,7 @@ final class SourceDeletionRecoveryServiceForceFinalizeTest extends TestCase
     private function sourceApiFacade(): MockObject&SourceApiFacadeInterface
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
-        $sourceApiFacade->method('findSource')->with(self::SOURCE_ID)->willReturn($this->source());
+        $sourceApiFacade->expects(self::atLeastOnce())->method('findSource')->with(self::SOURCE_ID)->willReturn($this->source());
 
         return $sourceApiFacade;
     }

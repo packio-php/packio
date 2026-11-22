@@ -1,10 +1,5 @@
 export type QueryValue =
-  | boolean
-  | number
-  | string
-  | string[]
-  | null
-  | undefined;
+  boolean | number | string | string[] | null | undefined;
 
 export function cleanQuery(
   query: Record<string, QueryValue>,

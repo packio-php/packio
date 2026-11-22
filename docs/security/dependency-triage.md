@@ -57,7 +57,7 @@ npm ls --all
 npm ci --no-audit --no-fund
 ```
 
-`npm run check` must run in a browser-ready environment matching locked Playwright 1.62.1; it includes types, lint, Inertia guards, frontend tests, built SSR tests, real Chromium tests, formatting, and client/SSR builds. The second install must leave both npm manifests unchanged. A full audit includes devDependencies; `--omit=dev` does not check the shipped JavaScript.
+`npm run check` must run in a browser-ready environment matching locked Playwright 1.65.1; it includes types, lint, Inertia guards, frontend tests, built SSR tests, real Chromium tests, formatting, and client/SSR builds. The second install must leave both npm manifests unchanged. A full audit includes devDependencies; `--omit=dev` does not check the shipped JavaScript.
 
 The production `prod-ssr` target must start with its actual filesystem, which contains the built SSR bundle and no application `node_modules`. Verify that exact image with the existing proxy harness against disposable PostgreSQL/app resources, including real SSR/hydration/navigation and positive/negative CSRF controls. Working tree/image checks do not establish a clean release candidate, image provenance, or publication approval.
 

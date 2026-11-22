@@ -142,8 +142,8 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $registryAccessTokenDto = $this->createToken('org-01', ['packages.read.private']);
         $serverRequest          = $this->createRequest('repo.private.packages');
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         $this->organizationApi
             ->expects(self::once())
             ->method('findOrganization')
@@ -164,8 +164,8 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $registryAccessTokenDto = $this->createToken('org-01', []);
         $serverRequest          = $this->createRequest('repo.private.packages', $organizationDto);
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('no-permission')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', [])->willReturn(false);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('no-permission')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', [])->willReturn(false);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         $registryProtocolAuthorizationResult = $this->authorizer()->authorize($serverRequest, 'no-permission');
@@ -196,8 +196,8 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $registryAccessTokenDto = $this->createToken('org-b', ['packages.read.private']);
         $serverRequest          = $this->createRequest('repo.private.packages', $organizationDto);
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('cross-org')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('cross-org')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         $registryProtocolAuthorizationResult = $this->authorizer()->authorize($serverRequest, 'cross-org');
@@ -210,9 +210,9 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $registryAccessTokenDto = $this->createToken('missing-org', ['packages.read.private']);
         $serverRequest          = $this->createRequest('repo.private.packages');
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
-        $this->organizationApi->method('findOrganization')->with('missing-org')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->organizationApi->expects(self::atLeastOnce())->method('findOrganization')->with('missing-org')->willReturn(null);
 
         $registryProtocolAuthorizationResult = $this->authorizer()->authorize($serverRequest, 'valid-token');
 
@@ -224,7 +224,7 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $organizationDto = $this->createOrganization('org-01', 'acme');
         $serverRequest   = $this->createRequest('repo.private.packages', $organizationDto);
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter
             ->expects(self::once())
@@ -243,7 +243,7 @@ final class RegistryProtocolAuthorizerTest extends TestCase
         $organizationDto = $this->createOrganization('org-01', 'acme');
         $serverRequest   = $this->createRequest('repo.private.packages', $organizationDto);
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter
             ->expects(self::once())

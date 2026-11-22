@@ -59,7 +59,7 @@ final class RegistryPackagesHandlerTest extends TestCase
         $uri->method('getScheme')->willReturn('https');
 
         $request = $this->createMock(ServerRequestInterface::class);
-        $request->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn($organizationDto);
+        $request->expects(self::atLeastOnce())->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn($organizationDto);
         $request->method('getUri')->willReturn($uri);
 
         $this->registryApiFacade
@@ -81,7 +81,7 @@ final class RegistryPackagesHandlerTest extends TestCase
     public function testReturns404WhenOrganizationNotFound(): void
     {
         $request = $this->createMock(ServerRequestInterface::class);
-        $request->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn(null);
+        $request->expects(self::atLeastOnce())->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn(null);
 
         /** @var JsonResponse $response */
         $response = $this->registryPackagesHandler->handle($request);
@@ -99,7 +99,7 @@ final class RegistryPackagesHandlerTest extends TestCase
         );
 
         $request = $this->createMock(ServerRequestInterface::class);
-        $request->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn($organizationDto);
+        $request->expects(self::atLeastOnce())->method('getAttribute')->with(RequestContextAttributes::CURRENT_ORGANIZATION)->willReturn($organizationDto);
 
         /** @var JsonResponse $response */
         $response = $this->registryPackagesHandler->handle($request);

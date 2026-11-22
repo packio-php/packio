@@ -9,7 +9,6 @@ use GuzzleHttp\Psr7\StreamDecoratorTrait;
 use GuzzleHttp\Psr7\Utils;
 use Psr\Http\Message\StreamInterface;
 
-use function fopen;
 use function strlen;
 
 final class BoundedResponseStream implements StreamInterface
@@ -20,7 +19,7 @@ final class BoundedResponseStream implements StreamInterface
 
     public function __construct(private readonly int $maxBytes)
     {
-        $this->stream = Utils::streamFor(fopen('php://temp/maxmemory:1048576', 'w+b'));
+        $this->stream = Utils::streamFor(Utils::tryFopen('php://temp/maxmemory:1048576', 'w+b'));
     }
 
     public function write(string $string): int

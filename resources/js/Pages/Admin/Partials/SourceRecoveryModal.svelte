@@ -197,7 +197,7 @@
   }
 
   function postRecoveryAction(): void {
-    let url = "";
+    let url: string;
     let payload: Record<string, string> = {};
 
     if (action === "requeue") {

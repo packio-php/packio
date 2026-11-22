@@ -98,7 +98,7 @@ final class RestrictRegistrySubdomainMiddlewareTest extends TestCase
 
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
-        $request->method('getHeaderLine')->with('X-Inertia')->willReturn('');
+        $request->expects(self::atLeastOnce())->method('getHeaderLine')->with('X-Inertia')->willReturn('');
 
         $handler = $this->createMock(RequestHandlerInterface::class);
         $handler->expects(self::never())->method('handle');
@@ -120,7 +120,7 @@ final class RestrictRegistrySubdomainMiddlewareTest extends TestCase
 
         $request = $this->createMock(ServerRequestInterface::class);
         $request->method('getUri')->willReturn($uri);
-        $request->method('getHeaderLine')->with('X-Inertia')->willReturn('true');
+        $request->expects(self::atLeastOnce())->method('getHeaderLine')->with('X-Inertia')->willReturn('true');
 
         $handler = $this->createMock(RequestHandlerInterface::class);
         $handler->expects(self::never())->method('handle');

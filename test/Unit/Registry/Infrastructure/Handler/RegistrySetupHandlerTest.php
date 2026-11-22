@@ -97,7 +97,7 @@ final class RegistrySetupHandlerTest extends TestCase
         ;
 
         $this->registryApiFacade
-            ->method('packageOverview')
+            ->expects(self::atLeastOnce())->method('packageOverview')
             ->with('org-01')
             ->willReturn([])
         ;
@@ -162,7 +162,7 @@ final class RegistrySetupHandlerTest extends TestCase
         ;
 
         $this->registryApiFacade
-            ->method('packageOverview')
+            ->expects(self::atLeastOnce())->method('packageOverview')
             ->with('org-01')
             ->willReturn([])
         ;

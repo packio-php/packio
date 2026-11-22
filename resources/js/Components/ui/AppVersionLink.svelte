@@ -23,8 +23,10 @@
       class="hover:underline"
       href={releaseUrl}
       target="_blank"
-      rel="noopener noreferrer">v{version.number}</a
+      rel="noopener noreferrer"
     >
+      v{version.number}
+    </a>
   {:else}
     v{version.number}
   {/if}
@@ -33,7 +35,9 @@
       class="hover:underline"
       href={`${repositoryUrl}/commit/${version.sha}`}
       target="_blank"
-      rel="noopener noreferrer">{version.sha}</a
-    >)
+      rel="noopener noreferrer"
+    >
+      {version.sha}
+    </a>)
   {/if}
 </span>

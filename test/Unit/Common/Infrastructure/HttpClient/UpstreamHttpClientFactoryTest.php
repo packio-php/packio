@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Common\Infrastructure\HttpClient;
 
+use Common\Infrastructure\HttpClient\HostResolver;
 use Common\Infrastructure\HttpClient\OutboundUrlPolicy;
 use Common\Infrastructure\HttpClient\OutboundUrlPolicyFactory;
 use Common\Infrastructure\HttpClient\UpstreamHttpClientFactory;
@@ -24,6 +25,21 @@ final class UpstreamHttpClientFactoryTest extends TestCase
         $client = new UpstreamHttpClientFactory()($container);
         $this->expectException(InvalidArgumentException::class);
         $client->request('GET', 'https://127.0.0.1/private');
+    }
+
+    public function testProductionClientRejectsHostnameResolvingToLoopbackBeforeConnectionAttempt(): void
+    {
+        $resolver = $this->createStub(HostResolver::class);
+        $resolver->method('resolve')->willReturn(['127.0.0.1']);
+        $container = $this->createStub(ContainerInterface::class);
+        $container->method('get')->willReturnMap([
+            [OutboundUrlPolicy::class, new OutboundUrlPolicy(hostResolver: $resolver)],
+            [ResourceLimits::class, new ResourceLimits()],
+        ]);
+        $client = new UpstreamHttpClientFactory()($container);
+        // The policy message, not a curl connection error, proves the real curl handler was never reached.
+        $this->expectExceptionObject(new InvalidArgumentException('Outbound destination is not allowed.'));
+        $client->request('GET', 'https://internal.example.test/');
     }
 
     public function testPolicyFactoryReadsOnlyInstallationConfiguration(): void

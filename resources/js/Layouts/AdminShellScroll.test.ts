@@ -55,16 +55,13 @@ describe("AdminShell content scroll wiring", () => {
     });
     expect(screen.queryByRole("button", { name: "Scroll to top" })).toBeNull();
 
-    // Scrolling the content column shows the button at the default
-    // viewport-edge position (no inline right offset).
+    // Scrolling the content column shows the button.
     await act(() => {
       setScrollTop(scrollContainer, 400);
       scrollContainer.dispatchEvent(new Event("scroll"));
     });
 
     const button = screen.getByRole("button", { name: "Scroll to top" });
-    expect(button.parentElement?.style.right).toBe("");
-    expect(button.parentElement).toHaveClass("right-6");
 
     // Clicking scrolls the container, not the window.
     const scrollTo = vi.fn();

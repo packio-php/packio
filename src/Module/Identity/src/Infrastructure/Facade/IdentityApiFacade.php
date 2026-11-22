@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Identity\Infrastructure\Facade;
 
+use Cake\Chronos\Chronos;
 use Common\Registry\RegistryProtocolPermissions;
 use Packio\Identity\Api\Dto\ApiAccessTokenDto;
 use Packio\Identity\Api\Dto\ApiAccessTokenRegenerationDto;
@@ -16,8 +17,11 @@ use Packio\Identity\Api\Dto\UserListFilterDto;
 use Packio\Identity\Api\Dto\UserListStatus as ApiUserListStatus;
 use Packio\Identity\Api\Dto\UserModerationOutcome;
 use Packio\Identity\Api\Dto\UserModerationResultDto;
+use Packio\Identity\Api\Dto\UserOAuthAccountDto;
+use Packio\Identity\Api\Dto\UserSignInDto;
 use Packio\Identity\Api\EmailVerificationReasonType as ApiEmailVerificationReasonType;
 use Packio\Identity\Api\IdentityApiFacadeInterface;
+use Packio\Identity\Api\OAuthProvider;
 use Packio\Identity\Application\Command\ApiAccessTokenCommandService;
 use Packio\Identity\Application\Command\EmailVerificationService;
 use Packio\Identity\Application\Command\IdentityCommandService;
@@ -34,11 +38,14 @@ use Packio\Identity\Application\Result\IssuedApiAccessToken;
 use Packio\Identity\Application\Result\IssuedRegistryAccessToken;
 use Packio\Identity\Application\Result\PasswordResetResult;
 use Packio\Identity\Application\Result\RegistryAccessTokenResult;
+use Packio\Identity\Application\Result\UserOAuthAccountResult;
 use Packio\Identity\Domain\EmailVerificationReason as DomainEmailVerificationReason;
 use Packio\Identity\Domain\Entity\User;
+use Packio\Identity\Domain\Entity\UserSignIn;
 use Packio\Identity\Domain\Repository\EmailVerificationCodeRepositoryInterface;
 use Packio\Identity\Domain\Repository\PasswordResetTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserRepositoryInterface;
+use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use Packio\Identity\Domain\Value\UserListFilterCriteria;
 use Packio\Identity\Domain\Value\UserListStatus;
 use Packio\Shared\Api\Dto\PaginatedResultDto;
@@ -70,6 +77,7 @@ final readonly class IdentityApiFacade implements IdentityApiFacadeInterface
         private ObjectMapperInterface $objectMapper,
         private AuthMailQueuePort $authMailQueuePort,
         private AuthManagerInterface $authManager,
+        private UserSignInRepositoryInterface $userSignInRepository,
     ) {}
 
     public function createUser(string $email, string $displayName, string $password, array $roles = ['user']): UserDto
@@ -373,6 +381,48 @@ final readonly class IdentityApiFacade implements IdentityApiFacadeInterface
     public function deleteRevokedApiAccessTokenForUser(string $userId, string $tokenId): bool
     {
         return $this->apiAccessTokenCommandService->deleteRevokedForUser($userId, $tokenId);
+    }
+
+    public function oauthAccountsForUser(string $userId): array
+    {
+        return array_map(
+            static function(UserOAuthAccountResult $account): UserOAuthAccountDto {
+                $providerLabel = OAuthProvider::tryFrom($account->provider)?->label() ?? $account->provider;
+
+                return new UserOAuthAccountDto(
+                    id: $account->id,
+                    provider: $account->provider,
+                    providerLabel: $providerLabel,
+                    accountLabel: $account->providerUsername ?? $account->providerEmail ?? $providerLabel,
+                    providerEmail: $account->providerEmail,
+                    providerUsername: $account->providerUsername,
+                );
+            },
+            $this->identityQueryService->findOAuthAccountsByUserId($userId),
+        );
+    }
+
+    public function recentSignIns(string $userId, int $limit = 20): array
+    {
+        return array_map(
+            static fn (UserSignIn $signIn): UserSignInDto => new UserSignInDto(
+                id: $signIn->getIdentifier()->toString(),
+                method: $signIn->method(),
+                methodLabel: OAuthProvider::tryFrom($signIn->method())?->label() ?? 'Password',
+                occurredAt: $signIn->getCreatedAt()->toAtomString(),
+                ip: $signIn->ip(),
+                userAgent: $signIn->userAgent(),
+            ),
+            $this->userSignInRepository->recentByUserUuid($userId, $limit),
+        );
+    }
+
+    public function lastSignInAtByUserIds(array $userIds): array
+    {
+        return array_map(
+            static fn (Chronos $chronos): string => $chronos->toAtomString(),
+            $this->userSignInRepository->lastSignInAtByUserUuids($userIds),
+        );
     }
 
     private function mapUser(User $user): UserDto

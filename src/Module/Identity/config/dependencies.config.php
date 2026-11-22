@@ -406,6 +406,7 @@ return [
             ObjectMapperInterface::class,
             AuthMailQueuePort::class,
             AuthManagerInterface::class,
+            UserSignInRepositoryInterface::class,
         ],
         OAuthApiFacade::class                                   => [
             OAuthClientFactory::class,

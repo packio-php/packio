@@ -73,7 +73,7 @@ final readonly class OAuthCallbackUseCase
         }
 
         if ($user->isBanned()) {
-            return new OAuthCallbackResult(OAuthCallbackStatus::Banned, userId: $user->getIdentifier()->toString());
+            return new OAuthCallbackResult(OAuthCallbackStatus::Banned, userId: $user->getIdentifier()->toString(), provider: $resolveOAuthCallbackCommand->provider);
         }
 
         if (null === $resolveOAuthCallbackCommand->email && $resolveOAuthCallbackCommand->verifyEmailFromProvider && ! $user->isEmailVerified()) {
@@ -95,6 +95,7 @@ final readonly class OAuthCallbackUseCase
             $user->getIdentifier()->toString(),
             $user->email(),
             $user->displayName(),
+            provider: null === $resolveOAuthCallbackCommand->email ? $resolveOAuthCallbackCommand->provider : null,
         );
     }
 }

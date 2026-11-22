@@ -89,6 +89,7 @@ final class OAuthCallbackUseCaseTest extends TestCase
         $oAuthCallbackResult = $this->useCase($users)->handle($this->command(currentUserId: $user->getIdentifier()->toString()));
         self::assertSame(OAuthCallbackStatus::Banned, $oAuthCallbackResult->status);
         self::assertSame($user->getIdentifier()->toString(), $oAuthCallbackResult->userId);
+        self::assertSame(OAuthProvider::Github, $oAuthCallbackResult->provider);
         self::assertFalse($user->isEmailVerified());
     }
 
@@ -118,6 +119,7 @@ final class OAuthCallbackUseCaseTest extends TestCase
         $oAuthCallbackResult = $this->useCase($users, $policy, $resolver, $linker)->handle($this->command(registrationRedirectTarget: '/organization/invite/orgi_pending'));
         self::assertSame(OAuthCallbackStatus::Authenticated, $oAuthCallbackResult->status);
         self::assertTrue($oAuthCallbackResult->userCreated);
+        self::assertSame(OAuthProvider::Github, $oAuthCallbackResult->provider);
         self::assertSame($user->getIdentifier()->toString(), $oAuthCallbackResult->userId);
         self::assertTrue($user->isEmailVerified());
     }

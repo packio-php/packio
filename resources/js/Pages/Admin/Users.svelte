@@ -285,7 +285,7 @@
         />
 
         <div class="hidden md:block">
-          <TableFrame ariaLabel="Admin users" tableClassName="min-w-[720px]">
+          <TableFrame ariaLabel="Admin users" tableClassName="min-w-[840px]">
             <thead>
               <tr>
                 <th class="px-4 py-3">User</th>
@@ -294,6 +294,7 @@
                 <th class="px-4 py-3">Roles</th>
                 <th class="px-4 py-3">Created</th>
                 <th class="px-4 py-3">Updated</th>
+                <th class="px-4 py-3">Last sign-in</th>
                 <th class="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
@@ -330,6 +331,9 @@
                   </td>
                   <td class="px-4 py-3 text-sm ui-muted">
                     {formatDate(user.updated_at)}
+                  </td>
+                  <td class="px-4 py-3 text-sm ui-muted">
+                    {formatDate(user.last_sign_in_at)}
                   </td>
                   <td class="px-4 py-3 text-right">
                     <div class="flex justify-end gap-2">
@@ -387,6 +391,7 @@
               <div class="mt-4 grid gap-2 text-sm ui-muted">
                 <p>Created: {formatDate(user.created_at)}</p>
                 <p>Updated: {formatDate(user.updated_at)}</p>
+                <p>Last sign-in: {formatDate(user.last_sign_in_at)}</p>
               </div>
               <div class="mt-4 flex flex-wrap gap-2">
                 <Link

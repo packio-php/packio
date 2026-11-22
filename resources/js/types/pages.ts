@@ -161,6 +161,7 @@ export interface AdminUserListItem {
   updated_at?: string;
   email_verified?: boolean;
   banned_by_user_id?: string | null;
+  last_sign_in_at?: string | null;
 }
 
 export interface AdminUsersPageProps extends AppPageProps {
@@ -191,6 +192,11 @@ export interface AdminUsersPaginationMeta {
 export interface AdminUserDetailsPageProps extends AppPageProps {
   user_record?: AdminUserListItem | null;
   ban_history?: AdminUserBanHistoryEntry[];
+  sign_in_methods?: {
+    has_password: boolean;
+    oauth_accounts: ProfileOAuthAccountPayload[];
+  };
+  sign_in_history?: SignInHistoryEntry[];
   errors?: ValidationErrors;
 }
 

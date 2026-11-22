@@ -275,9 +275,9 @@
           <InsetCard className="grid gap-4 p-4">
             {#if hasPassword}
               <label class="grid gap-2">
-                <span class="text-sm font-medium ui-title"
-                  >Current password</span
-                >
+                <span class="text-sm font-medium ui-title">
+                  Current password
+                </span>
                 <Input
                   bind:value={currentPassword}
                   name="current_password"
@@ -302,9 +302,9 @@
             </label>
 
             <label class="grid gap-2">
-              <span class="text-sm font-medium ui-title"
-                >Confirm new password</span
-              >
+              <span class="text-sm font-medium ui-title">
+                Confirm new password
+              </span>
               <Input
                 bind:value={newPasswordConfirmation}
                 name="new_password_confirmation"

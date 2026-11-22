@@ -50,12 +50,15 @@
   {:else}
     <code
       class="ui-code mt-3 block min-w-0 overflow-x-auto rounded-xl px-3 py-2 text-xs"
-      >{#if shouldRenderAction}{contentParts[0]}<Link
-          class="ui-button-secondary inline-flex h-6 items-center rounded-lg px-2 text-[0.7rem] font-medium"
-          href={actionHref}>{actionLabel}</Link
-        >{contentParts
-          .slice(1)
-          .join(actionPlaceholder)}{:else}{content}{/if}</code
     >
+      {#if shouldRenderAction}{contentParts[0]}<Link
+          class="ui-button-secondary inline-flex h-6 items-center rounded-lg px-2 text-[0.7rem] font-medium"
+          href={actionHref}
+        >
+          {actionLabel}
+        </Link>{contentParts
+          .slice(1)
+          .join(actionPlaceholder)}{:else}{content}{/if}
+    </code>
   {/if}
 </InsetCard>

@@ -823,9 +823,9 @@
               {#if providerNeedsInstance}
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title"
-                      >GitLab instance</span
-                    >
+                    <span class="text-sm font-medium ui-title">
+                      GitLab instance
+                    </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"
                       value={selectedProviderInstanceId}
@@ -968,9 +968,9 @@
                           connectOAuth(selectedOAuthProvider)}
                       >
                         <OAuthIcon provider={selectedOAuthIconProvider} />
-                        <span
-                          >Connect with {providerName(selectedProvider)}</span
-                        >
+                        <span>
+                          Connect with {providerName(selectedProvider)}
+                        </span>
                       </Button>
                     {/if}
                   </div>
@@ -984,9 +984,9 @@
                       ></div>
                     </div>
                     <div class="relative flex justify-center">
-                      <span class="bg-(--surface) px-3 text-sm ui-muted"
-                        >or enter token manually</span
-                      >
+                      <span class="bg-(--surface) px-3 text-sm ui-muted">
+                        or enter token manually
+                      </span>
                     </div>
                   </div>
                 {/if}
@@ -1020,9 +1020,9 @@
                   {/if}
                   {#if selectedProvider === "gitlab_self_hosted" && !providerNeedsInstance}
                     <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title"
-                        >GitLab instance URL</span
-                      >
+                      <span class="text-sm font-medium ui-title">
+                        GitLab instance URL
+                      </span>
                       <Input
                         className="w-full h-14"
                         name="instance_url"
@@ -1034,9 +1034,9 @@
                     </label>
                   {/if}
                   <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title"
-                      >{providerName(selectedProvider)} authorization token</span
-                    >
+                    <span class="text-sm font-medium ui-title">
+                      {providerName(selectedProvider)} authorization token
+                    </span>
                     <Input
                       className="w-full h-14"
                       name="authorization_token"
@@ -1048,17 +1048,17 @@
                   </label>
                   {#if selectedProvider === "generic_git"}
                     <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title"
-                        >Auth scheme</span
-                      >
+                      <span class="text-sm font-medium ui-title">
+                        Auth scheme
+                      </span>
                       <Select
                         className="rounded-2xl px-4 py-3 text-sm w-full h-14"
                         name="auth_scheme"
                       >
                         <option value="bearer">Bearer token</option>
-                        <option value="basic"
-                          >Basic auth (username:token)</option
-                        >
+                        <option value="basic">
+                          Basic auth (username:token)
+                        </option>
                       </Select>
                     </label>
                   {/if}
@@ -1066,8 +1066,10 @@
                     <Button
                       className="rounded-full px-5"
                       type="submit"
-                      variant="primary">Save provider access</Button
+                      variant="primary"
                     >
+                      Save provider access
+                    </Button>
                     <Button
                       className="rounded-full px-5"
                       type="button"
@@ -1137,9 +1139,9 @@
               {#if providerNeedsInstance}
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title"
-                      >GitLab instance</span
-                    >
+                    <span class="text-sm font-medium ui-title">
+                      GitLab instance
+                    </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"
                       value={selectedProviderInstanceId}
@@ -1184,19 +1186,19 @@
                 {:else if filteredAuthorizations.length === 1}
                   <p class="mt-2 text-sm leading-6 ui-muted">
                     Using saved authorization
-                    <span class="font-medium ui-title"
-                      >{selectedAuthorization?.account_name ||
-                        selectedAuthorization?.auth_strategy}</span
-                    > automatically.
+                    <span class="font-medium ui-title">
+                      {selectedAuthorization?.account_name ||
+                        selectedAuthorization?.auth_strategy}
+                    </span> automatically.
                   </p>
                   {#if selectedAuthorization?.auth_health === "reauthorization_required"}
                     <p class="mt-2 text-sm text-(--danger)">
                       This authorization needs reconnection before repositories
                       can be loaded.
                       {#if selectedAuthorization?.auth_failure_reason}
-                        <span class="block mt-1 text-xs ui-muted"
-                          >Reason: {selectedAuthorization.auth_failure_reason}</span
-                        >
+                        <span class="block mt-1 text-xs ui-muted">
+                          Reason: {selectedAuthorization.auth_failure_reason}
+                        </span>
                       {/if}
                     </p>
                     <div class="mt-3">
@@ -1212,9 +1214,9 @@
                   {/if}
                 {:else}
                   <div class="mt-4 grid gap-2">
-                    <span class="text-sm font-medium ui-title"
-                      >Choose saved authorization</span
-                    >
+                    <span class="text-sm font-medium ui-title">
+                      Choose saved authorization
+                    </span>
                     <div class="grid gap-3">
                       {#each filteredAuthorizations as authorization (authorization.id)}
                         {@const selected =
@@ -1301,9 +1303,9 @@
                       This authorization needs reconnection before repositories
                       can be loaded.
                       {#if selectedAuthorization?.auth_failure_reason}
-                        <span class="block mt-1 text-xs ui-muted"
-                          >Reason: {selectedAuthorization.auth_failure_reason}</span
-                        >
+                        <span class="block mt-1 text-xs ui-muted">
+                          Reason: {selectedAuthorization.auth_failure_reason}
+                        </span>
                       {/if}
                     </p>
                     <div class="mt-2">
@@ -1325,9 +1327,9 @@
                 {#if isGenericGitProvider}
                   <div class="mt-4 grid gap-4">
                     <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title"
-                        >Repository URL</span
-                      >
+                      <span class="text-sm font-medium ui-title">
+                        Repository URL
+                      </span>
                       <Input
                         name="repository_url"
                         placeholder="https://codeberg.org/owner/repository.git"
@@ -1336,9 +1338,9 @@
                       />
                     </label>
                     <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title"
-                        >composer.json path</span
-                      >
+                      <span class="text-sm font-medium ui-title">
+                        composer.json path
+                      </span>
                       <Input
                         name="composer_json_path"
                         placeholder="composer.json"
@@ -1375,9 +1377,9 @@
                       <div
                         class="h-5 w-5 animate-spin rounded-full border-2 border-(--border) border-t-transparent"
                       ></div>
-                      <span class="text-sm ui-muted"
-                        >Loading repositories...</span
-                      >
+                      <span class="text-sm ui-muted">
+                        Loading repositories...
+                      </span>
                     </div>
                   {:else if !hasClickedLoad}
                     <p class="mt-2 text-sm leading-6 ui-muted">
@@ -1411,15 +1413,15 @@
                     </p>
                   {:else if providerResources.length === 1}
                     <p class="mt-2 text-sm leading-6 ui-muted">
-                      Repository <span class="font-medium ui-title"
-                        >{providerResources[0].name}</span
-                      > was selected automatically.
+                      Repository <span class="font-medium ui-title">
+                        {providerResources[0].name}
+                      </span> was selected automatically.
                     </p>
                   {:else}
                     <div class="mt-4 grid gap-2">
-                      <span class="text-sm font-medium ui-title"
-                        >Select repositories ({selectedResources.length} selected)</span
-                      >
+                      <span class="text-sm font-medium ui-title">
+                        Select repositories ({selectedResources.length} selected)
+                      </span>
                       <div
                         class="max-h-60 overflow-y-auto rounded-2xl border border-(--panel-border) bg-(--surface) p-3"
                       >
@@ -1454,16 +1456,18 @@
                               class="mt-0.5 h-4 w-4 rounded border-(--panel-border) disabled:cursor-not-allowed"
                             />
                             <span class="flex flex-col gap-0.5">
-                              <span class="text-sm"
-                                >{resource.name}{#if resource.private}<span
+                              <span class="text-sm">
+                                {resource.name}{#if resource.private}<span
                                     class="ml-1 text-xs ui-muted"
-                                    >· private</span
-                                  >{/if}</span
-                              >
+                                  >
+                                    · private
+                                  </span>{/if}
+                              </span>
                               {#if isAlreadyConnected}<span
                                   class="text-xs ui-badge-success"
-                                  >✓ Already connected</span
-                                >{/if}
+                                >
+                                  ✓ Already connected
+                                </span>{/if}
                             </span>
                           </label>
                         {/each}
@@ -1473,8 +1477,9 @@
                           type="button"
                           class="text-left text-xs ui-link-accent"
                           onclick={() => (selectedResources = [])}
-                          >Clear selection</button
                         >
+                          Clear selection
+                        </button>
                       {/if}
                     </div>
                   {/if}
@@ -1498,9 +1503,9 @@
                   </label>
 
                   <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title"
-                      >Keep last releases</span
-                    >
+                    <span class="text-sm font-medium ui-title">
+                      Keep last releases
+                    </span>
                     <Input
                       name="keep_last_releases"
                       type="number"
@@ -1533,9 +1538,9 @@
                     >
                       {#if !isGenericGitProvider}
                         <label class="grid gap-2">
-                          <span class="text-sm font-medium ui-title"
-                            >Repository URL fallback</span
-                          >
+                          <span class="text-sm font-medium ui-title">
+                            Repository URL fallback
+                          </span>
                           <Input
                             name="repository_url"
                             placeholder="https://github.com/vendor/package"
@@ -1544,9 +1549,9 @@
                         </label>
                       {/if}
                       <label class="grid gap-2">
-                        <span class="text-sm font-medium ui-title"
-                          >One-off token override</span
-                        >
+                        <span class="text-sm font-medium ui-title">
+                          One-off token override
+                        </span>
                         <Input
                           name="authorization_token"
                           type="password"
@@ -1587,15 +1592,15 @@
                           {/each}
                         </ul>
                       {:else}
-                        <span class="ui-muted"
-                          >select repositories above or enter a repository URL</span
-                        >
+                        <span class="ui-muted">
+                          select repositories above or enter a repository URL
+                        </span>
                       {/if}
                     </div>
                     <p class="mt-2">
-                      <span class="font-medium ui-title"
-                        >Release retention:</span
-                      >
+                      <span class="font-medium ui-title">
+                        Release retention:
+                      </span>
                       {Number(keepLastReleases) > 0
                         ? `latest ${Number(keepLastReleases)} releases`
                         : "all releases"}
@@ -1619,8 +1624,10 @@
                       className="rounded-full px-5"
                       type="button"
                       variant="secondary"
-                      onclick={handleClose}>Cancel</Button
+                      onclick={handleClose}
                     >
+                      Cancel
+                    </Button>
                   </div>
                 </div>
               </InsetCard>

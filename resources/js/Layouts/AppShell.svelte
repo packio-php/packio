@@ -329,8 +329,10 @@
     <Link
       class={linkClass}
       style={matchesPath(match) ? active : inactive}
-      {href}>{label}</Link
+      {href}
     >
+      {label}
+    </Link>
   {/snippet}
   {#if hasOrganizationAccess}
     {@render section("/packages", withOrganization("/packages"), "Packages")}
@@ -348,8 +350,10 @@
     <Link
       class={`inline-flex ${mobile ? "min-h-11" : "h-10"} items-center justify-center rounded-lg px-5 text-sm font-semibold no-underline transition`}
       style="background-color: var(--button-primary-bg); color: var(--button-primary-text);"
-      href="/auth/login">Login</Link
+      href="/auth/login"
     >
+      Login
+    </Link>
   {/if}
 {/snippet}
 
@@ -407,8 +411,10 @@
       <Link
         class={`block ${itemClass} text-sm transition no-underline`}
         style={matchesPath(path) ? active : inactive}
-        href={withOrganization(path)}>{label}</Link
+        href={withOrganization(path)}
       >
+        {label}
+      </Link>
     {/each}
   {/snippet}
   {#snippet organizationCreate()}

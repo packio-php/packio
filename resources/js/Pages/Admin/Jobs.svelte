@@ -579,9 +579,9 @@
                   >
                     <option value="">Any organization</option>
                     {#each organizations ?? [] as organization (organization.id)}
-                      <option value={organization.id}
-                        >{organization.name}</option
-                      >
+                      <option value={organization.id}>
+                        {organization.name}
+                      </option>
                     {/each}
                   </Select>
                 </label>

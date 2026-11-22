@@ -44,9 +44,9 @@
     Email
     <input data-testid="email" bind:value={email} />
   </label>
-  <button type="button" data-testid="submit-form" onclick={submit}
-    >Submit form</button
-  >
+  <button type="button" data-testid="submit-form" onclick={submit}>
+    Submit form
+  </button>
   {#if errors.email}
     <p data-testid="email-error">{errors.email}</p>
   {/if}

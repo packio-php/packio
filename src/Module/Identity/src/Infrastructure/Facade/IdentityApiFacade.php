@@ -48,6 +48,7 @@ use Packio\Identity\Domain\Repository\UserRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use Packio\Identity\Domain\Value\UserListFilterCriteria;
 use Packio\Identity\Domain\Value\UserListStatus;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Packio\Shared\Api\Dto\PaginatedResultDto;
 use Packio\Shared\Api\Dto\UserDto;
 use Packio\Shared\Domain\Organization\ActorContext;
@@ -408,7 +409,9 @@ final readonly class IdentityApiFacade implements IdentityApiFacadeInterface
             static fn (UserSignIn $signIn): UserSignInDto => new UserSignInDto(
                 id: $signIn->getIdentifier()->toString(),
                 method: $signIn->method(),
-                methodLabel: OAuthProvider::tryFrom($signIn->method())?->label() ?? 'Password',
+                methodLabel: SignInRecorder::METHOD_PASSWORD === $signIn->method()
+                    ? 'Password'
+                    : OAuthProvider::tryFrom($signIn->method())?->label() ?? $signIn->method(),
                 occurredAt: $signIn->getCreatedAt()->toAtomString(),
                 ip: $signIn->ip(),
                 userAgent: $signIn->userAgent(),

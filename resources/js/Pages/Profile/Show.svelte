@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Lock } from "@lucide/svelte";
   import { router } from "@inertiajs/svelte";
   import { Endpoints } from "@/lib/api";
   import AppShell from "@/Layouts/AppShell.svelte";
@@ -337,10 +338,8 @@
           class="flex flex-col gap-4 rounded-xl border px-4 py-4 md:flex-row md:items-center md:justify-between"
         >
           <div class="flex items-center gap-3">
-            <span
-              class="grid h-10 w-10 place-items-center rounded-full border border-(--panel-border) bg-(--surface-muted) text-sm font-semibold ui-title"
-            >
-              •••
+            <span class="text-(--accent)">
+              <Lock class="size-6" aria-hidden="true" />
             </span>
             <div class="grid gap-0.5">
               <span class="text-sm font-medium ui-title">Password</span>

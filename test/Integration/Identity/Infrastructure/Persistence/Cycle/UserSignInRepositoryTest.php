@@ -45,13 +45,13 @@ final class UserSignInRepositoryTest extends IntegrationTestCase
         $userB = Uuid::uuid7()->toString();
 
         $this->saveSignIn($userA, 'password', 5);
-        $this->saveSignIn($userA, 'github', 1);
+        $expected = $this->saveSignIn($userA, 'github', 1);
 
         $latest = $this->repository()->lastSignInAtByUserUuids([$userA, $userB]);
 
         self::assertSame([$userA], array_keys($latest));
         self::assertSame(
-            Chronos::now('UTC')->subDays(1)->toDateTimeString(),
+            $expected->toDateTimeString(),
             $latest[$userA]->setTimezone('UTC')->toDateTimeString(),
         );
     }
@@ -88,14 +88,17 @@ final class UserSignInRepositoryTest extends IntegrationTestCase
         int $daysAgo,
         ?string $ip = null,
         ?string $userAgent = null
-    ): void {
+    ): Chronos {
         $signIn = new UserSignIn($userUuid, $method, $ip, $userAgent);
         $this->repository()->save($signIn);
+        $createdAt = Chronos::now('UTC')->subDays($daysAgo);
 
         // The ORM stamps created_at with the real clock, so set it directly.
         $this->database()->update('user_sign_ins')->values([
-            'created_at' => Chronos::now('UTC')->subDays($daysAgo)->toDateTimeString(),
+            'created_at' => $createdAt->toDateTimeString(),
         ])->where('uuid', $signIn->getIdentifier()->toString())->run();
+
+        return $createdAt;
     }
 
     private function database(): DatabaseInterface

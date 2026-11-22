@@ -29,18 +29,21 @@ final class IdentityApiFacadeSignInHistoryTest extends IntegrationTestCase
         $user = Uuid::uuid7()->toString();
         $this->saveSignIn($user, 'github', 2, '203.0.113.7', 'Mozilla/5.0');
         $this->saveSignIn($user, 'password', 1);
+        $this->saveSignIn($user, 'passkey', 0);
 
         $signIns = $this->facade()->recentSignIns($user);
 
-        self::assertCount(2, $signIns);
-        self::assertSame('password', $signIns[0]->method);
-        self::assertSame('Password', $signIns[0]->methodLabel);
-        self::assertNull($signIns[0]->ip);
-        self::assertSame('github', $signIns[1]->method);
-        self::assertSame('GitHub', $signIns[1]->methodLabel);
-        self::assertSame('203.0.113.7', $signIns[1]->ip);
-        self::assertSame('Mozilla/5.0', $signIns[1]->userAgent);
-        self::assertSame(Chronos::parse($signIns[1]->occurredAt)->toAtomString(), $signIns[1]->occurredAt);
+        self::assertCount(3, $signIns);
+        self::assertSame('passkey', $signIns[0]->method);
+        self::assertSame('passkey', $signIns[0]->methodLabel);
+        self::assertSame('password', $signIns[1]->method);
+        self::assertSame('Password', $signIns[1]->methodLabel);
+        self::assertNull($signIns[1]->ip);
+        self::assertSame('github', $signIns[2]->method);
+        self::assertSame('GitHub', $signIns[2]->methodLabel);
+        self::assertSame('203.0.113.7', $signIns[2]->ip);
+        self::assertSame('Mozilla/5.0', $signIns[2]->userAgent);
+        self::assertSame(Chronos::parse($signIns[2]->occurredAt)->toAtomString(), $signIns[2]->occurredAt);
     }
 
     #[Test]

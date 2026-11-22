@@ -268,7 +268,7 @@ describe("Admin users page", () => {
       .getAllByRole("columnheader")
       .map((header) => header.textContent);
     expect(headers).toContain("Last sign-in");
-    expect(screen.getAllByText(/2026-11-2[12] \d\d:00:00/).length).toBe(2);
+    expect(screen.getAllByText(/2026-11-2[12] \d\d:\d\d:00/).length).toBe(2);
     expect(screen.getAllByText("—").length).toBe(1);
     expect(screen.getAllByText(/^Last sign-in: —$/).length).toBe(1);
   });

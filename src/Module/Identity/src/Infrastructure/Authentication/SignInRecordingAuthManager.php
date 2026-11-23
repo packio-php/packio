@@ -14,7 +14,7 @@ use Sirix\Mezzio\Authentication\Contract\TokenInterface;
 
 use function is_string;
 
-/** Records a sign-in when the login payload carries PAYLOAD_KEY; the key never reaches the inner manager. */
+/** Records a sign-in when the login payload carries PAYLOAD_KEY and a string user_id; the key never reaches the inner manager. */
 final readonly class SignInRecordingAuthManager implements AuthManagerInterface
 {
     public const string PAYLOAD_KEY = 'sign_in_method';

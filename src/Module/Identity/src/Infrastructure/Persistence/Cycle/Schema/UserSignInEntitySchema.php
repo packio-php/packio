@@ -60,6 +60,11 @@ final class UserSignInEntitySchema implements GeneratorInterface
             ->index(['user_uuid', 'created_at'])
             ->setName('user_sign_ins_user_recent_idx')
         ;
+        $registry
+            ->getTableSchema($entity)
+            ->index(['created_at'])
+            ->setName('user_sign_ins_created_at_idx')
+        ;
 
         return $registry;
     }

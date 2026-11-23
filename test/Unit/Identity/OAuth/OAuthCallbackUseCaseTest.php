@@ -125,6 +125,22 @@ final class OAuthCallbackUseCaseTest extends TestCase
     }
 
     #[Test]
+    public function manualEmailRequiresVerificationAndCarriesNoProvider(): void
+    {
+        $user = new User('manual@example.test', 'Manual');
+        $user->setIdentifier(Uuid::fromString('018f25e5-fd27-7000-8000-000000000004'));
+        $users = $this->createMock(UserRepositoryInterface::class);
+        $users->expects(self::once())->method('findByEmail')->with('manual@example.test')->willReturn(null);
+        $policy = $this->createMock(OAuthRegistrationPolicyInterface::class);
+        $policy->expects(self::once())->method('allowsRegistration')->willReturn(true);
+        $resolver = $this->createMock(OAuthUserResolverInterface::class);
+        $resolver->expects(self::once())->method('resolveUser')->willReturn(new OAuthUserResolution(OAuthUserResolutionType::Created, $user));
+        $oAuthCallbackResult = $this->useCase($users, $policy, $resolver)->handle($this->command(email: 'manual@example.test', providerEmail: null));
+        self::assertSame(OAuthCallbackStatus::VerificationRequired, $oAuthCallbackResult->status);
+        self::assertNull($oAuthCallbackResult->provider);
+    }
+
+    #[Test]
     public function linkedAccountWithoutProviderEmailLogsInExistingUser(): void
     {
         $user = new User('existing@example.test', 'Existing');

@@ -52,6 +52,15 @@ final class OAuthContinuationWorkflowTest extends TestCase
     }
 
     #[Test]
+    public function userVerifyingAnOAuthContinuationIsAuthenticatedWithTheCommandProvider(): void
+    {
+        $oAuthCallbackResult = $this->workflow($this->user(false))->verify(self::USER_ID, '123456', $this->command(), true);
+
+        self::assertSame(OAuthCallbackStatus::Authenticated, $oAuthCallbackResult->status);
+        self::assertSame(OAuthProvider::Github, $oAuthCallbackResult->provider);
+    }
+
+    #[Test]
     public function bannedUserVerifyingAnOAuthContinuationCarriesTheCommandProvider(): void
     {
         $oAuthCallbackResult = $this->workflow($this->user(true))->verify(self::USER_ID, '123456', $this->command(), true);

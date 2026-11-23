@@ -80,6 +80,24 @@ final class SignInRecordingAuthManagerTest extends TestCase
     }
 
     #[Test]
+    public function itStripsTheMethodButDoesNotRecordWithoutAStringUserId(): void
+    {
+        $request  = new ServerRequest();
+        $response = new RedirectResponse('/outer');
+        $inner    = $this->createMock(AuthManagerInterface::class);
+        $inner->expects(self::once())->method('login')->with($request, $response, [
+            'user_id' => 42,
+        ], null)->willReturn($response);
+
+        $this->manager($inner)->login($request, $response, [
+            'user_id'                               => 42,
+            SignInRecordingAuthManager::PAYLOAD_KEY => 'password',
+        ]);
+
+        self::assertSame([], $this->signIns->saved);
+    }
+
+    #[Test]
     public function itRecordsOnlyAfterInnerLoginSucceeds(): void
     {
         $inner = $this->createStub(AuthManagerInterface::class);

@@ -35,13 +35,12 @@ final readonly class SignInRecordingAuthManager implements AuthManagerInterface
     ): ResponseInterface {
         $method = $payload[self::PAYLOAD_KEY] ?? null;
         $userId = $payload['user_id'] ?? null;
-        if (! is_string($method) || ! is_string($userId)) {
-            return $this->authManager->login($serverRequest, $response, $payload, $expiresAt);
-        }
-
         unset($payload[self::PAYLOAD_KEY]);
+
         $response = $this->authManager->login($serverRequest, $response, $payload, $expiresAt);
-        $this->signInRecorder->record($serverRequest, $userId, $method);
+        if (is_string($method) && is_string($userId)) {
+            $this->signInRecorder->record($serverRequest, $userId, $method);
+        }
 
         return $response;
     }

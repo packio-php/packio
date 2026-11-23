@@ -177,6 +177,26 @@ Only PostgreSQL 17 is supported. See [Environment variables](../ENV.md#database)
 
 S3 archives: package archives are stored in a Docker volume by default. S3-compatible storage is experimental. Its `PACKAGE_ARCHIVE_*` settings go into `.env`; the names are in [Environment variables](../ENV.md).
 
+## Legal pages
+
+Packio can serve a privacy policy at `/privacy` and terms of service at `/terms` from Markdown files you provide. Set `PRIVACY_POLICY_PATH` and `TERMS_OF_SERVICE_PATH` in `.env`; each one is optional. For every page you set, a link appears in the footer and sign-up shows a short notice linking to it. With neither set, no page, link or notice appears.
+
+Packio ships no legal text. You write the documents and you are responsible for them. Raw HTML in the files is stripped.
+
+Put the files in a `legal` directory next to `compose.yaml` and mount it read-only into the `app` service (the line is already in `compose.yaml`, commented out):
+
+```yaml
+    volumes:
+      - ./legal:/app/legal:ro
+```
+
+```dotenv
+PRIVACY_POLICY_PATH=/app/legal/privacy.md
+TERMS_OF_SERVICE_PATH=/app/legal/terms.md
+```
+
+Run `docker compose up -d` after changing the variables. The files are read on every request, so later edits to the text apply without a restart. Use absolute paths; a relative path is resolved against the app's working directory. If a variable points to a missing or unreadable file, that page answers with a 500 error and the path is logged; the rest of the site keeps working.
+
 ## Certificates for registry subdomains
 
 Each organization has its own address, `<org>.<registry domain>`. Caddy cannot know them all in advance. It gets a certificate the first time someone opens an address, which takes a few seconds. Before asking, Caddy checks that the name looks like `<one-word>.<registry domain>`.

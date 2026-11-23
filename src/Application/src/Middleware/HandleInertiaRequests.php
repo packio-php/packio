@@ -9,6 +9,7 @@ use Mezzio\Session\SessionInterface;
 use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Http\ApiPathMatcher;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
+use Packio\Application\Legal\LegalDocuments;
 use Packio\Application\Release\AppReleaseVersion;
 use Packio\Application\Security\Csrf\CsrfTokenManager;
 use Packio\Application\Service\InitialListViewModeResolver;
@@ -40,6 +41,7 @@ final readonly class HandleInertiaRequests implements MiddlewareInterface
         private OrganizationApiFacadeInterface $organizationApiFacade,
         private ValidationRedirectState $validationRedirectState,
         private CsrfTokenManager $csrfTokenManager,
+        private LegalDocuments $legalDocuments,
     ) {}
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
@@ -72,6 +74,7 @@ final readonly class HandleInertiaRequests implements MiddlewareInterface
                 'version' => $this->appReleaseVersion->toArray(),
             ]);
             $inertia->share('branding', $this->brandingConfig->toArray());
+            $inertia->share('legal', $this->legalDocuments->sharedProps());
             $inertia->share('organization', $resolvedOrganization);
             $inertia->share('organizations', $isBanned ? [] : $this->resolveOrganizations($userId));
             $inertia->share('current_membership', $isBanned ? null : $this->membershipPayload($context->currentMembership));

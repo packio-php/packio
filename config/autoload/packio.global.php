@@ -43,6 +43,11 @@ return [
         'retention_days' => \env('SIGN_IN_HISTORY_RETENTION_DAYS', '90'),
     ],
 
+    'legal'           => [
+        'privacy_policy_path'   => \env('PRIVACY_POLICY_PATH', ''),
+        'terms_of_service_path' => \env('TERMS_OF_SERVICE_PATH', ''),
+    ],
+
     'branding'        => [
         'product_name'              => \env('BRAND_PRODUCT_NAME', 'Packio'),
         'tagline'                   => \env('BRAND_TAGLINE', 'a lightweight private package registry for Composer'),

@@ -12,6 +12,7 @@ use Packio\Shared\Api\Dto\UserDto;
 use PackioTest\Support\Base\UnitTestCase;
 use PackioTest\Support\Fake\InMemorySession;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -50,6 +51,30 @@ final class RequireEmailVerificationMiddlewareTest extends UnitTestCase
         self::assertSame('/auth/verification', $response->getHeaderLine('Location'));
         self::assertSame('user-1', $inMemorySession->get('pending_verification_user_uuid'));
         self::assertSame('/organizations', $inMemorySession->get('pending_verification_redirect_to'));
+    }
+
+    #[Test]
+    #[DataProvider('legalPaths')]
+    public function unverifiedUserCanOpenLegalPages(string $path): void
+    {
+        $inMemorySession = new InMemorySession();
+        $response        = new RequireEmailVerificationMiddleware()->process(
+            new ServerRequest(uri: $path)
+                ->withAttribute('session', $inMemorySession)
+                ->withAttribute(RequestContextAttributes::CURRENT_USER, $this->unverifiedBannedUser()),
+            $this->handler(),
+        );
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame([], $inMemorySession->toArray());
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function legalPaths(): iterable
+    {
+        yield 'privacy' => ['/privacy'];
+
+        yield 'terms' => ['/terms'];
     }
 
     private function unverifiedBannedUser(): UserDto

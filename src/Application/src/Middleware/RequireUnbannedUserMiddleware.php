@@ -7,6 +7,7 @@ namespace Packio\Application\Middleware;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Infrastructure\Http\ApiPathMatcher;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
+use Packio\Application\Legal\LegalDocument;
 use Packio\Shared\Api\Dto\UserDto;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -37,7 +38,7 @@ final readonly class RequireUnbannedUserMiddleware implements MiddlewareInterfac
         $path   = $serverRequest->getUri()->getPath();
         $method = $serverRequest->getMethod();
 
-        return ('GET' === $method && self::BANNED_ACCOUNT_PATH === $path)
+        return ('GET' === $method && (self::BANNED_ACCOUNT_PATH === $path || LegalDocument::fromPath($path) instanceof LegalDocument))
             || ('POST' === $method && self::LOGOUT_PATH === $path);
     }
 }

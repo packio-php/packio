@@ -5,6 +5,7 @@
   import FieldErrors from "@/Components/forms/FieldErrors.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import LegalNotice from "@/Components/ui/LegalNotice.svelte";
   import Input from "@/Components/ui/Input.svelte";
   import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
@@ -129,6 +130,7 @@
             </button>
           {/each}
         </div>
+        <LegalNotice />
 
         <div class="relative flex items-center justify-center py-4">
           <div class="h-px flex-1 border-t border-[var(--border)]"></div>

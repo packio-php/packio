@@ -28,6 +28,7 @@ use Packio\Identity\Domain\Repository\UserRepositoryInterface;
 use Packio\Identity\Domain\ValueObject\OAuthProvider;
 use Packio\Identity\Domain\ValueObject\OAuthTokenResponse;
 use Packio\Identity\Domain\ValueObject\OAuthUserData;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Dto\PendingOAuthEmailContext;
 use Packio\Identity\Infrastructure\Handler\EmailVerificationResendHandler;
 use Packio\Identity\Infrastructure\Handler\EmailVerificationVerifyHandler;
@@ -158,8 +159,9 @@ final class EmailVerificationFlowTest extends TestCase
         $authManager->expects(self::once())
             ->method('login')
             ->with($serverRequest, self::isInstanceOf(RedirectResponse::class), [
-                'user_id'                 => 'user-uuid',
-                'credentials_fingerprint' => null,
+                'user_id'                               => 'user-uuid',
+                'credentials_fingerprint'               => null,
+                SignInRecordingAuthManager::PAYLOAD_KEY => 'password',
             ])
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;
@@ -208,12 +210,15 @@ final class EmailVerificationFlowTest extends TestCase
         $identityApi->expects(self::once())
             ->method('verify')
             ->with('user-uuid', '123456', self::anything(), false)
-            ->willReturn(new OAuthCallbackResult(OAuthCallbackStatus::Authenticated, userId: 'user-uuid'))
+            ->willReturn(new OAuthCallbackResult(OAuthCallbackStatus::Authenticated, userId: 'user-uuid', provider: OAuthProvider::Codeberg))
         ;
 
         $authManager = $this->createMock(AuthManagerInterface::class);
         $authManager->expects(self::once())
             ->method('login')
+            ->with(self::anything(), self::anything(), self::callback(
+                static fn (array $payload): bool => 'codeberg' === ($payload[SignInRecordingAuthManager::PAYLOAD_KEY] ?? null),
+            ))
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;
 

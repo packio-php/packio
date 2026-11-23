@@ -25,6 +25,7 @@ use Packio\Identity\Domain\Repository\UserRepositoryInterface;
 use Packio\Identity\Domain\ValueObject\OAuthProvider as DomainOAuthProvider;
 use Packio\Identity\Domain\ValueObject\OAuthTokenResponse;
 use Packio\Identity\Domain\ValueObject\OAuthUserData;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Dto\OAuthState;
 use Packio\Identity\Infrastructure\Handler\OAuthCallbackHandler;
 use Packio\Identity\Infrastructure\Handler\OAuthOutcomePresenter;
@@ -437,6 +438,7 @@ final class OAuthAuthHandlerTest extends TestCase
             userId: 'user-123',
             email: 'user@example.com',
             displayName: 'Test User',
+            provider: DomainOAuthProvider::Github,
         );
 
         $this->workflow->expects(self::once())
@@ -448,8 +450,9 @@ final class OAuthAuthHandlerTest extends TestCase
         $this->authManager->expects(self::once())
             ->method('login')
             ->with($serverRequest, self::isInstanceOf(RedirectResponse::class), [
-                'user_id'                 => 'user-123',
-                'credentials_fingerprint' => null,
+                'user_id'                               => 'user-123',
+                'credentials_fingerprint'               => null,
+                SignInRecordingAuthManager::PAYLOAD_KEY => 'github',
             ])
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;
@@ -486,13 +489,15 @@ final class OAuthAuthHandlerTest extends TestCase
                 userId: 'user-banned',
                 email: 'banned@example.test',
                 displayName: 'Banned User',
+                provider: DomainOAuthProvider::Github,
             ))
         ;
         $this->authManager->expects(self::once())
             ->method('login')
             ->with($serverRequest, self::isInstanceOf(RedirectResponse::class), [
-                'user_id'                 => 'user-banned',
-                'credentials_fingerprint' => null,
+                'user_id'                               => 'user-banned',
+                'credentials_fingerprint'               => null,
+                SignInRecordingAuthManager::PAYLOAD_KEY => 'github',
             ])
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;

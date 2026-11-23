@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Lock } from "@lucide/svelte";
   import { router } from "@inertiajs/svelte";
   import { Endpoints } from "@/lib/api";
   import AppShell from "@/Layouts/AppShell.svelte";
@@ -10,6 +11,7 @@
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import SignInHistoryList from "@/Components/ui/SignInHistoryList.svelte";
   import { mergeBranding } from "@/lib/branding";
   import { formatDate } from "@/lib/date";
   import type { AuthPayload } from "@/types/auth";
@@ -18,6 +20,7 @@
     ProfileOAuthAccountPayload,
     ProfilePageProps,
     ProfilePayload,
+    SignInHistoryEntry,
   } from "@/types/pages";
 
   interface Props {
@@ -26,6 +29,7 @@
     branding?: ProfilePageProps["branding"];
     oauth_accounts?: ProfileOAuthAccountPayload[];
     api_tokens?: ApiAccessTokenPayload[];
+    sign_in_history?: SignInHistoryEntry[];
   }
 
   let {
@@ -34,6 +38,7 @@
     branding = {},
     oauth_accounts = [],
     api_tokens = [],
+    sign_in_history = [],
   }: Props = $props();
 
   let resolvedBranding = $derived(mergeBranding(branding ?? {}));
@@ -275,9 +280,9 @@
           <InsetCard className="grid gap-4 p-4">
             {#if hasPassword}
               <label class="grid gap-2">
-                <span class="text-sm font-medium ui-title"
-                  >Current password</span
-                >
+                <span class="text-sm font-medium ui-title">
+                  Current password
+                </span>
                 <Input
                   bind:value={currentPassword}
                   name="current_password"
@@ -302,9 +307,9 @@
             </label>
 
             <label class="grid gap-2">
-              <span class="text-sm font-medium ui-title"
-                >Confirm new password</span
-              >
+              <span class="text-sm font-medium ui-title">
+                Confirm new password
+              </span>
               <Input
                 bind:value={newPasswordConfirmation}
                 name="new_password_confirmation"
@@ -337,10 +342,8 @@
           class="flex flex-col gap-4 rounded-xl border px-4 py-4 md:flex-row md:items-center md:justify-between"
         >
           <div class="flex items-center gap-3">
-            <span
-              class="grid h-10 w-10 place-items-center rounded-full border border-(--panel-border) bg-(--surface-muted) text-sm font-semibold ui-title"
-            >
-              •••
+            <span class="text-(--accent)">
+              <Lock class="size-6" aria-hidden="true" />
             </span>
             <div class="grid gap-0.5">
               <span class="text-sm font-medium ui-title">Password</span>
@@ -416,6 +419,18 @@
             <p class="text-sm ui-muted">No OAuth sign-in methods connected.</p>
           </div>
         {/if}
+      </div>
+    </Card>
+
+    <Card className="rounded-[1.75rem] p-6 xl:col-span-2">
+      <SectionHeading
+        eyebrow="Security"
+        title="Sign-in history"
+        description="Your 20 most recent successful sign-ins."
+      />
+
+      <div class="mt-6">
+        <SignInHistoryList entries={sign_in_history} />
       </div>
     </Card>
 

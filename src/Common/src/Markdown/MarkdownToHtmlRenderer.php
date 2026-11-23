@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Packio\Publication\Infrastructure\Readme;
+namespace Common\Markdown;
 
 use League\CommonMark\Environment\Environment;
 use League\CommonMark\Extension\CommonMark\CommonMarkCoreExtension;

@@ -156,7 +156,7 @@ final class IdentityQueryServiceTest extends TestCase
         $repository->expects(self::once())->method('latestForOrganization')->with('org-1')->willReturn([$registryAccessToken]);
         $repository->expects(self::never())->method('save');
         $encryptor = $this->createMock(SecretEncryptorInterface::class);
-        $encryptor->method('isEncrypted')->with('encrypted')->willReturn(true);
+        $encryptor->expects(self::atLeastOnce())->method('isEncrypted')->with('encrypted')->willReturn(true);
         $encryptor->expects(self::once())->method('decrypt')->with('encrypted')->willReturn('plain');
 
         $results = $this->service($repository, $encryptor)->registryAccessTokensForOrganization('org-1');

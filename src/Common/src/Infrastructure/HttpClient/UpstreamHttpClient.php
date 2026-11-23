@@ -20,8 +20,8 @@ final readonly class UpstreamHttpClient
     public function __construct(private ClientInterface $httpClient, private ResourceLimits $resourceLimits = new ResourceLimits()) {}
 
     /**
-     * @param array<string, list<string>|string> $headers
-     * @param null|array<string, mixed>          $json
+     * @param array<string, non-empty-list<string>|string> $headers
+     * @param null|array<string, mixed>                    $json
      */
     public function request(
         string $method,
@@ -61,8 +61,8 @@ final readonly class UpstreamHttpClient
     }
 
     /**
-     * @param array<string, list<string>|string> $headers
-     * @param null|array<string, mixed>          $json
+     * @param array<string, non-empty-list<string>|string> $headers
+     * @param null|array<string, mixed>                    $json
      */
     public function requestStream(
         string $method,

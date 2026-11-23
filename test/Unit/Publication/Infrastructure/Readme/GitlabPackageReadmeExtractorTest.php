@@ -8,6 +8,7 @@ use const JSON_THROW_ON_ERROR;
 
 use Common\Branding\BrandingConfig;
 use Common\Infrastructure\HttpClient\UpstreamHttpClient;
+use Common\Markdown\MarkdownToHtmlRenderer;
 use Common\Security\StoredSecretResolver;
 use GuzzleHttp\Client;
 use GuzzleHttp\Handler\MockHandler;
@@ -17,7 +18,6 @@ use GuzzleHttp\Psr7\Response;
 use Packio\Publication\Infrastructure\Gitlab\GitlabAccessCredentials;
 use Packio\Publication\Infrastructure\Readme\Base64FileContentDecoder;
 use Packio\Publication\Infrastructure\Readme\GitlabPackageReadmeExtractor;
-use Packio\Publication\Infrastructure\Readme\MarkdownToHtmlRenderer;
 use Packio\Publication\Infrastructure\Readme\ReadmeCandidateProvider;
 use Packio\Publication\Infrastructure\Readme\ReadmeExtractorTemplate;
 use PackioTest\Support\Fake\SecretEncryptorStub;

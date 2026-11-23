@@ -141,8 +141,8 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         $handler = $this->createHandler();
 
         // Token auth happens before rate limiting → rateLimiter should NOT be called for a valid token
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         $response = $this->createMock(ResponseInterface::class);
@@ -164,8 +164,8 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         ], $organizationDto);
         $handler = $this->createHandler();
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('valid-token')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         $response = $this->createMock(ResponseInterface::class);
@@ -186,7 +186,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         $handler = $this->createHandler();
 
         // Token auth fails
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
         // Then rate limit is checked → not exceeded
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter
@@ -210,7 +210,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         $handler = $this->createHandler();
 
         // Token auth fails
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
         // Then rate limit is checked → exceeded
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter
@@ -237,8 +237,8 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         ], $organizationDto);
         $handler = $this->createHandler();
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('no-perm')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', [])->willReturn(false);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('no-perm')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', [])->willReturn(false);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         /** @var JsonResponse $response */
@@ -258,8 +258,8 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         ], $organizationDto);
         $handler = $this->createHandler();
 
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('cross-org')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('cross-org')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         /** @var JsonResponse $response */
@@ -282,7 +282,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
 
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter->expects(self::never())->method('attempt');
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
 
         $response = $this->createMock(ResponseInterface::class);
         $handler->expects(self::once())->method('handle')->willReturn($response);
@@ -307,7 +307,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
             ->with('registry_auth:127.0.0.1', 30, 60)
             ->willReturn(true)
         ;
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
 
         /** @var JsonResponse $response */
         $response = $this->requireRegistryAccessMiddleware->process($serverRequest, $handler);
@@ -323,7 +323,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
 
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter->expects(self::never())->method('attempt');
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/missing')->willReturn(null);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/missing')->willReturn(null);
 
         $response = $this->createMock(ResponseInterface::class);
         $handler->expects(self::once())->method('handle')->willReturn($response);
@@ -372,7 +372,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
 
         // Anonymous check runs FIRST → finds public package → passes through.
         // The bad token is never extracted/authenticated.
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
         $this->identityApi->expects(self::never())->method('authenticateRegistryAccessToken');
         $this->rateLimiter->expects(self::never())->method('attempt');
 
@@ -392,7 +392,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         $serverRequest = $this->createRequest('repo.package.metadata', 'GET', [], $organizationDto, 'vendor', 'pkg');
         $handler       = $this->createHandler();
 
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
         $this->rateLimiter->expects(self::never())->method('attempt');
 
         $response = $this->createMock(ResponseInterface::class);
@@ -420,10 +420,10 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         );
         $handler = $this->createHandler();
 
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
 
         // Auth path: bad token → auth fails → rate limit → 401
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('bad-token')->willReturn(null);
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter
             ->expects(self::once())
@@ -446,7 +446,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         $handler = $this->createHandler();
 
         $this->identityApi
-            ->method('authenticateRegistryAccessToken')
+            ->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')
             ->with('bad-token')
             ->willReturn(null)
         ;
@@ -491,9 +491,9 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
         );
         $handler = $this->createHandler();
 
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
-        $this->identityApi->method('authenticateRegistryAccessToken')->with('valid-private-token')->willReturn($registryAccessTokenDto);
-        $this->permissionEvaluator->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/private')->willReturn($packageData);
+        $this->identityApi->expects(self::atLeastOnce())->method('authenticateRegistryAccessToken')->with('valid-private-token')->willReturn($registryAccessTokenDto);
+        $this->permissionEvaluator->expects(self::atLeastOnce())->method('allows')->with('packages.read.private', ['packages.read.private'])->willReturn(true);
         // Rate limiter must NOT be called for valid token
         $this->rateLimiter->expects(self::never())->method('attempt');
 
@@ -515,7 +515,7 @@ final class RequireRegistryAccessMiddlewareTest extends TestCase
 
         $this->clientIpResolver->method('resolve')->willReturn('127.0.0.1');
         $this->rateLimiter->expects(self::never())->method('attempt');
-        $this->packageQuery->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
+        $this->packageQuery->expects(self::atLeastOnce())->method('findPackageInOrganization')->with('org-01', 'vendor/pkg')->willReturn($packageData);
 
         $response = $this->createMock(ResponseInterface::class);
         $handler->expects(self::once())->method('handle')->willReturn($response);

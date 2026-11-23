@@ -1,25 +1,18 @@
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
   import { onMount } from "svelte";
-  import Button from "@/Components/ui/Button.svelte";
 
   let {
     threshold = 320,
     label = "↑ Top",
     container = null,
-    // @internal Optional anchor-to-content mode: no production shell uses it
-    // today (AdminShell pins the button to the viewport right edge), it is kept
-    // as a backward-compatible extension covered by unit tests.
-    referenceSelector = null,
   }: {
     threshold?: number;
     label?: string;
     container?: HTMLElement | null;
-    referenceSelector?: string | null;
   } = $props();
 
   let visible = $state(false);
-  let rightOffset = $state<number | null>(null);
   let navigationFrame: number | null = null;
 
   function scrollSource(): HTMLElement | Window {
@@ -37,23 +30,6 @@
       : window.scrollY > threshold;
   }
 
-  function syncPosition(): void {
-    if (typeof window === "undefined" || !referenceSelector) {
-      rightOffset = null;
-      return;
-    }
-
-    const reference = document.querySelector(referenceSelector);
-
-    if (!reference) {
-      rightOffset = null;
-      return;
-    }
-
-    const rect = reference.getBoundingClientRect();
-    rightOffset = Math.max(window.innerWidth - rect.right - 16, 24);
-  }
-
   function syncAfterNavigation(): void {
     if (typeof window === "undefined") {
       return;
@@ -66,7 +42,6 @@
     navigationFrame = window.requestAnimationFrame(() => {
       navigationFrame = null;
       syncVisibility();
-      syncPosition();
     });
   }
 
@@ -83,14 +58,12 @@
 
   onMount(() => {
     syncVisibility();
-    syncPosition();
 
     const source = scrollSource();
     source.addEventListener("scroll", syncVisibility, {
       passive: true,
     });
 
-    window.addEventListener("resize", syncPosition);
     const offNavigate = router.on("navigate", syncAfterNavigation);
 
     return () => {
@@ -99,7 +72,6 @@
       }
 
       source.removeEventListener("scroll", syncVisibility);
-      window.removeEventListener("resize", syncPosition);
       offNavigate();
     };
   });
@@ -107,17 +79,16 @@
 
 {#if visible}
   <div
-    class="pointer-events-none fixed bottom-[55px] right-6 z-40 hidden md:block sm:bottom-[71px]"
-    style={rightOffset !== null ? `right: ${rightOffset}px` : undefined}
+    class="pointer-events-none fixed inset-x-0 top-[calc(var(--admin-header-h,5rem)+0.75rem)] z-40 hidden justify-center md:flex"
   >
-    <Button
+    <button
       aria-label="Scroll to top"
-      className="pointer-events-auto rounded-full px-3 py-2 text-xs opacity-80 shadow-[0_18px_48px_color-mix(in_srgb,var(--accent)_22%,transparent)] transition-opacity hover:opacity-95"
+      class="pointer-events-auto cursor-pointer rounded-full border px-3 py-1 text-xs opacity-80 shadow-sm backdrop-blur transition-opacity hover:opacity-100 theme-border"
+      style="background-color: var(--header-bg);"
       onclick={scrollToTop}
       type="button"
-      variant="primary"
     >
       {label}
-    </Button>
+    </button>
   </div>
 {/if}

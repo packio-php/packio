@@ -25,7 +25,7 @@ $sourceOAuthRedirectUrl = static fn (string $provider): string => \rtrim(
 ) . '/auth/oauth/' . $provider . '/source-callback';
 
 return [
-    'packio'        => [
+    'packio'          => [
         'name'            => \env('APP_NAME', \env('BRAND_PRODUCT_NAME', 'Packio')),
         'debug'           => \env('APP_DEBUG', true, 'bool'),
         'timezone'        => \env('APP_TIMEZONE', 'UTC'),
@@ -35,11 +35,20 @@ return [
         ],
     ],
 
-    'audit'         => [
+    'audit'           => [
         'retention_days' => \env('AUDIT_LOG_RETENTION_DAYS', '180'),
     ],
 
-    'branding'      => [
+    'sign_in_history' => [
+        'retention_days' => \env('SIGN_IN_HISTORY_RETENTION_DAYS', '90'),
+    ],
+
+    'legal'           => [
+        'privacy_policy_path'   => \env('PRIVACY_POLICY_PATH', ''),
+        'terms_of_service_path' => \env('TERMS_OF_SERVICE_PATH', ''),
+    ],
+
+    'branding'        => [
         'product_name'              => \env('BRAND_PRODUCT_NAME', 'Packio'),
         'tagline'                   => \env('BRAND_TAGLINE', 'a lightweight private package registry for Composer'),
         'domain'                    => \env('BRAND_DOMAIN', 'packio.localhost'),
@@ -53,7 +62,7 @@ return [
         'app_url'                   => \env('APP_URL', 'http://packio.localhost:8080'),
     ],
 
-    'mail'          => [
+    'mail'            => [
         'dsn'  => (static function(): string {
             $dsn = \trim((string) \env('MAIL_DSN', ''));
             if ('' !== $dsn) {
@@ -86,7 +95,7 @@ return [
         })(),
     ],
 
-    'turnstile'     => [
+    'turnstile'       => [
         'enabled'           => \env('TURNSTILE_ENABLED', false, 'bool'),
         'site_key'          => \env('TURNSTILE_SITE_KEY', ''),
         'secret_key'        => \env('TURNSTILE_SECRET_KEY', ''),
@@ -95,7 +104,7 @@ return [
         'validate_hostname' => \env('TURNSTILE_VALIDATE_HOSTNAME', true, 'bool'),
     ],
 
-    'sources'       => [
+    'sources'         => [
         'providers' => [
             SourceProvider::Github->value           => [
                 'enabled' => \env(SourceProvider::Github->enabledEnvName(), true, 'bool'),
@@ -133,15 +142,15 @@ return [
         ],
     ],
 
-    'identity'      => [
+    'identity'        => [
         'registration_open' => \env('IDENTITY_REGISTRATION_OPEN', true, 'bool'),
     ],
 
-    'organizations' => [
+    'organizations'   => [
         'reserved_slugs' => \env('ORGANIZATION_RESERVED_SLUGS', ReservedOrganizationSlugs::DEFAULT_SLUGS, 'array'),
     ],
 
-    'oauth'         => [
+    'oauth'           => [
         'github'    => [
             'enabled'           => \env('OAUTH_GITHUB_ENABLED', false, 'bool'),
             'client_id'         => \env('OAUTH_GITHUB_CLIENT_ID', ''),
@@ -224,7 +233,7 @@ return [
         ],
     ],
 
-    'security'      => [
+    'security'        => [
         'secret_encryption_key' => \env('APP_SECRET_ENCRYPTION_KEY', ''),
 
         'password_reset'        => [

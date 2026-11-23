@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-11-23
+
+### Added
+
+- The profile page shows your 20 most recent successful sign-ins: time, method, IP address and browser.
+- The admin user page shows the user's sign-in methods (password and connected OAuth accounts) and their sign-in history. The admin users list has a "Last sign-in" column.
+- Sign-in history is kept for `SIGN_IN_HISTORY_RETENTION_DAYS` days (90 by default). The new `sign-in-history:prune` command deletes older entries, and `worker-cleanup` runs it in its loop.
+- Optional privacy policy and terms pages from Markdown files (`PRIVACY_POLICY_PATH`, `TERMS_OF_SERVICE_PATH`), linked in the footer and on sign-up.
+
+### Security
+
+- The session gets a new ID when a user logs in, which protects against session fixation.
+
+### Changed
+
+- Outbound HTTPS requests (Git and OAuth providers, webhooks, dist downloads, S3-compatible storage) now require TLS 1.2 or newer. Self-hosted services that still use TLS 1.0 or 1.1 stop working.
+- PHP and JavaScript dependencies are updated, including Guzzle 8 and Symfony Mailer 8.
+- The scroll-to-top button is now a small pill centred at the top of the page instead of a button in the bottom-right corner.
+
+### Fixed
+
+- The password icon in the sign-in methods block of the profile page now matches the size and colour of the OAuth provider icons.
+
 ## [0.5.1] - 2026-11-19
 
 ### Security

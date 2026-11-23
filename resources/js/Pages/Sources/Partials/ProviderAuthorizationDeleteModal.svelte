@@ -103,9 +103,9 @@
                 name="new_authorization_id"
                 id="reassign-select"
               >
-                <option value="" disabled selected
-                  >— Select authorization —</option
-                >
+                <option value="" disabled selected>
+                  — Select authorization —
+                </option>
                 {#each check.other_authorizations as auth (auth.id)}
                   <option value={auth.id}>
                     {auth.auth_strategy} ({auth.masked_value})

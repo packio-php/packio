@@ -129,4 +129,59 @@ describe("Admin user details page", () => {
     expect(screen.getByText("admin")).toHaveClass("ui-badge-gold");
     expect(screen.getByText("Unverified")).toHaveClass("ui-badge-gold");
   });
+
+  it("shows read-only sign-in methods and history", () => {
+    render(AdminUserDetails, {
+      props: {
+        user_record: user,
+        sign_in_methods: {
+          has_password: false,
+          oauth_accounts: [
+            {
+              id: "acc-1",
+              provider: "github",
+              provider_label: "GitHub",
+              account_label: "@octo",
+              provider_email: null,
+              provider_username: "octo",
+            },
+          ],
+        },
+        sign_in_history: [
+          {
+            id: "s-1",
+            ip: "203.0.113.7",
+            method: "github",
+            method_label: "GitHub",
+            occurred_at: "2026-11-22T10:00:00+00:00",
+            user_agent: null,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Sign-in methods")).toBeInTheDocument();
+    expect(screen.getByText("Not set")).toBeInTheDocument();
+    expect(screen.getByText("@octo")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Disconnect" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Sign-in history")).toBeInTheDocument();
+    expect(screen.getByText("203.0.113.7")).toBeInTheDocument();
+  });
+
+  it("shows an enabled password and the empty OAuth state", () => {
+    render(AdminUserDetails, {
+      props: {
+        user_record: user,
+        sign_in_methods: { has_password: true, oauth_accounts: [] },
+      },
+    });
+
+    expect(screen.getByText("Enabled")).toBeInTheDocument();
+    expect(
+      screen.getByText("No OAuth sign-in methods connected."),
+    ).toBeInTheDocument();
+    expect(screen.getByText("No sign-ins recorded yet.")).toBeInTheDocument();
+  });
 });

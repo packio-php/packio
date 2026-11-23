@@ -329,8 +329,10 @@
     <Link
       class={linkClass}
       style={matchesPath(match) ? active : inactive}
-      {href}>{label}</Link
+      {href}
     >
+      {label}
+    </Link>
   {/snippet}
   {#if hasOrganizationAccess}
     {@render section("/packages", withOrganization("/packages"), "Packages")}
@@ -348,8 +350,10 @@
     <Link
       class={`inline-flex ${mobile ? "min-h-11" : "h-10"} items-center justify-center rounded-lg px-5 text-sm font-semibold no-underline transition`}
       style="background-color: var(--button-primary-bg); color: var(--button-primary-text);"
-      href="/auth/login">Login</Link
+      href="/auth/login"
     >
+      Login
+    </Link>
   {/if}
 {/snippet}
 
@@ -407,8 +411,10 @@
       <Link
         class={`block ${itemClass} text-sm transition no-underline`}
         style={matchesPath(path) ? active : inactive}
-        href={withOrganization(path)}>{label}</Link
+        href={withOrganization(path)}
       >
+        {label}
+      </Link>
     {/each}
   {/snippet}
   {#snippet organizationCreate()}
@@ -577,7 +583,10 @@
   {/if}
 {/snippet}
 
-<div class="flex min-h-screen flex-col bg-(--page-bg) text-(--page-ink)">
+<div
+  class="flex min-h-screen flex-col bg-(--page-bg) text-(--page-ink)"
+  style={headerHeight > 0 ? `--admin-header-h: ${headerHeight}px` : undefined}
+>
   <header
     bind:offsetHeight={headerHeight}
     class="sticky top-0 z-50 border-b theme-border"
@@ -783,6 +792,14 @@
     >
       <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-6">
         <span>{branding.name}, {branding.tagline}</span>
+        {#if page.props.legal?.privacy_url}
+          <Link class="underline" href={page.props.legal.privacy_url}>
+            Privacy
+          </Link>
+        {/if}
+        {#if page.props.legal?.terms_url}
+          <Link class="underline" href={page.props.legal.terms_url}>Terms</Link>
+        {/if}
       </div>
       <div class="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
         <span class="text-xs">{branding.domain}</span>

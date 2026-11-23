@@ -187,7 +187,7 @@ jobs:
   frontend:
     runs-on: ubuntu-24.04
     container:
-      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      image: mcr.microsoft.com/playwright:v1.65.1-noble
       options: --ipc=host
     steps:
       - uses: actions/checkout@v4

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 use Common\Branding\BrandingConfig;
 use Common\Infrastructure\Resource\ResourceLimits;
+use Common\Markdown\MarkdownToHtmlRenderer;
 use GuzzleHttp\ClientInterface;
 use Laminas\ServiceManager\AbstractFactory\ConfigAbstractFactory;
 use Mezzio\Cors\Middleware\CorsMiddleware;
+use Mezzio\Handler\NotFoundHandler;
 use Mezzio\Template\TemplateRendererInterface;
 use Packio\Admin\Api\ProjectSettingsApiFacadeInterface;
 use Packio\Admin\Api\RuntimeSettingKeysApiFacadeInterface;
@@ -19,11 +21,13 @@ use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Cli\RateLimitCleanupCommand;
 use Packio\Application\Infrastructure\Handler\HealthHandler;
 use Packio\Application\Infrastructure\Handler\HomeHandler;
+use Packio\Application\Infrastructure\Handler\LegalPageHandler;
 use Packio\Application\Infrastructure\Handler\ReadyHandler;
 use Packio\Application\Infrastructure\Handler\RootRedirectHandler;
 use Packio\Application\Infrastructure\Handler\SitemapHandler;
 use Packio\Application\Infrastructure\Http\RequestPresentationPolicy;
 use Packio\Application\Infrastructure\Readiness\ReadinessChecker;
+use Packio\Application\Legal\LegalDocuments;
 use Packio\Application\Middleware\ApiAuthenticationAttemptRateLimitMiddleware;
 use Packio\Application\Middleware\CsrfValidationMiddleware;
 use Packio\Application\Middleware\HandleAuthorizationExceptionMiddleware;
@@ -127,6 +131,8 @@ return [
             ApiAuthenticationAttemptRateLimitMiddleware::class      => ConfigAbstractFactory::class,
             RootRedirectHandler::class                              => ConfigAbstractFactory::class,
             SitemapHandler::class                                   => ConfigAbstractFactory::class,
+            LegalPageHandler::class                                 => ConfigAbstractFactory::class,
+            LegalDocuments::class                                   => ConfigAbstractFactory::class,
             AppReleaseVersion::class                                => ConfigAbstractFactory::class,
             TurnstileVerifier::class                                => ConfigAbstractFactory::class,
             TurnstileRequestGuard::class                            => ConfigAbstractFactory::class,
@@ -174,6 +180,16 @@ return [
         ],
         SitemapHandler::class                                  => [
             BrandingConfig::class,
+            LegalDocuments::class,
+        ],
+        LegalPageHandler::class                                => [
+            LegalDocuments::class,
+            NotFoundHandler::class,
+        ],
+        LegalDocuments::class                                  => [
+            'config.legal.privacy_policy_path',
+            'config.legal.terms_of_service_path',
+            MarkdownToHtmlRenderer::class,
         ],
         AppReleaseVersion::class                               => [
             'config.packio',
@@ -223,6 +239,7 @@ return [
             OrganizationApiFacadeInterface::class,
             ValidationRedirectState::class,
             CsrfTokenManager::class,
+            LegalDocuments::class,
         ],
         ResolveCurrentUserMiddleware::class                    => [
             IdentityApiFacadeInterface::class,

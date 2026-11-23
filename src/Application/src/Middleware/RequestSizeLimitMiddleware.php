@@ -14,7 +14,6 @@ use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
 
 use function ctype_digit;
-use function fopen;
 use function min;
 use function rawurldecode;
 use function str_starts_with;
@@ -37,7 +36,7 @@ final readonly class RequestSizeLimitMiddleware implements MiddlewareInterface
             return $this->tooLarge();
         }
         // Verify actual bytes even without Content-Length, before body parsing.
-        $copy  = Utils::streamFor(fopen('php://temp/maxmemory:1048576', 'w+b'));
+        $copy  = Utils::streamFor(Utils::tryFopen('php://temp/maxmemory:1048576', 'w+b'));
         $bytes = 0;
 
         try {

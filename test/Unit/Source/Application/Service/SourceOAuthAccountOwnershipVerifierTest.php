@@ -86,8 +86,8 @@ final class SourceOAuthAccountOwnershipVerifierTest extends TestCase
         $sourceOAuthAccount = $this->account();
 
         $this->sourceOAuthAccountRepository->method('findById')->willReturn($sourceOAuthAccount);
-        $this->secretEncryptor->method('isEncrypted')->with('enc_at')->willReturn(true);
-        $this->secretEncryptor->method('decrypt')->with('enc_at')->willReturn('decrypted_at');
+        $this->secretEncryptor->expects(self::atLeastOnce())->method('isEncrypted')->with('enc_at')->willReturn(true);
+        $this->secretEncryptor->expects(self::atLeastOnce())->method('decrypt')->with('enc_at')->willReturn('decrypted_at');
 
         $sourceOAuthAccountOwnershipDecision = $this->verifier()->verify(
             new ActorContext('org-2', 'user-1', 'owner'),
@@ -156,7 +156,7 @@ final class SourceOAuthAccountOwnershipVerifierTest extends TestCase
     public function returnsTokenUnavailableWhenAccessTokenCannotBeDecrypted(): void
     {
         $this->sourceOAuthAccountRepository->method('findById')->willReturn($this->account());
-        $this->secretEncryptor->method('isEncrypted')->with('enc_at')->willReturn(false);
+        $this->secretEncryptor->expects(self::atLeastOnce())->method('isEncrypted')->with('enc_at')->willReturn(false);
 
         $sourceOAuthAccountOwnershipDecision = $this->verifier()->verify(
             new ActorContext('org-1', 'user-1', 'owner'),

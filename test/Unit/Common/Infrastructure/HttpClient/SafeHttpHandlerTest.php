@@ -9,7 +9,9 @@ use Common\Infrastructure\HttpClient\HostResolver;
 use Common\Infrastructure\HttpClient\OutboundUrlPolicy;
 use Common\Infrastructure\HttpClient\SafeHttpHandler;
 use Common\Infrastructure\Resource\ResourceLimits;
+use GuzzleHttp\Client;
 use GuzzleHttp\Handler\CurlFactory;
+use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Promise\Create;
 use GuzzleHttp\Promise\PromiseInterface;
 use GuzzleHttp\Psr7\Request;
@@ -34,6 +36,33 @@ final class SafeHttpHandlerTest extends TestCase
             return Create::promiseFor(new Response(204));
         });
         self::assertSame(204, $safeHttpHandler(new Request('GET', 'https://example.test'), [])->wait()->getStatusCode());
+    }
+
+    public function testPinsResolvedAddressThroughCurlOptionsOnClientHandlerStack(): void
+    {
+        $captured        = [];
+        $safeHttpHandler = new SafeHttpHandler(OutboundPolicyFixture::policy(), static function(RequestInterface $request, array $options) use (&$captured): PromiseInterface {
+            $captured    = $options;
+            $curlFactory = new CurlFactory(0);
+            $curlFactory->release($curlFactory->create($request, $options));
+
+            return Create::promiseFor(new Response(204));
+        });
+        // Same stack as UpstreamHttpClientFactory, with the last handler intercepted to avoid network access.
+        $client = new Client([
+            'handler'         => HandlerStack::create($safeHttpHandler),
+            'allow_redirects' => false,
+        ]);
+        self::assertSame(204, $client->request('GET', 'https://api.example.test/repo', [
+            'allow_redirects' => true,
+            'curl'            => [
+                CURLOPT_FRESH_CONNECT => false,
+            ],
+        ])->getStatusCode());
+        self::assertSame(['api.example.test:443:93.184.216.34'], $captured['curl'][CURLOPT_RESOLVE]);
+        self::assertTrue($captured['curl'][CURLOPT_FRESH_CONNECT]);
+        self::assertTrue($captured['curl'][CURLOPT_FORBID_REUSE]);
+        self::assertFalse($captured['allow_redirects']);
     }
 
     public function testTransportSinkStopsOversizedDecodedResponse(): void

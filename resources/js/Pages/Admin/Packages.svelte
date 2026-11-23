@@ -902,9 +902,9 @@
                         {item.source.name}
                       </p>
                       <div class="flex flex-wrap gap-2">
-                        <Badge tone="neutral"
-                          >{item.source.provider_label}</Badge
-                        >
+                        <Badge tone="neutral">
+                          {item.source.provider_label}
+                        </Badge>
                         <Badge tone={syncTone(item.source.last_sync_status)}>
                           {item.source.last_sync_status}
                         </Badge>

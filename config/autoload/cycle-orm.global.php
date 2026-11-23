@@ -12,6 +12,7 @@ use Packio\Identity\Infrastructure\Persistence\Cycle\Schema\PasswordResetTokenEn
 use Packio\Identity\Infrastructure\Persistence\Cycle\Schema\RegistryAccessTokenEntitySchema;
 use Packio\Identity\Infrastructure\Persistence\Cycle\Schema\UserEntitySchema;
 use Packio\Identity\Infrastructure\Persistence\Cycle\Schema\UserOAuthAccountEntitySchema;
+use Packio\Identity\Infrastructure\Persistence\Cycle\Schema\UserSignInEntitySchema;
 use Packio\Organization\Infrastructure\Persistence\Cycle\Schema\OrganizationEntitySchema;
 use Packio\Organization\Infrastructure\Persistence\Cycle\Schema\OrganizationInvitationEntitySchema;
 use Packio\Organization\Infrastructure\Persistence\Cycle\Schema\OrganizationMemberEntitySchema;
@@ -95,6 +96,7 @@ return [
             SourceProviderInstanceEntitySchema::class,
             UserEntitySchema::class,
             UserOAuthAccountEntitySchema::class,
+            UserSignInEntitySchema::class,
             WebhookEventEntitySchema::class,
         ],
         'schema'     => [

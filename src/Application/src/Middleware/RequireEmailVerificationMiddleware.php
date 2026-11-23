@@ -27,6 +27,8 @@ final readonly class RequireEmailVerificationMiddleware implements MiddlewareInt
         '/auth/login',
         '/auth/register',
         '/account/banned',
+        '/privacy',
+        '/terms',
     ];
 
     public function __construct(

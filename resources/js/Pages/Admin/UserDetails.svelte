@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Lock } from "@lucide/svelte";
   import Badge from "@/Components/ui/Badge.svelte";
   import { router } from "@inertiajs/svelte";
 
@@ -9,7 +10,9 @@
   import Card from "@/Components/ui/Card.svelte";
   import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import Input from "@/Components/ui/Input.svelte";
+  import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import SignInHistoryList from "@/Components/ui/SignInHistoryList.svelte";
   import { formatDate } from "@/lib/date";
   import { Endpoints } from "@/lib/api";
   import { hasFieldErrors } from "@/lib/validationErrors";
@@ -24,6 +27,8 @@
     errors?: ValidationErrors;
     user_record?: AdminUserDetailsPageProps["user_record"];
     ban_history?: AdminUserDetailsPageProps["ban_history"];
+    sign_in_methods?: AdminUserDetailsPageProps["sign_in_methods"];
+    sign_in_history?: AdminUserDetailsPageProps["sign_in_history"];
   }
 
   let {
@@ -31,6 +36,8 @@
     errors = {},
     user_record = null,
     ban_history = [],
+    sign_in_methods = { has_password: false, oauth_accounts: [] },
+    sign_in_history = [],
   }: Props = $props();
 
   const defaultBanReason = "Violation of project rules.";
@@ -155,9 +162,9 @@
                   {user_record.email_verified ? "Verified" : "Unverified"}
                 </Badge>
                 {#each user_record.roles as role (role)}
-                  <Badge tone={role === "admin" ? "gold" : "muted"}
-                    >{role}</Badge
-                  >
+                  <Badge tone={role === "admin" ? "gold" : "muted"}>
+                    {role}
+                  </Badge>
                 {/each}
               </div>
             </div>
@@ -276,6 +283,67 @@
         </Card>
 
         <Card className="rounded-[1.25rem] p-4 sm:p-6">
+          <SectionHeading
+            eyebrow="Account"
+            title="Sign-in methods"
+            description="How this user can sign in to their account."
+          />
+
+          <div class="mt-5 grid gap-3">
+            <div
+              class="flex items-center justify-between gap-4 rounded-xl border px-4 py-4"
+            >
+              <div class="flex items-center gap-3">
+                <span class="text-(--accent)">
+                  <Lock class="size-6" aria-hidden="true" />
+                </span>
+                <span class="text-sm font-medium ui-title">Password</span>
+              </div>
+              <Badge tone={sign_in_methods.has_password ? "accent" : "muted"}>
+                {sign_in_methods.has_password ? "Enabled" : "Not set"}
+              </Badge>
+            </div>
+
+            {#each sign_in_methods.oauth_accounts as account (account.id)}
+              <div
+                class="flex items-center justify-between gap-4 rounded-xl border px-4 py-4"
+              >
+                <div class="flex items-center gap-3">
+                  <span class="text-(--accent)">
+                    <OAuthIcon provider={account.provider} className="size-6" />
+                  </span>
+                  <div class="grid gap-0.5">
+                    <span class="text-sm font-medium ui-title">
+                      {account.provider_label}
+                    </span>
+                    <span class="break-all text-xs ui-muted">
+                      {account.account_label}
+                    </span>
+                  </div>
+                </div>
+                <Badge tone="accent">Connected</Badge>
+              </div>
+            {:else}
+              <p class="text-sm ui-muted">
+                No OAuth sign-in methods connected.
+              </p>
+            {/each}
+          </div>
+        </Card>
+
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
+          <SectionHeading
+            eyebrow="Security"
+            title="Sign-in history"
+            description="Recent successful sign-ins for this account."
+          />
+
+          <div class="mt-5">
+            <SignInHistoryList entries={sign_in_history} />
+          </div>
+        </Card>
+
+        <Card className="rounded-[1.25rem] p-4 sm:p-6">
           <div
             class="grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start"
           >
@@ -380,9 +448,9 @@
                       <p class="font-semibold ui-title">
                         {historyActionLabel(entry.action)}
                       </p>
-                      <time class="text-xs ui-muted"
-                        >{formatDate(entry.occurred_at)}</time
-                      >
+                      <time class="text-xs ui-muted">
+                        {formatDate(entry.occurred_at)}
+                      </time>
                     </div>
                     <p class="mt-2 break-all text-sm ui-muted">
                       {historyActorLabel(entry.actor_id)}
@@ -419,11 +487,10 @@
       id="ban-reason"
       maxlength={500}
       minlength={3}
-      required
-    ></textarea>
-    <span class="text-xs ui-muted"
-      >3–500 characters. This reason is shown to the user.</span
-    >
+      required></textarea>
+    <span class="text-xs ui-muted">
+      3–500 characters. This reason is shown to the user.
+    </span>
   </label>
 </ConfirmationModal>
 
@@ -446,10 +513,9 @@
       id="unban-note"
       maxlength={500}
       minlength={3}
-      required
-    ></textarea>
-    <span class="text-xs ui-muted"
-      >3–500 characters. This note is retained in moderation history.</span
-    >
+      required></textarea>
+    <span class="text-xs ui-muted">
+      3–500 characters. This note is retained in moderation history.
+    </span>
   </label>
 </ConfirmationModal>

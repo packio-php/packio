@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PackioTest\Feature\Profile;
 
 use Packio\Identity\Api\IdentityApiFacadeInterface;
+use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use Packio\Shared\Api\Dto\UserDto;
 use PackioTest\Support\Base\FeatureTestCase;
 use PackioTest\Support\Http\TestResponse;
@@ -80,6 +81,9 @@ final class ChangePasswordFeatureTest extends FeatureTestCase
         ])->assertRedirect('/profile');
         // The session is re-issued with a rotated CSRF token; the browser picks it up from the /profile page.
         $this->loadCsrfToken('/profile');
+
+        // Only the login in logIn() is recorded; the password change re-logs in without recording.
+        self::assertCount(1, $this->getService(UserSignInRepositoryInterface::class)->recentByUserUuid($userDto->id, 10));
 
         $this->post('/auth/logout')->assertRedirect();
 

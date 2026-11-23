@@ -1,4 +1,8 @@
 const browsers: [string, string][] = [
+  // iOS browsers are WebKit and carry their own token next to Safari/.
+  ["CriOS/", "Chrome"],
+  ["FxiOS/", "Firefox"],
+  ["EdgiOS/", "Edge"],
   ["Edg/", "Edge"],
   ["OPR/", "Opera"],
   ["Firefox/", "Firefox"],

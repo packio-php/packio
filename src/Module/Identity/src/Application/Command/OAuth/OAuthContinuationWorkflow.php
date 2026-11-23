@@ -54,7 +54,7 @@ final readonly class OAuthContinuationWorkflow implements OAuthContinuationInter
             }
 
             if ($user->isBanned()) {
-                return new OAuthCallbackResult(OAuthCallbackStatus::Banned, userId: $userId);
+                return new OAuthCallbackResult(OAuthCallbackStatus::Banned, userId: $userId, provider: $resolveOAuthCallbackCommand?->provider);
             }
 
             if (! $resolveOAuthCallbackCommand instanceof ResolveOAuthCallbackCommand) {

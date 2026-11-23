@@ -18,6 +18,7 @@ use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Get;
 
 use function array_map;
+use function array_values;
 use function in_array;
 
 #[Get('/admin/users', name: 'admin.users')]
@@ -35,20 +36,25 @@ final readonly class AdminUsersHandler implements RequestHandlerInterface
         $userListFilterDto    = UserListFilterDto::fromArray($queryParams);
         $paginatedResultDto   = $this->identityApiFacade->findUsersPaginated($paginationCriteria, $userListFilterDto);
 
+        $lastSignInAt = [] === $paginatedResultDto->items
+            ? []
+            : $this->identityApiFacade->lastSignInAtByUserIds(array_values(array_map(static fn (UserDto $userDto): string => $userDto->id, $paginatedResultDto->items)));
+
         return $inertia->render('Admin/Users', [
             'users'      => array_map(
                 fn (UserDto $userDto): array => [
-                    'id'             => $userDto->id,
-                    'email'          => $userDto->email,
-                    'display_name'   => $userDto->displayName,
-                    'roles'          => $userDto->roles,
-                    'created_at'     => $userDto->createdAt,
-                    'updated_at'     => $userDto->updatedAt,
-                    'is_admin'       => in_array('admin', $userDto->roles, true),
-                    'email_verified' => $userDto->isEmailVerified,
-                    'is_banned'      => $userDto->isBanned,
-                    'banned_at'      => $userDto->bannedAt,
-                    'ban_reason'     => $userDto->banReason,
+                    'id'              => $userDto->id,
+                    'email'           => $userDto->email,
+                    'display_name'    => $userDto->displayName,
+                    'roles'           => $userDto->roles,
+                    'created_at'      => $userDto->createdAt,
+                    'updated_at'      => $userDto->updatedAt,
+                    'last_sign_in_at' => $lastSignInAt[$userDto->id] ?? null,
+                    'is_admin'        => in_array('admin', $userDto->roles, true),
+                    'email_verified'  => $userDto->isEmailVerified,
+                    'is_banned'       => $userDto->isBanned,
+                    'banned_at'       => $userDto->bannedAt,
+                    'ban_reason'      => $userDto->banReason,
                 ],
                 $paginatedResultDto->items,
             ),

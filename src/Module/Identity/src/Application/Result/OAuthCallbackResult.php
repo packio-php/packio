@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Packio\Identity\Application\Result;
 
 use Packio\Identity\Application\Command\OAuth\ResolveOAuthCallbackCommand;
+use Packio\Identity\Domain\ValueObject\OAuthProvider;
 
 final readonly class OAuthCallbackResult
 {
@@ -15,5 +16,6 @@ final readonly class OAuthCallbackResult
         public ?string $email = null,
         public ?string $displayName = null,
         public ?ResolveOAuthCallbackCommand $pendingOAuth = null,
+        public ?OAuthProvider $provider = null,
     ) {}
 }

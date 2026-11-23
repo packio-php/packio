@@ -38,6 +38,7 @@ final readonly class ProfileHandler implements RequestHandlerInterface
             $currentUser,
             $currentUser instanceof UserDto ? $this->identityQueryService->findOAuthAccountsByUserId($currentUser->id) : [],
             $currentUser instanceof UserDto ? $this->identityApiFacade->apiAccessTokensForUser($currentUser->id) : [],
+            $currentUser instanceof UserDto ? $this->identityApiFacade->recentSignIns($currentUser->id) : [],
         ));
     }
 }

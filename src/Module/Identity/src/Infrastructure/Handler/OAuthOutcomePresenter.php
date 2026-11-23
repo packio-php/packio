@@ -11,8 +11,10 @@ use Packio\Identity\Application\Command\OAuth\ResolveOAuthCallbackCommand;
 use Packio\Identity\Application\Query\IdentityQueryService;
 use Packio\Identity\Application\Result\OAuthCallbackResult;
 use Packio\Identity\Application\Result\OAuthCallbackStatus;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Dto\PendingOAuthEmailContext;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
@@ -30,7 +32,7 @@ final readonly class OAuthOutcomePresenter
     public function present(
         ServerRequestInterface $serverRequest,
         OAuthCallbackResult $oAuthCallbackResult,
-        string $redirectTo
+        string $redirectTo,
     ): ResponseInterface {
         $session = $serverRequest->getAttribute('session');
         if (OAuthCallbackStatus::EmailRequired === $oAuthCallbackResult->status && $oAuthCallbackResult->pendingOAuth instanceof ResolveOAuthCallbackCommand) {
@@ -59,8 +61,9 @@ final readonly class OAuthOutcomePresenter
             }
 
             return $this->authManager->login($serverRequest, new RedirectResponse(OAuthCallbackStatus::Banned === $oAuthCallbackResult->status ? '/account/banned' : ($redirectTo ?: '/organizations')), [
-                'user_id'                 => $oAuthCallbackResult->userId,
-                'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($oAuthCallbackResult->userId),
+                'user_id'                               => $oAuthCallbackResult->userId,
+                'credentials_fingerprint'               => $this->identityQueryService->credentialsFingerprint($oAuthCallbackResult->userId),
+                SignInRecordingAuthManager::PAYLOAD_KEY => $oAuthCallbackResult->provider->value ?? SignInRecorder::METHOD_PASSWORD,
             ]);
         }
 

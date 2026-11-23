@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- The profile page shows your 20 most recent successful sign-ins: time, method, IP address and browser.
+- The admin user page shows the user's sign-in methods (password and connected OAuth accounts) and their sign-in history. The admin users list has a "Last sign-in" column.
+- Sign-in history is kept for `SIGN_IN_HISTORY_RETENTION_DAYS` days (90 by default). The new `sign-in-history:prune` command deletes older entries, and `worker-cleanup` runs it in its loop.
+
 ### Security
 
 - The session gets a new ID when a user logs in, which protects against session fixation.

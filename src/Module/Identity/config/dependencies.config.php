@@ -51,15 +51,18 @@ use Packio\Identity\Domain\Repository\PasswordResetTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\RegistryAccessTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserOAuthAccountRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserRepositoryInterface;
+use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use Packio\Identity\Infrastructure\Adapter\RegistrationPolicyAdapter;
 use Packio\Identity\Infrastructure\Adapter\Worker\AuthMailJobHandler;
 use Packio\Identity\Infrastructure\Adapter\Worker\AuthMailQueueAdapter;
 use Packio\Identity\Infrastructure\Authentication\ApiAccessTokenStorage;
 use Packio\Identity\Infrastructure\Authentication\ApiAccessTokenUsageRecordingActorProvider;
 use Packio\Identity\Infrastructure\Authentication\DatabaseUserActorProvider;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManagerDelegator;
 use Packio\Identity\Infrastructure\Cli\EmailVerificationCleanupCommand;
 use Packio\Identity\Infrastructure\Cli\MakeUserAdminCommand;
 use Packio\Identity\Infrastructure\Cli\PasswordResetCleanupCommand;
+use Packio\Identity\Infrastructure\Cli\SignInHistoryPruneCommand;
 use Packio\Identity\Infrastructure\Facade\IdentityApiFacade;
 use Packio\Identity\Infrastructure\Facade\OAuthApiFacade;
 use Packio\Identity\Infrastructure\Handler\BannedAccountPageHandler;
@@ -117,8 +120,10 @@ use Packio\Identity\Infrastructure\Persistence\Cycle\PasswordResetTokenRepositor
 use Packio\Identity\Infrastructure\Persistence\Cycle\RegistryAccessTokenRepository;
 use Packio\Identity\Infrastructure\Persistence\Cycle\UserOAuthAccountRepository;
 use Packio\Identity\Infrastructure\Persistence\Cycle\UserRepository;
+use Packio\Identity\Infrastructure\Persistence\Cycle\UserSignInRepository;
 use Packio\Identity\Infrastructure\Support\OAuthCallbackStateValidator;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
+use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
 use Packio\Organization\Api\Policy\OrganizationPolicy;
 use Packio\Source\Api\SourceApiFacadeInterface;
@@ -145,6 +150,7 @@ return [
             UserOAuthAccountRepositoryInterface::class           => UserOAuthAccountRepository::class,
             EmailVerificationCodeRepositoryInterface::class      => EmailVerificationCodeRepository::class,
             PasswordResetTokenRepositoryInterface::class         => PasswordResetTokenRepository::class,
+            UserSignInRepositoryInterface::class                 => UserSignInRepository::class,
             IdentityApiFacadeInterface::class                    => IdentityApiFacade::class,
             OAuthApiFacadeInterface::class                       => OAuthApiFacade::class,
             OAuthProviderInterface::class                        => OAuthProviderGateway::class,
@@ -172,6 +178,7 @@ return [
             VerificationDispatch::class                             => ConfigAbstractFactory::class,
             BrowserOAuthWorkflow::class                             => ConfigAbstractFactory::class,
             OAuthOutcomePresenter::class                            => ConfigAbstractFactory::class,
+            SignInRecorder::class                                   => ConfigAbstractFactory::class,
             // --- Repositories ---
             ApiAccessTokenRepository::class                         => RepositoryFactory::class,
             UserRepository::class                                   => RepositoryFactory::class,
@@ -179,6 +186,7 @@ return [
             UserOAuthAccountRepository::class                       => RepositoryFactory::class,
             EmailVerificationCodeRepository::class                  => RepositoryFactory::class,
             PasswordResetTokenRepository::class                     => RepositoryFactory::class,
+            UserSignInRepository::class                             => RepositoryFactory::class,
 
             // --- Domain services ---
             ApiAccessTokenHasher::class                             => ConfigAbstractFactory::class,
@@ -257,6 +265,12 @@ return [
             EmailVerificationCleanupCommand::class                  => ConfigAbstractFactory::class,
             MakeUserAdminCommand::class                             => ConfigAbstractFactory::class,
             PasswordResetCleanupCommand::class                      => ConfigAbstractFactory::class,
+            SignInHistoryPruneCommand::class                        => ConfigAbstractFactory::class,
+        ],
+        'delegators' => [
+            AuthManagerInterface::class => [
+                SignInRecordingAuthManagerDelegator::class,
+            ],
         ],
     ],
     ConfigAbstractFactory::class => [
@@ -271,6 +285,7 @@ return [
         OAuthContinuationWorkflow::class                        => [OAuthCallbackUseCase::class, UserRepositoryInterface::class, EmailVerificationService::class, VerificationDispatch::class, OAuthCallbackTransaction::class],
         VerificationDispatch::class                             => [EventDispatcherInterface::class, LoggerInterface::class],
         BrowserOAuthWorkflow::class                             => [OAuthProviderInterface::class, OAuthCallbackUseCase::class],
+        SignInRecorder::class                                   => [UserSignInRepositoryInterface::class, ClientIpResolverInterface::class, LoggerInterface::class],
         OAuthOutcomePresenter::class                            => [AuthManagerInterface::class, OAuthSessionContext::class, PendingEmailVerificationSession::class, InertiaNotificationMessenger::class, IdentityQueryService::class],
         // --- Domain services ---
         ApiAccessTokenHasher::class                             => [
@@ -399,6 +414,7 @@ return [
             ObjectMapperInterface::class,
             AuthMailQueuePort::class,
             AuthManagerInterface::class,
+            UserSignInRepositoryInterface::class,
         ],
         OAuthApiFacade::class                                   => [
             OAuthClientFactory::class,
@@ -628,6 +644,10 @@ return [
         ],
         PasswordResetCleanupCommand::class                      => [
             IdentityApiFacadeInterface::class,
+        ],
+        SignInHistoryPruneCommand::class                        => [
+            UserSignInRepositoryInterface::class,
+            'config',
         ],
     ],
     'worker'                     => [

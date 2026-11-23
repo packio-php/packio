@@ -122,4 +122,25 @@ describe("Profile show page", () => {
       screen.queryByRole("dialog", { name: "Delete revoked token?" }),
     ).not.toBeInTheDocument();
   });
+
+  it("lists the sign-in history", () => {
+    render(ProfileShow, {
+      props: {
+        profile,
+        sign_in_history: [
+          {
+            id: "s1",
+            method: "github",
+            method_label: "GitHub",
+            occurred_at: "2026-11-22T10:00:00Z",
+            ip: "203.0.113.5",
+            user_agent: null,
+          },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Sign-in history")).toBeInTheDocument();
+    expect(screen.getByText("203.0.113.5")).toBeInTheDocument();
+  });
 });

@@ -14,6 +14,8 @@ use Packio\Identity\Api\Dto\RegistryAccessTokenDto;
 use Packio\Identity\Api\Dto\RegistryAccessTokenRegenerationDto;
 use Packio\Identity\Api\Dto\UserListFilterDto;
 use Packio\Identity\Api\Dto\UserModerationResultDto;
+use Packio\Identity\Api\Dto\UserOAuthAccountDto;
+use Packio\Identity\Api\Dto\UserSignInDto;
 use Packio\Shared\Api\Dto\PaginatedResultDto;
 use Packio\Shared\Api\Dto\UserDto;
 use Packio\Shared\Domain\Organization\ActorContext;
@@ -134,4 +136,21 @@ interface IdentityApiFacadeInterface
     public function regenerateApiAccessTokenForUser(string $userId, string $tokenId): ApiAccessTokenRegenerationDto;
 
     public function deleteRevokedApiAccessTokenForUser(string $userId, string $tokenId): bool;
+
+    /**
+     * @return list<UserOAuthAccountDto>
+     */
+    public function oauthAccountsForUser(string $userId): array;
+
+    /**
+     * @return list<UserSignInDto> newest first
+     */
+    public function recentSignIns(string $userId, int $limit = 20): array;
+
+    /**
+     * @param list<string> $userIds
+     *
+     * @return array<string, string> ATOM timestamps keyed by user id; users who never signed in are absent
+     */
+    public function lastSignInAtByUserIds(array $userIds): array;
 }

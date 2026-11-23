@@ -6,6 +6,7 @@ namespace PackioTest\Unit\Publication\Infrastructure;
 
 use Common\Branding\BrandingConfig;
 use Common\Infrastructure\HttpClient\UpstreamHttpClient;
+use Common\Markdown\MarkdownToHtmlRenderer;
 use Common\Security\SodiumSecretEncryptor;
 use Common\Security\StoredSecretResolver;
 use GuzzleHttp\ClientInterface;
@@ -28,7 +29,6 @@ use Packio\Publication\Infrastructure\Readme\GenericGitPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\GithubPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\GitlabPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\GitlabSelfHostedPackageReadmeExtractor;
-use Packio\Publication\Infrastructure\Readme\MarkdownToHtmlRenderer;
 use Packio\Publication\Infrastructure\Readme\ReadmeCandidateProvider;
 use Packio\Publication\Infrastructure\Readme\ReadmeExtractorTemplate;
 use PackioTest\Support\Fake\OutboundPolicyFixture;

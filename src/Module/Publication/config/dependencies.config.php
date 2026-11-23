@@ -6,6 +6,7 @@ use Common\Branding\BrandingConfig;
 use Common\Infrastructure\HttpClient\SafeGitEnvironment;
 use Common\Infrastructure\HttpClient\UpstreamHttpClient;
 use Common\Infrastructure\Process\LimitedProcessRunner;
+use Common\Markdown\MarkdownToHtmlRenderer;
 use Common\Security\StoredSecretResolver;
 use Laminas\ServiceManager\AbstractFactory\ConfigAbstractFactory;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
@@ -55,7 +56,6 @@ use Packio\Publication\Infrastructure\Readme\GitlabPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\GitlabPackageReadmeExtractorInterface;
 use Packio\Publication\Infrastructure\Readme\GitlabSelfHostedPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\GitlabSelfHostedPackageReadmeExtractorInterface;
-use Packio\Publication\Infrastructure\Readme\MarkdownToHtmlRenderer;
 use Packio\Publication\Infrastructure\Readme\PackageReadmeExtractorInterface;
 use Packio\Publication\Infrastructure\Readme\ReadmeCandidateProvider;
 use Packio\Publication\Infrastructure\Readme\ReadmeExtractorTemplate;
@@ -102,7 +102,6 @@ return [
             ComposerVersionResolver::class      => ComposerVersionResolver::class,
             ComposerReleaseDateResolver::class  => ComposerReleaseDateResolver::class,
             Base64FileContentDecoder::class     => Base64FileContentDecoder::class,
-            MarkdownToHtmlRenderer::class       => MarkdownToHtmlRenderer::class,
             ReadmeCandidateProvider::class      => ReadmeCandidateProvider::class,
         ],
         'factories'  => [

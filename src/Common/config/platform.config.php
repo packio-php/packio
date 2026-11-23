@@ -7,6 +7,7 @@ use Common\Branding\BrandingOptions;
 use Common\Mail\MailerInterface;
 use Common\Mail\SymfonyMailer;
 use Common\Mail\SymfonyMailerTransportFactory;
+use Common\Markdown\MarkdownToHtmlRenderer;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Common\Security\StoredSecretResolver;
@@ -16,11 +17,14 @@ use Symfony\Component\Mailer\MailerInterface as SymfonyMailerInterface;
 
 return [
     'dependencies'               => [
-        'aliases'   => [
+        'aliases'    => [
             SecretEncryptorInterface::class => SodiumSecretEncryptor::class,
             MailerInterface::class          => SymfonyMailer::class,
         ],
-        'factories' => [
+        'invokables' => [
+            MarkdownToHtmlRenderer::class => MarkdownToHtmlRenderer::class,
+        ],
+        'factories'  => [
             BrandingOptions::class          => [ValinorConfigFactory::class, 'config.branding'],
             BrandingConfig::class           => ConfigAbstractFactory::class,
             SodiumSecretEncryptor::class    => ConfigAbstractFactory::class,

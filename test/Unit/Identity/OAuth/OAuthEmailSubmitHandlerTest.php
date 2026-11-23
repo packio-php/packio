@@ -27,15 +27,12 @@ use Packio\Identity\Infrastructure\Dto\PendingOAuthEmailContext;
 use Packio\Identity\Infrastructure\Handler\OAuthEmailSubmitHandler;
 use Packio\Identity\Infrastructure\Handler\OAuthOutcomePresenter;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
-use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use PackioTest\Support\Fake\InMemorySession;
-use PackioTest\Support\Fake\RecordingUserSignInRepository;
 use PackioTest\Support\Fake\SecretEncryptorStub;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
-use Psr\Log\LoggerInterface;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
 
 #[CoversClass(OAuthEmailSubmitHandler::class)]
@@ -64,7 +61,7 @@ final class OAuthEmailSubmitHandlerTest extends TestCase
         $oAuthEmailSubmitHandler = new OAuthEmailSubmitHandler(
             $oAuthSessionContext,
             $workflow,
-            new OAuthOutcomePresenter($this->createMock(AuthManagerInterface::class), $oAuthSessionContext, new PendingEmailVerificationSession(), new InertiaNotificationMessenger(), $this->identityQueryService(), new SignInRecorder(new RecordingUserSignInRepository(), $this->createStub(ClientIpResolverInterface::class), $this->createStub(LoggerInterface::class))),
+            new OAuthOutcomePresenter($this->createMock(AuthManagerInterface::class), $oAuthSessionContext, new PendingEmailVerificationSession(), new InertiaNotificationMessenger(), $this->identityQueryService()),
             new SafeRedirectTarget(),
             $this->disabledTurnstileGuard(),
             new InertiaNotificationMessenger(),

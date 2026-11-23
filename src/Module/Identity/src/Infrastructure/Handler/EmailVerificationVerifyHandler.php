@@ -18,7 +18,6 @@ use Packio\Identity\Application\Command\OAuth\OAuthContinuationInterface;
 use Packio\Identity\Application\Result\OAuthCallbackStatus;
 use Packio\Identity\Infrastructure\Request\EmailVerificationCodeRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
-use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -98,7 +97,7 @@ final readonly class EmailVerificationVerifyHandler implements RequestHandlerInt
             $this->inertiaNotificationMessenger->toast($request, 'success', 'Email verified.');
         }
 
-        return $this->oAuthOutcomePresenter->present($request, $result, $redirectTo, $pending?->command()?->provider->value ?? SignInRecorder::METHOD_PASSWORD);
+        return $this->oAuthOutcomePresenter->present($request, $result, $redirectTo);
     }
 
     private function getUserUuidFromSession(ServerRequestInterface $serverRequest): ?string

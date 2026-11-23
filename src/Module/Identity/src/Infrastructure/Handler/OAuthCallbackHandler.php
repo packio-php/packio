@@ -95,6 +95,6 @@ final readonly class OAuthCallbackHandler implements RequestHandlerInterface
             return new RedirectResponse('/auth/login');
         }
 
-        return $this->oAuthOutcomePresenter->present($request, $result, $redirectTo, $providerEnum->value);
+        return $this->oAuthOutcomePresenter->present($request, $result, $redirectTo);
     }
 }

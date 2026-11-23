@@ -112,6 +112,6 @@ final readonly class OAuthEmailSubmitHandler implements RequestHandlerInterface
             $this->oAuthSessionContext->requireContinuation($session);
         }
 
-        return $this->oAuthOutcomePresenter->present($request, $result, $this->safeRedirectTarget->normalize($context->registrationRedirectTarget), $command->provider->value);
+        return $this->oAuthOutcomePresenter->present($request, $result, $this->safeRedirectTarget->normalize($context->registrationRedirectTarget));
     }
 }

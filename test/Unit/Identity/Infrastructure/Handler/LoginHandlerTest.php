@@ -22,11 +22,11 @@ use Packio\Identity\Application\Security\RegistryAccessTokenSecrets;
 use Packio\Identity\Domain\Repository\RegistryAccessTokenRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserOAuthAccountRepositoryInterface;
 use Packio\Identity\Domain\Repository\UserRepositoryInterface;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Handler\LoginHandler;
 use Packio\Identity\Infrastructure\Request\LoginRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
 use Packio\Identity\Infrastructure\Support\SignInRecorder;
-use PackioTest\Support\Fake\RecordingUserSignInRepository;
 use PackioTest\Support\Fake\SecretEncryptorStub;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -66,14 +66,14 @@ final class LoginHandlerTest extends TestCase
             ))
         ;
 
-        $signIns             = new RecordingUserSignInRepository();
         $authManager         = $this->createMock(AuthManagerInterface::class);
         $redirectResponse    = new RedirectResponse('/response-from-auth-manager');
         $authManager->expects(self::once())
             ->method('login')
             ->with($request, self::isInstanceOf(RedirectResponse::class), [
-                'user_id'                 => 'user-uuid',
-                'credentials_fingerprint' => null,
+                'user_id'                               => 'user-uuid',
+                'credentials_fingerprint'               => null,
+                SignInRecordingAuthManager::PAYLOAD_KEY => SignInRecorder::METHOD_PASSWORD,
             ])
             ->willReturn($redirectResponse)
         ;
@@ -87,34 +87,21 @@ final class LoginHandlerTest extends TestCase
             new PendingEmailVerificationSession(),
             new ValidationRedirectState(),
             new OAuthSessionContext(new SecretEncryptorStub()),
-            $this->signInRecorder($signIns),
         );
 
         self::assertSame($redirectResponse, $loginHandler->handle($request));
-        self::assertCount(1, $signIns->saved);
-        self::assertSame('user-uuid', $signIns->saved[0]->userUuid());
-        self::assertSame('password', $signIns->saved[0]->method());
     }
 
     #[Test]
-    public function bannedUserLoginRecordsOneSignIn(): void
+    public function bannedUserLoginCarriesThePasswordSignInMethod(): void
     {
-        $signIns = new RecordingUserSignInRepository();
-
-        $this->handler($this->signInResult(isBanned: true), $signIns, true)->handle($this->request());
-
-        self::assertCount(1, $signIns->saved);
-        self::assertSame('password', $signIns->saved[0]->method());
+        $this->handler($this->signInResult(isBanned: true), true)->handle($this->request());
     }
 
     #[Test]
-    public function verificationRequiredLoginRecordsNothing(): void
+    public function verificationRequiredLoginDoesNotLogIn(): void
     {
-        $signIns = new RecordingUserSignInRepository();
-
-        $this->handler($this->signInResult(isEmailVerified: false), $signIns, false)->handle($this->request());
-
-        self::assertSame([], $signIns->saved);
+        $this->handler($this->signInResult(isEmailVerified: false), false)->handle($this->request());
     }
 
     private function request(): ServerRequest
@@ -141,12 +128,15 @@ final class LoginHandlerTest extends TestCase
         );
     }
 
-    private function handler(IdentityUserResult $user, RecordingUserSignInRepository $signIns, bool $expectLogin): LoginHandler
+    private function handler(IdentityUserResult $user, bool $expectLogin): LoginHandler
     {
         $identityApi = $this->createStub(IdentityCredentialsInterface::class);
         $identityApi->method('authenticateCredentials')->willReturn($user);
         $authManager = $this->createMock(AuthManagerInterface::class);
         $authManager->expects($expectLogin ? self::once() : self::never())->method('login')
+            ->with(self::anything(), self::anything(), self::callback(
+                static fn (array $payload): bool => SignInRecorder::METHOD_PASSWORD === ($payload[SignInRecordingAuthManager::PAYLOAD_KEY] ?? null),
+            ))
             ->willReturn(new RedirectResponse('/x'))
         ;
 
@@ -159,13 +149,7 @@ final class LoginHandlerTest extends TestCase
             new PendingEmailVerificationSession(),
             new ValidationRedirectState(),
             new OAuthSessionContext(new SecretEncryptorStub()),
-            $this->signInRecorder($signIns),
         );
-    }
-
-    private function signInRecorder(RecordingUserSignInRepository $signIns): SignInRecorder
-    {
-        return new SignInRecorder($signIns, $this->createStub(ClientIpResolverInterface::class), $this->createStub(LoggerInterface::class));
     }
 
     private function disabledTurnstileGuard(): TurnstileRequestGuard

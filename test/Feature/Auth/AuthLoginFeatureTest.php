@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PackioTest\Feature\Auth;
 
 use Packio\Identity\Api\IdentityApiFacadeInterface;
+use Packio\Identity\Domain\Repository\UserSignInRepositoryInterface;
 use PackioTest\Support\Base\FeatureTestCase;
 use PackioTest\Support\Http\TestResponse;
 use PHPUnit\Framework\Attributes\Test;
@@ -88,6 +89,27 @@ final class AuthLoginFeatureTest extends FeatureTestCase
             'Origin'       => 'https://localhost',
             'X-CSRF-Token' => $this->loadCsrfToken('/organizations'),
         ])->assertRedirect('/auth/login');
+    }
+
+    #[Test]
+    public function itRecordsTheSignIn(): void
+    {
+        $identity = $this->getService(IdentityApiFacadeInterface::class);
+        $user     = $identity->createUser(
+            'history-' . bin2hex(random_bytes(6)) . '@example.test',
+            'History User',
+            'Password1!',
+        );
+        $identity->markUserEmailAsVerified($user->id);
+
+        $this->withCsrf()->post('/auth/login', [
+            'email'    => $user->email,
+            'password' => 'Password1!',
+        ])->assertRedirect('/organizations');
+
+        $signIns = $this->getService(UserSignInRepositoryInterface::class)->recentByUserUuid($user->id, 10);
+        self::assertCount(1, $signIns);
+        self::assertSame('password', $signIns[0]->method());
     }
 
     #[Test]

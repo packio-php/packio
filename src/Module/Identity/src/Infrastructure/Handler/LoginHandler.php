@@ -17,6 +17,7 @@ use Packio\Application\Service\SafeRedirectTarget;
 use Packio\Identity\Application\Command\SignInWorkflow;
 use Packio\Identity\Application\Query\IdentityQueryService;
 use Packio\Identity\Application\Result\SignInStatus;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Request\LoginRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
 use Packio\Identity\Infrastructure\Support\SignInRecorder;
@@ -58,7 +59,6 @@ final readonly class LoginHandler implements RequestHandlerInterface
         private PendingEmailVerificationSession $pendingEmailVerificationSession,
         private ValidationRedirectState $validationRedirectState,
         private OAuthSessionContext $oAuthSessionContext,
-        private SignInRecorder $signInRecorder,
     ) {}
 
     /**
@@ -101,17 +101,15 @@ final readonly class LoginHandler implements RequestHandlerInterface
         }
 
         if (SignInStatus::Banned === $signInResult->status) {
-            $response = $this->authManager->login(
+            return $this->authManager->login(
                 $request,
                 new RedirectResponse('/account/banned'),
                 [
-                    'user_id'                 => $signInResult->userId,
-                    'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
+                    'user_id'                               => $signInResult->userId,
+                    'credentials_fingerprint'               => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
+                    SignInRecordingAuthManager::PAYLOAD_KEY => SignInRecorder::METHOD_PASSWORD,
                 ],
             );
-            $this->signInRecorder->record($request, $signInResult->userId, SignInRecorder::METHOD_PASSWORD);
-
-            return $response;
         }
 
         // Email not verified - redirect to verification
@@ -124,16 +122,14 @@ final readonly class LoginHandler implements RequestHandlerInterface
             return new RedirectResponse('/auth/verification');
         }
 
-        $response = $this->authManager->login(
+        return $this->authManager->login(
             $request,
             new RedirectResponse('' !== $redirectTo ? $redirectTo : '/organizations'),
             [
-                'user_id'                 => $signInResult->userId,
-                'credentials_fingerprint' => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
+                'user_id'                               => $signInResult->userId,
+                'credentials_fingerprint'               => $this->identityQueryService->credentialsFingerprint($signInResult->userId),
+                SignInRecordingAuthManager::PAYLOAD_KEY => SignInRecorder::METHOD_PASSWORD,
             ],
         );
-        $this->signInRecorder->record($request, $signInResult->userId, SignInRecorder::METHOD_PASSWORD);
-
-        return $response;
     }
 }

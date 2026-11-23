@@ -58,6 +58,7 @@ use Packio\Identity\Infrastructure\Adapter\Worker\AuthMailQueueAdapter;
 use Packio\Identity\Infrastructure\Authentication\ApiAccessTokenStorage;
 use Packio\Identity\Infrastructure\Authentication\ApiAccessTokenUsageRecordingActorProvider;
 use Packio\Identity\Infrastructure\Authentication\DatabaseUserActorProvider;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManagerDelegator;
 use Packio\Identity\Infrastructure\Cli\EmailVerificationCleanupCommand;
 use Packio\Identity\Infrastructure\Cli\MakeUserAdminCommand;
 use Packio\Identity\Infrastructure\Cli\PasswordResetCleanupCommand;
@@ -266,6 +267,11 @@ return [
             PasswordResetCleanupCommand::class                      => ConfigAbstractFactory::class,
             SignInHistoryPruneCommand::class                        => ConfigAbstractFactory::class,
         ],
+        'delegators' => [
+            AuthManagerInterface::class => [
+                SignInRecordingAuthManagerDelegator::class,
+            ],
+        ],
     ],
     ConfigAbstractFactory::class => [
         AuthMailQueueAdapter::class                             => [JobApiFacadeInterface::class, SecretEncryptorInterface::class],
@@ -280,7 +286,7 @@ return [
         VerificationDispatch::class                             => [EventDispatcherInterface::class, LoggerInterface::class],
         BrowserOAuthWorkflow::class                             => [OAuthProviderInterface::class, OAuthCallbackUseCase::class],
         SignInRecorder::class                                   => [UserSignInRepositoryInterface::class, ClientIpResolverInterface::class, LoggerInterface::class],
-        OAuthOutcomePresenter::class                            => [AuthManagerInterface::class, OAuthSessionContext::class, PendingEmailVerificationSession::class, InertiaNotificationMessenger::class, IdentityQueryService::class, SignInRecorder::class],
+        OAuthOutcomePresenter::class                            => [AuthManagerInterface::class, OAuthSessionContext::class, PendingEmailVerificationSession::class, InertiaNotificationMessenger::class, IdentityQueryService::class],
         // --- Domain services ---
         ApiAccessTokenHasher::class                             => [
             'config.security.secret_encryption_key',
@@ -452,7 +458,6 @@ return [
             PendingEmailVerificationSession::class,
             ValidationRedirectState::class,
             OAuthSessionContext::class,
-            SignInRecorder::class,
         ],
         RegisterHandler::class                                  => [
             RegistrationWorkflow::class,

@@ -28,15 +28,14 @@ use Packio\Identity\Domain\Repository\UserRepositoryInterface;
 use Packio\Identity\Domain\ValueObject\OAuthProvider;
 use Packio\Identity\Domain\ValueObject\OAuthTokenResponse;
 use Packio\Identity\Domain\ValueObject\OAuthUserData;
+use Packio\Identity\Infrastructure\Authentication\SignInRecordingAuthManager;
 use Packio\Identity\Infrastructure\Dto\PendingOAuthEmailContext;
 use Packio\Identity\Infrastructure\Handler\EmailVerificationResendHandler;
 use Packio\Identity\Infrastructure\Handler\EmailVerificationVerifyHandler;
 use Packio\Identity\Infrastructure\Handler\OAuthOutcomePresenter;
 use Packio\Identity\Infrastructure\Request\EmailVerificationCodeRequest;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
-use Packio\Identity\Infrastructure\Support\SignInRecorder;
 use PackioTest\Support\Fake\InMemorySession;
-use PackioTest\Support\Fake\RecordingUserSignInRepository;
 use PackioTest\Support\Fake\SecretEncryptorStub;
 use PackioTest\Unit\Application\Middleware\TestInertia;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
@@ -45,7 +44,6 @@ use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
-use Psr\Log\LoggerInterface;
 use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
 use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
 
@@ -54,13 +52,6 @@ use Sirix\Mezzio\Authentication\Contract\AuthManagerInterface;
 #[AllowMockObjectsWithoutExpectations]
 final class EmailVerificationFlowTest extends TestCase
 {
-    private RecordingUserSignInRepository $signIns;
-
-    protected function setUp(): void
-    {
-        $this->signIns = new RecordingUserSignInRepository();
-    }
-
     #[Test]
     public function verifyHandlerRedirectsToLoginWhenPendingUserMissing(): void
     {
@@ -81,7 +72,7 @@ final class EmailVerificationFlowTest extends TestCase
 
         $emailVerificationVerifyHandler = new EmailVerificationVerifyHandler(
             $identityApi,
-            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService(), $this->signInRecorder()),
+            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService()),
             $inertiaNotificationMessenger,
             new SafeRedirectTarget(),
             $this->disabledTurnstileGuard(),
@@ -124,7 +115,7 @@ final class EmailVerificationFlowTest extends TestCase
 
         $emailVerificationVerifyHandler = new EmailVerificationVerifyHandler(
             $identityApi,
-            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService(), $this->signInRecorder()),
+            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService()),
             $inertiaNotificationMessenger,
             new SafeRedirectTarget(),
             $this->disabledTurnstileGuard(),
@@ -168,8 +159,9 @@ final class EmailVerificationFlowTest extends TestCase
         $authManager->expects(self::once())
             ->method('login')
             ->with($serverRequest, self::isInstanceOf(RedirectResponse::class), [
-                'user_id'                 => 'user-uuid',
-                'credentials_fingerprint' => null,
+                'user_id'                               => 'user-uuid',
+                'credentials_fingerprint'               => null,
+                SignInRecordingAuthManager::PAYLOAD_KEY => 'password',
             ])
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;
@@ -179,7 +171,7 @@ final class EmailVerificationFlowTest extends TestCase
 
         $emailVerificationVerifyHandler = new EmailVerificationVerifyHandler(
             $identityApi,
-            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService(), $this->signInRecorder()),
+            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService()),
             $inertiaNotificationMessenger,
             new SafeRedirectTarget(),
             $this->disabledTurnstileGuard(),
@@ -194,9 +186,6 @@ final class EmailVerificationFlowTest extends TestCase
         self::assertSame('/target', $response->getHeaderLine('Location'));
         self::assertFalse($inMemorySession->has('pending_verification_user_uuid'));
         self::assertFalse($inMemorySession->has('pending_verification_redirect_to'));
-        self::assertCount(1, $this->signIns->saved);
-        self::assertSame('user-uuid', $this->signIns->saved[0]->userUuid());
-        self::assertSame('password', $this->signIns->saved[0]->method());
         self::assertSame([[
             'type'     => 'success',
             'message'  => 'Email verified.',
@@ -221,12 +210,15 @@ final class EmailVerificationFlowTest extends TestCase
         $identityApi->expects(self::once())
             ->method('verify')
             ->with('user-uuid', '123456', self::anything(), false)
-            ->willReturn(new OAuthCallbackResult(OAuthCallbackStatus::Authenticated, userId: 'user-uuid'))
+            ->willReturn(new OAuthCallbackResult(OAuthCallbackStatus::Authenticated, userId: 'user-uuid', provider: OAuthProvider::Codeberg))
         ;
 
         $authManager = $this->createMock(AuthManagerInterface::class);
         $authManager->expects(self::once())
             ->method('login')
+            ->with(self::anything(), self::anything(), self::callback(
+                static fn (array $payload): bool => 'codeberg' === ($payload[SignInRecordingAuthManager::PAYLOAD_KEY] ?? null),
+            ))
             ->willReturnCallback(static fn (ServerRequestInterface $serverRequest, ResponseInterface $response): ResponseInterface => $response)
         ;
 
@@ -244,7 +236,7 @@ final class EmailVerificationFlowTest extends TestCase
 
         $emailVerificationVerifyHandler = new EmailVerificationVerifyHandler(
             $identityApi,
-            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService(), $this->signInRecorder()),
+            new OAuthOutcomePresenter($authManager, new OAuthSessionContext(new SecretEncryptorStub()), new PendingEmailVerificationSession(), $inertiaNotificationMessenger, $this->identityQueryService()),
             $inertiaNotificationMessenger,
             new SafeRedirectTarget(),
             $this->disabledTurnstileGuard(),
@@ -256,8 +248,6 @@ final class EmailVerificationFlowTest extends TestCase
 
         self::assertInstanceOf(RedirectResponse::class, $response);
         self::assertFalse($inMemorySession->has('oauth_pending_email_context'));
-        self::assertCount(1, $this->signIns->saved);
-        self::assertSame('codeberg', $this->signIns->saved[0]->method());
     }
 
     #[Test]
@@ -299,11 +289,6 @@ final class EmailVerificationFlowTest extends TestCase
         self::assertSame([
             'success' => 'Verification code sent.',
         ], $testInertia->flash);
-    }
-
-    private function signInRecorder(): SignInRecorder
-    {
-        return new SignInRecorder($this->signIns, $this->createStub(ClientIpResolverInterface::class), $this->createStub(LoggerInterface::class));
     }
 
     private function disabledTurnstileGuard(): TurnstileRequestGuard

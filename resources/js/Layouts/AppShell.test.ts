@@ -220,4 +220,28 @@ describe("AppShell", () => {
       delete (page as unknown as { flash?: unknown }).flash;
     }
   });
+
+  it("links the enabled legal documents in the footer", () => {
+    setPageProps({
+      legal: { privacy_url: "/privacy", terms_url: "/terms" },
+    });
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    expect(screen.getByRole("link", { name: "Privacy" })).toHaveAttribute(
+      "href",
+      "/privacy",
+    );
+    expect(screen.getByRole("link", { name: "Terms" })).toHaveAttribute(
+      "href",
+      "/terms",
+    );
+  });
+
+  it("hides legal links when both documents are off", () => {
+    setPageProps({ legal: { privacy_url: null, terms_url: null } });
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
+  });
 });

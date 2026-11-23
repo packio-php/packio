@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { router } from "@/test/inertia";
+import { router, setPageProps } from "@/test/inertia";
 import Register from "./Register.svelte";
 
 vi.mock("@/Layouts/AppShell.svelte", async () => ({
@@ -98,5 +98,14 @@ describe("Register page", () => {
     expect(
       screen.getByRole("button", { name: "Create account" }),
     ).toBeDisabled();
+  });
+
+  it("shows the legal notice under the form when terms are enabled", () => {
+    setPageProps({ legal: { privacy_url: null, terms_url: "/terms" } });
+    render(Register);
+
+    expect(
+      screen.getByRole("link", { name: "Terms of Service" }),
+    ).toHaveAttribute("href", "/terms");
   });
 });

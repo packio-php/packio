@@ -6,6 +6,8 @@ namespace Packio\Application\Infrastructure\Handler;
 
 use Common\Branding\BrandingConfig;
 use Laminas\Diactoros\Response\XmlResponse;
+use Packio\Application\Legal\LegalDocument;
+use Packio\Application\Legal\LegalDocuments;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
@@ -16,7 +18,10 @@ use function rtrim;
 #[Get('/sitemap.xml', name: 'sitemap')]
 final readonly class SitemapHandler implements RequestHandlerInterface
 {
-    public function __construct(private BrandingConfig $brandingConfig) {}
+    public function __construct(
+        private BrandingConfig $brandingConfig,
+        private LegalDocuments $legalDocuments,
+    ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
@@ -44,6 +49,15 @@ final readonly class SitemapHandler implements RequestHandlerInterface
                 'priority'   => '0.3',
             ],
         ];
+        foreach (LegalDocument::cases() as $legalDocument) {
+            if ($this->legalDocuments->isEnabled($legalDocument)) {
+                $urls[] = [
+                    'loc'        => $legalDocument->path(),
+                    'changefreq' => 'yearly',
+                    'priority'   => '0.2',
+                ];
+            }
+        }
 
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
         $xml .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' . "\n";

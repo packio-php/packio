@@ -40,6 +40,8 @@ Local development uses `compose.yaml` defaults: PostgreSQL is published on
 | `API_TOKEN_PREFIX` | `packio_api_` | Prefix of generated API tokens |
 | `VITE_DEV_SERVER_URL` | `http://localhost:5173` | Vite dev server URL used in development |
 | `RUN_MIGRATIONS` | `true` in development Compose | Production Compose enables migrations and runtime-settings seed in the `app` service only. Workers and SSR have migrations disabled. |
+| `PRIVACY_POLICY_PATH` | empty | Path to a Markdown file served at `/privacy`; empty disables the page and its links. Use an absolute path. |
+| `TERMS_OF_SERVICE_PATH` | empty | Path to a Markdown file served at `/terms`; empty disables the page and its links. Use an absolute path. |
 
 Keep `APP_SECRET_ENCRYPTION_KEY` unchanged between deployments and identical in
 HTTP and worker processes. Back it up in separate protected storage, linked to

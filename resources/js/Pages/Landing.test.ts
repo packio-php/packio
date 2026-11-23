@@ -1,5 +1,6 @@
-import { render } from "@testing-library/svelte";
+import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
+import { setPageProps } from "@/test/inertia";
 import Landing from "./Landing.svelte";
 
 vi.mock("@/Layouts/AppShell.svelte", async () => ({
@@ -15,5 +16,22 @@ describe("Landing", () => {
 
     expect(container.textContent).toContain("Acme");
     expect(container.textContent).not.toContain("Packio");
+  });
+
+  it("shows the legal notice only with OAuth providers", () => {
+    setPageProps({
+      legal: { privacy_url: "/privacy", terms_url: "/terms" },
+    });
+    const oauth_providers = [
+      { provider: "github" as const, label: "GitHub", enabled: true },
+    ];
+    const { unmount } = render(Landing, { props: { oauth_providers } });
+    expect(
+      screen.getByRole("link", { name: "Terms of Service" }),
+    ).toBeInTheDocument();
+    unmount();
+
+    render(Landing, { props: { oauth_providers: [] } });
+    expect(screen.queryByRole("link", { name: "Terms of Service" })).toBeNull();
   });
 });

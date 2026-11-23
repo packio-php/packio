@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Packio\Publication\Infrastructure\Readme;
 
+use Common\Markdown\MarkdownToHtmlRenderer;
+
 final readonly class ReadmeExtractorTemplate
 {
     public function __construct(

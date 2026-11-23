@@ -792,6 +792,14 @@
     >
       <div class="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-6">
         <span>{branding.name}, {branding.tagline}</span>
+        {#if page.props.legal?.privacy_url}
+          <Link class="underline" href={page.props.legal.privacy_url}>
+            Privacy
+          </Link>
+        {/if}
+        {#if page.props.legal?.terms_url}
+          <Link class="underline" href={page.props.legal.terms_url}>Terms</Link>
+        {/if}
       </div>
       <div class="flex items-center gap-2 sm:flex-col sm:items-end sm:gap-0.5">
         <span class="text-xs">{branding.domain}</span>

@@ -33,6 +33,11 @@ export interface InitialTheme {
   darkPageBg: string;
 }
 
+export interface LegalLinks {
+  privacy_url: string | null;
+  terms_url: string | null;
+}
+
 export interface AppPageProps {
   app?: SharedAppInfo;
   auth?: AuthPayload;
@@ -42,6 +47,7 @@ export interface AppPageProps {
   current_membership?: OrganizationMembership | null;
   initial_list_view_mode?: ListViewMode;
   initial_theme?: InitialTheme;
+  legal?: LegalLinks;
   old?: Record<string, unknown>;
   organization?: OrganizationSummary | null;
   organizations?: OrganizationSummary[];

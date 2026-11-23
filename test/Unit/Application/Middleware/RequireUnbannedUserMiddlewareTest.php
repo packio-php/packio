@@ -11,6 +11,7 @@ use Packio\Application\Middleware\RequireUnbannedUserMiddleware;
 use Packio\Shared\Api\Dto\UserDto;
 use PackioTest\Support\Base\UnitTestCase;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -42,6 +43,24 @@ final class RequireUnbannedUserMiddlewareTest extends UnitTestCase
             $this->bannedRequest('/auth/logout', 'POST'),
             $this->handler(),
         )->getStatusCode());
+    }
+
+    #[Test]
+    #[DataProvider('legalPaths')]
+    public function bannedUserCanOpenLegalPages(string $path): void
+    {
+        $response = $this->middleware()->process($this->bannedRequest($path), $this->handler());
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertSame('', $response->getHeaderLine('Location'));
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function legalPaths(): iterable
+    {
+        yield 'privacy' => ['/privacy'];
+
+        yield 'terms' => ['/terms'];
     }
 
     private function middleware(): RequireUnbannedUserMiddleware

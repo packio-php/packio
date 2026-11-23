@@ -1,6 +1,7 @@
 <script lang="ts">
   import AppShell from "@/Layouts/AppShell.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import LegalNotice from "@/Components/ui/LegalNotice.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Link from "@/Components/core/Link.svelte";
   import SnippetBlock from "@/Components/ui/SnippetBlock.svelte";
@@ -208,6 +209,7 @@
                     </button>
                   {/each}
                 </div>
+                <LegalNotice />
               </div>
             {/if}
           </div>

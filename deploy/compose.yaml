@@ -64,6 +64,7 @@ services:
       - sessions:/app/data/sessions
       - rate-limits:/app/data/rate-limits
       - package-archives:/app/data/package-archives
+      # - ./legal:/app/legal:ro  # see docs/self-hosting.md, Legal pages
     healthcheck:
       test: ["CMD", "sh", "/usr/local/bin/roadrunner-healthcheck.sh", "--ready"]
       interval: 15s

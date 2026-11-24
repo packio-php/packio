@@ -55,4 +55,23 @@ final class CodebergPublicationAdapterTest extends TestCase
         self::assertSame('https://codeberg.org', $credentials->baseUrl);
         self::assertSame('codeberg', $adapter->provider());
     }
+
+    #[Test]
+    public function codebergIgnoresBaseUrlFromProviderConfig(): void
+    {
+        $adapter = new CodebergPublicationAdapter(
+            $this->createStub(CodebergComposerMetadataFetcherInterface::class),
+            $this->createStub(CodebergPackageReadmeExtractorInterface::class),
+            new PackageReadmeSyncService($this->createStub(SynchronizerDependenciesPort::class)),
+        );
+
+        $credentials = $adapter->credentials([
+            'providerConfig' => [
+                'base_url' => 'https://evil.example',
+            ],
+        ], 'token');
+
+        self::assertInstanceOf(CodebergAccessCredentials::class, $credentials);
+        self::assertSame('https://codeberg.org', $credentials->baseUrl);
+    }
 }

@@ -38,20 +38,20 @@ final readonly class DistArchiveFetcher implements DistArchiveFetcherInterface
         array $providerConfig = [],
     ): DistArchiveStream {
         return match ($provider) {
-            'github'             => $this->fetchGithubZipball(
+            'github'              => $this->fetchGithubZipball(
                 $owner,
                 $repository,
                 $reference,
                 $token,
             ),
-            'gitlab'             => $this->gitlabDistArchiveFetcher->fetchArchive(
+            'gitlab'              => $this->gitlabDistArchiveFetcher->fetchArchive(
                 $owner,
                 $repository,
                 $reference,
                 $token,
                 (string) ($providerConfig['auth_strategy'] ?? ''),
             ),
-            'gitlab_self_hosted' => $this->gitlabSelfHostedDistArchiveFetcher->fetchArchive(
+            'gitlab_self_hosted'  => $this->gitlabSelfHostedDistArchiveFetcher->fetchArchive(
                 $baseUrl,
                 $owner,
                 $repository,
@@ -59,25 +59,32 @@ final readonly class DistArchiveFetcher implements DistArchiveFetcherInterface
                 $token,
                 (string) ($providerConfig['auth_strategy'] ?? ''),
             ),
-            'bitbucket'          => $this->bitbucketDistArchiveFetcher->fetchArchive(
+            'bitbucket'           => $this->bitbucketDistArchiveFetcher->fetchArchive(
                 $owner,
                 $repository,
                 $reference,
                 $token,
             ),
-            'codeberg'           => $this->codebergDistArchiveFetcher->fetchArchive(
+            'codeberg'            => $this->codebergDistArchiveFetcher->fetchArchive(
                 $owner,
                 $repository,
                 $reference,
                 $token,
             ),
-            'generic_git'        => $this->genericGitDistArchiveFetcher->fetchArchive(
+            'forgejo_self_hosted' => $this->codebergDistArchiveFetcher->fetchArchive(
+                $owner,
+                $repository,
+                $reference,
+                $token,
+                $baseUrl,
+            ),
+            'generic_git'         => $this->genericGitDistArchiveFetcher->fetchArchive(
                 $repository,
                 $reference,
                 $token,
                 $providerConfig,
             ),
-            default              => throw new InvalidArgumentException(
+            default               => throw new InvalidArgumentException(
                 sprintf('Archive fetch for provider "%s" is not supported.', $provider),
             ),
         };

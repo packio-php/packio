@@ -35,8 +35,8 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
     {
         $baseUrl = $source['providerConfig']['base_url'] ?? null;
 
-        // Only self-hosted sources store base_url; Codeberg keeps the default host.
-        return is_string($baseUrl)
+        // Codeberg stays pinned to codeberg.org; only the instance provider honours base_url.
+        return 'codeberg' !== $this->provider && is_string($baseUrl)
             ? new CodebergAccessCredentials($accessToken, $baseUrl)
             : new CodebergAccessCredentials($accessToken);
     }

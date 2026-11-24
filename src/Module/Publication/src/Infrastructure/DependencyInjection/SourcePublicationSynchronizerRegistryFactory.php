@@ -20,6 +20,8 @@ use function array_map;
 
 final class SourcePublicationSynchronizerRegistryFactory implements FactoryInterface
 {
+    public const string FORGEJO_SELF_HOSTED_ADAPTER = 'publication.adapter.forgejo_self_hosted';
+
     /** @param null|array<string, mixed> $options */
     public function __invoke(
         ContainerInterface $container,
@@ -40,6 +42,7 @@ final class SourcePublicationSynchronizerRegistryFactory implements FactoryInter
                 GitlabSelfHostedPublicationAdapter::class,
                 BitbucketPublicationAdapter::class,
                 CodebergPublicationAdapter::class,
+                self::FORGEJO_SELF_HOSTED_ADAPTER,
             ],
         ));
     }

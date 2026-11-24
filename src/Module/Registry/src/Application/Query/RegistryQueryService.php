@@ -24,7 +24,7 @@ use function sprintf;
 final readonly class RegistryQueryService implements ReleaseArchiveDescriptorInterface
 {
     // Providers DistArchiveFetcher can build an archive for.
-    public const array ARCHIVE_PROVIDERS = ['github', 'gitlab', 'gitlab_self_hosted', 'generic_git', 'bitbucket', 'codeberg'];
+    public const array ARCHIVE_PROVIDERS = ['github', 'gitlab', 'gitlab_self_hosted', 'generic_git', 'bitbucket', 'codeberg', 'forgejo_self_hosted'];
 
     public function __construct(
         private PackageQueryPort $packageQueryPort,

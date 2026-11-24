@@ -46,12 +46,23 @@ final readonly class SourceProviderMetadataCatalog
                 label: 'Codeberg',
                 oauthProvider: 'codeberg',
             ),
+            new SourceProviderMetadata(
+                key: 'forgejo_self_hosted',
+                label: 'Forgejo Self-Hosted',
+                oauthProvider: 'codeberg',
+                supportsSelfHostedInstances: true,
+            ),
         ];
     }
 
     public function get(string $key): ?SourceProviderMetadata
     {
         return array_find($this->all(), fn ($sourceProviderMetadatum) => $sourceProviderMetadatum->key === $key);
+    }
+
+    public function isSelfHosted(string $key): bool
+    {
+        return true === $this->get($key)?->supportsSelfHostedInstances;
     }
 
     /**

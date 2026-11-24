@@ -106,23 +106,26 @@ return [
 
     'sources'         => [
         'providers' => [
-            SourceProvider::Github->value           => [
+            SourceProvider::Github->value            => [
                 'enabled' => \env(SourceProvider::Github->enabledEnvName(), true, 'bool'),
             ],
-            SourceProvider::Gitlab->value           => [
+            SourceProvider::Gitlab->value            => [
                 'enabled' => \env(SourceProvider::Gitlab->enabledEnvName(), true, 'bool'),
             ],
-            SourceProvider::GitlabSelfHosted->value => [
+            SourceProvider::GitlabSelfHosted->value  => [
                 'enabled' => \env(SourceProvider::GitlabSelfHosted->enabledEnvName(), false, 'bool'),
             ],
-            SourceProvider::GenericGit->value       => [
+            SourceProvider::GenericGit->value        => [
                 'enabled' => \env(SourceProvider::GenericGit->enabledEnvName(), true, 'bool'),
             ],
-            SourceProvider::Bitbucket->value        => [
+            SourceProvider::Bitbucket->value         => [
                 'enabled' => \env(SourceProvider::Bitbucket->enabledEnvName(), true, 'bool'),
             ],
-            SourceProvider::Codeberg->value         => [
+            SourceProvider::Codeberg->value          => [
                 'enabled' => \env(SourceProvider::Codeberg->enabledEnvName(), true, 'bool'),
+            ],
+            SourceProvider::ForgejoSelfHosted->value => [
+                'enabled' => \env(SourceProvider::ForgejoSelfHosted->enabledEnvName(), false, 'bool'),
             ],
         ],
         'webhooks'  => [
@@ -230,6 +233,13 @@ return [
             'token_url'         => \env('OAUTH_CODEBERG_TOKEN_URL', ''),
             'user_url'          => \env('OAUTH_CODEBERG_USER_URL', ''),
             'base_url'          => \env('OAUTH_CODEBERG_BASE_URL', 'https://codeberg.org'),
+        ],
+        'forgejo'   => [
+            'self_hosted' => [
+                'source' => [
+                    'enabled' => \env('OAUTH_FORGEJO_SELF_HOSTED_SOURCE_ENABLED', false, 'bool'),
+                ],
+            ],
         ],
     ],
 

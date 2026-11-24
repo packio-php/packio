@@ -28,6 +28,7 @@ final class RuntimeSettingsCatalogSeed implements SeedInterface
         'source.providers.generic_git.enabled',
         'source.providers.bitbucket.enabled',
         'source.providers.codeberg.enabled',
+        'source.providers.forgejo_self_hosted.enabled',
         'oauth.github.enabled',
         'oauth.gitlab.enabled',
         'oauth.bitbucket.enabled',
@@ -37,6 +38,7 @@ final class RuntimeSettingsCatalogSeed implements SeedInterface
         'oauth.bitbucket.source.enabled',
         'oauth.codeberg.source.enabled',
         'oauth.gitlab_self_hosted.source.enabled',
+        'oauth.forgejo_self_hosted.source.enabled',
     ];
 
     private DatabaseInterface $database;

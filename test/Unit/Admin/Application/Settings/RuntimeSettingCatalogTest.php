@@ -115,6 +115,7 @@ final class RuntimeSettingCatalogTest extends TestCase
                 'oauth.bitbucket.source.enabled',
                 'oauth.codeberg.source.enabled',
                 'oauth.gitlab_self_hosted.source.enabled',
+                'oauth.forgejo_self_hosted.source.enabled',
             ],
             array_column($this->definitionsByGroup($runtimeSettingCatalog, 'source_oauth'), 'key'),
         );
@@ -123,6 +124,12 @@ final class RuntimeSettingCatalogTest extends TestCase
 
         self::assertSame('gitlab_self_hosted', $runtimeSettingDefinition->providerKey);
         self::assertSame('oauth.gitlab.self_hosted.source.enabled', $runtimeSettingDefinition->configPath);
+
+        $forgejo = $runtimeSettingCatalog->definition('oauth.forgejo_self_hosted.source.enabled');
+
+        self::assertSame('forgejo_self_hosted', $forgejo->providerKey);
+        self::assertSame('oauth.forgejo.self_hosted.source.enabled', $forgejo->configPath);
+        self::assertTrue($runtimeSettingCatalog->has('source.providers.forgejo_self_hosted.enabled'));
     }
 
     /**

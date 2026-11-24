@@ -30,6 +30,16 @@ final class SourceCommandServiceProviderAuthorizationTest extends TestCase
     use InertSourceCollaborators;
 
     #[Test]
+    public function forgejoSelfHostedTokenStrategyIsNormalizedByConvention(): void
+    {
+        $resolver = new SourceAuthorizationStrategyResolver();
+
+        self::assertSame('forgejo_self_hosted_token', $resolver->defaultFor('forgejo_self_hosted'));
+        self::assertSame('forgejo_self_hosted_token', $resolver->normalize('forgejo_self_hosted', ' token '));
+        self::assertSame('oauth2', $resolver->normalize('forgejo_self_hosted', 'oauth2'));
+    }
+
+    #[Test]
     public function reassigningAuthorizationToItselfIsRejected(): void
     {
         $sourceRepository         = $this->createMock(SourceRepositoryInterface::class);

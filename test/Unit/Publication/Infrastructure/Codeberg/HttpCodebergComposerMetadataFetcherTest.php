@@ -61,6 +61,21 @@ final class HttpCodebergComposerMetadataFetcherTest extends TestCase
     }
 
     #[Test]
+    public function fetchReferenceUsesInstanceBaseUrlAndStoresItInMetadata(): void
+    {
+        $runner = $this->createStub(GitCommandRunnerInterface::class);
+        $client = $this->createMock(ClientInterface::class);
+        $client->expects(self::once())->method('request')->with('GET', 'https://example.com/git/api/v1/repos/team/repo/contents/composer.json?ref=v1.0.0', self::anything())->willReturn(new Response(200, [], json_encode([
+            'content' => base64_encode('{"name":"team/repo"}'),
+        ], JSON_THROW_ON_ERROR)));
+        $fetcher = new HttpCodebergComposerMetadataFetcher(new UpstreamHttpClient($client), new BrandingConfig([]), new StoredSecretResolver(new SecretEncryptorStub()), new GitRemoteReferenceReader($runner, OutboundPolicyFixture::git()));
+
+        $metadata = $fetcher->fetchReference('team', 'repo', new GitReference('v1.0.0', str_repeat('b', 40), GitReference::TYPE_TAG), 'main', new CodebergAccessCredentials(null, 'https://example.com/git/'));
+
+        self::assertSame('https://example.com/git', $metadata->baseUrl);
+    }
+
+    #[Test]
     public function fetchComposerJsonUsesContentsEndpointAndDecodesBase64Content(): void
     {
         $history                             = [];

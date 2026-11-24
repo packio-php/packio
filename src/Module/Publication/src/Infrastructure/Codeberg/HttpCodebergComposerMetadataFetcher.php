@@ -75,6 +75,7 @@ final readonly class HttpCodebergComposerMetadataFetcher implements CodebergComp
             defaultBranch: $defaultBranch,
             commitReference: $gitReference->commit,
             refType: $gitReference->type,
+            baseUrl: $codebergAccessCredentials->baseUrl ?? 'https://codeberg.org',
         );
     }
 
@@ -88,7 +89,8 @@ final readonly class HttpCodebergComposerMetadataFetcher implements CodebergComp
         ?CodebergAccessCredentials $codebergAccessCredentials
     ): array {
         $url = sprintf(
-            'https://codeberg.org/api/v1/repos/%s/%s/contents/%s?ref=%s',
+            '%s/api/v1/repos/%s/%s/contents/%s?ref=%s',
+            $codebergAccessCredentials->baseUrl ?? 'https://codeberg.org',
             rawurlencode($owner),
             rawurlencode($repository),
             rawurlencode('composer.json'),
@@ -187,7 +189,7 @@ final readonly class HttpCodebergComposerMetadataFetcher implements CodebergComp
      */
     private function fetchGitRefs(string $owner, string $repository, ?CodebergAccessCredentials $codebergAccessCredentials): array
     {
-        $remote = sprintf('https://codeberg.org/%s/%s.git', $owner, $repository);
+        $remote = sprintf('%s/%s/%s.git', $codebergAccessCredentials->baseUrl ?? 'https://codeberg.org', $owner, $repository);
         $token  = $this->plainToken($codebergAccessCredentials);
 
         return $this->gitRemoteReferenceReader->lsRemote(

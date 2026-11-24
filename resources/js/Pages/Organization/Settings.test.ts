@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api";
 import { router } from "@/test/inertia";
@@ -249,9 +255,10 @@ describe("Organization settings page", () => {
       );
     });
     expect(await screen.findByText("Company Forgejo")).toBeInTheDocument();
-    expect(screen.getAllByText("Forgejo Self-Hosted").length).toBeGreaterThan(
-      0,
-    );
+    const instanceHeader = screen.getByText("Company Forgejo").parentElement!;
+    expect(
+      within(instanceHeader).getByText("Forgejo Self-Hosted"),
+    ).toBeInTheDocument();
     expect(
       screen.getByText(
         "https://registry.example.com/auth/oauth/forgejo_self_hosted/source-callback",
@@ -272,6 +279,38 @@ describe("Organization settings page", () => {
         expect.objectContaining({ providerType: "forgejo_self_hosted" }),
       );
     });
+  });
+
+  it("shows no type picker when only Forgejo is enabled", async () => {
+    const get = vi.spyOn(apiClient, "get").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith(
+        "/organization/acme/source-provider-instances?provider_type=forgejo_self_hosted",
+      );
+    });
+    expect(
+      screen.getByText(
+        "https://registry.example.com/auth/oauth/forgejo_self_hosted/source-callback",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Instance type")).toBeNull();
   });
 
   it("deletes inactive authorizations and the instance when they are the only dependencies", async () => {

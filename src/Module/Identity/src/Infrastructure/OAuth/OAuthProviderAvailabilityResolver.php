@@ -120,25 +120,35 @@ final readonly class OAuthProviderAvailabilityResolver
         return $metadata instanceof OAuthProviderAvailability && $metadata->isSourceConnectAvailable();
     }
 
-    public function gitLabSelfHostedSourceConnectEnabled(): bool
+    public function selfHostedSourceConnectEnabled(string $provider): bool
     {
-        $selfHostedConfig = $this->gitLabSelfHostedConfig();
-        $sourceConfig     = $selfHostedConfig['source'] ?? [];
+        $configProvider = match ($provider) {
+            'gitlab_self_hosted'  => 'gitlab',
+            'forgejo_self_hosted' => 'forgejo',
+            default               => null,
+        };
+        if (null === $configProvider) {
+            return false;
+        }
+
+        $selfHostedConfig = $this->providerConfig($configProvider)['self_hosted'] ?? [];
+        $sourceConfig     = is_array($selfHostedConfig) ? ($selfHostedConfig['source'] ?? []) : [];
         $sourceConfig     = is_array($sourceConfig) ? $sourceConfig : [];
 
         return $this->runtimeBoolean(
-            'oauth.gitlab_self_hosted.source.enabled',
+            'oauth.' . $provider . '.source.enabled',
             (bool) ($sourceConfig['enabled'] ?? false),
         );
     }
 
-    public function gitLabSelfHostedSourceInstanceAvailable(
+    public function selfHostedSourceInstanceAvailable(
+        string $provider,
         bool $instanceExists,
         bool $instanceActive,
         bool $supportsOAuth,
         bool $credentialsConfigured,
     ): bool {
-        return $this->gitLabSelfHostedSourceConnectEnabled()
+        return $this->selfHostedSourceConnectEnabled($provider)
             && $instanceExists
             && $instanceActive
             && $supportsOAuth
@@ -219,16 +229,6 @@ final readonly class OAuthProviderAvailabilityResolver
         $sourceConfig = $this->providerConfig($provider)['source'] ?? [];
 
         return is_array($sourceConfig) ? $sourceConfig : [];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
-    private function gitLabSelfHostedConfig(): array
-    {
-        $selfHostedConfig = $this->providerConfig('gitlab')['self_hosted'] ?? [];
-
-        return is_array($selfHostedConfig) ? $selfHostedConfig : [];
     }
 
     private function runtimeBoolean(string $key, bool $fallback): bool

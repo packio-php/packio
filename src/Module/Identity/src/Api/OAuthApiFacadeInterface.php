@@ -11,7 +11,7 @@ interface OAuthApiFacadeInterface
     /** @return list<OAuthProviderAvailability> */
     public function providerAvailabilities(): array;
 
-    public function gitLabSelfHostedSourceConnectEnabled(): bool;
+    public function selfHostedSourceConnectEnabled(string $provider): bool;
 
     public function getAuthorizationUrl(string $provider, string $state, ?string $codeChallenge = null): string;
 

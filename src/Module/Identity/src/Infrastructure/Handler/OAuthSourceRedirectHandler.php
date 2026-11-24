@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Identity\Infrastructure\Handler;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
@@ -44,6 +45,7 @@ final readonly class OAuthSourceRedirectHandler implements RequestHandlerInterfa
         private OAuthSessionContext $oAuthSessionContext,
         private OAuthProviderAvailabilityResolver $oauthProviderAvailabilityResolver,
         private SourceApiFacadeInterface $sourceApiFacade,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog = new SourceProviderMetadataCatalog(),
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -63,8 +65,9 @@ final readonly class OAuthSourceRedirectHandler implements RequestHandlerInterfa
         $providerInstanceId = is_string($params['provider_instance_id'] ?? null) ? $params['provider_instance_id'] : '';
         $providerEnum       = null;
         $providerValue      = $provider;
+        $isSelfHosted       = $this->sourceProviderMetadataCatalog->isSelfHosted($provider);
 
-        if ('gitlab_self_hosted' !== $provider) {
+        if (! $isSelfHosted) {
             $providerEnum = $this->oauthProviderAvailabilityResolver->resolveSourceConnectProvider($provider);
             if (! $providerEnum instanceof OAuthProvider) {
                 return new JsonResponse([
@@ -76,7 +79,7 @@ final readonly class OAuthSourceRedirectHandler implements RequestHandlerInterfa
             return new JsonResponse([
                 'error' => 'Provider instance is required.',
             ], 422);
-        } elseif (! $this->gitLabSelfHostedInstanceAvailable($request, $providerInstanceId)) {
+        } elseif (! $this->selfHostedInstanceAvailable($request, $provider, $providerInstanceId)) {
             return new JsonResponse([
                 'error' => 'OAuth provider not supported.',
             ], 404);
@@ -94,13 +97,13 @@ final readonly class OAuthSourceRedirectHandler implements RequestHandlerInterfa
         $this->oAuthSessionContext->storeSourceContext($session, $organizationSlug, $popup, $providerInstanceId);
 
         $codeChallenge = null;
-        if (OAuthProvider::Codeberg === $providerEnum) {
+        if (OAuthProvider::Codeberg === $providerEnum || 'forgejo_self_hosted' === $provider) {
             $codeVerifier = OAuthPkce::createCodeVerifier();
             $this->oAuthSessionContext->storePkceCodeVerifier($session, $codeVerifier);
             $codeChallenge = OAuthPkce::createCodeChallenge($codeVerifier);
         }
 
-        if ('gitlab_self_hosted' === $provider) {
+        if ($isSelfHosted) {
             return new RedirectResponse(
                 $this->sourceApiFacade->sourceProviderInstanceAuthorizationUrl(
                     $organizationSlug,
@@ -119,19 +122,20 @@ final readonly class OAuthSourceRedirectHandler implements RequestHandlerInterfa
         );
     }
 
-    private function gitLabSelfHostedInstanceAvailable(ServerRequestInterface $serverRequest, string $providerInstanceId): bool
+    private function selfHostedInstanceAvailable(ServerRequestInterface $serverRequest, string $provider, string $providerInstanceId): bool
     {
         $organization = RequestContextAttributes::currentOrganization($serverRequest);
         if (! $organization instanceof OrganizationDto) {
             return false;
         }
 
-        foreach ($this->sourceApiFacade->sourceProviderInstances($organization->id, 'gitlab_self_hosted') as $sourceProviderInstanceDto) {
+        foreach ($this->sourceApiFacade->sourceProviderInstances($organization->id, $provider) as $sourceProviderInstanceDto) {
             if ($sourceProviderInstanceDto->id !== $providerInstanceId) {
                 continue;
             }
 
-            return $this->oauthProviderAvailabilityResolver->gitLabSelfHostedSourceInstanceAvailable(
+            return $this->oauthProviderAvailabilityResolver->selfHostedSourceInstanceAvailable(
+                provider: $provider,
                 instanceExists: true,
                 instanceActive: 'active' === $sourceProviderInstanceDto->status,
                 supportsOAuth: 'oauth2' === $sourceProviderInstanceDto->authMode || 'oauth2_and_token' === $sourceProviderInstanceDto->authMode,

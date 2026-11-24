@@ -821,7 +821,7 @@ final class SourcesPageDataBuilderTest extends TestCase
 
         $oauthApiFacade = $this->createStub(OAuthApiFacadeInterface::class);
         $oauthApiFacade->method('providerAvailabilities')->willReturnCallback($this->oAuthProviderAvailabilityResolver->all(...));
-        $oauthApiFacade->method('gitLabSelfHostedSourceConnectEnabled')->willReturnCallback($this->oAuthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled(...));
+        $oauthApiFacade->method('selfHostedSourceConnectEnabled')->willReturnCallback($this->oAuthProviderAvailabilityResolver->selfHostedSourceConnectEnabled(...));
 
         return new SourcesPageDataBuilder(
             $this->sourceApiFacade,

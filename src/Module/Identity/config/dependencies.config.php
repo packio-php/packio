@@ -550,6 +550,7 @@ return [
             OAuthSessionContext::class,
             OAuthProviderAvailabilityResolver::class,
             SourceApiFacadeInterface::class,
+            SourceProviderMetadataCatalog::class,
         ],
         OAuthSourceCallbackHandler::class                       => [
             OAuthSessionContext::class,
@@ -558,6 +559,7 @@ return [
             SourceOAuthCallbackWorkflow::class,
             InertiaNotificationMessenger::class,
             SourceOAuthPopupRenderer::class,
+            SourceProviderMetadataCatalog::class,
         ],
         RegistryTokenIssueHandler::class                        => [
             IdentityApiFacadeInterface::class,

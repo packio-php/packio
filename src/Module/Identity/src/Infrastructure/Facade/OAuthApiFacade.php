@@ -6,6 +6,7 @@ namespace Packio\Identity\Infrastructure\Facade;
 
 use Packio\Identity\Api\OAuthApiFacadeInterface;
 use Packio\Identity\Domain\ValueObject\OAuthProvider;
+use Packio\Identity\Infrastructure\OAuth\Client\CodebergOAuthClient;
 use Packio\Identity\Infrastructure\OAuth\OAuthClientFactory;
 use Packio\Identity\Infrastructure\OAuth\OAuthProviderAvailabilityResolver;
 
@@ -21,9 +22,9 @@ final readonly class OAuthApiFacade implements OAuthApiFacadeInterface
         return $this->oauthProviderAvailabilityResolver->all();
     }
 
-    public function gitLabSelfHostedSourceConnectEnabled(): bool
+    public function selfHostedSourceConnectEnabled(string $provider): bool
     {
-        return $this->oauthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled();
+        return $this->oauthProviderAvailabilityResolver->selfHostedSourceConnectEnabled($provider);
     }
 
     public function getAuthorizationUrl(string $provider, string $state, ?string $codeChallenge = null): string
@@ -51,12 +52,13 @@ final readonly class OAuthApiFacade implements OAuthApiFacadeInterface
         array $scopes,
         ?string $codeChallenge = null
     ): string {
-        unset($codeChallenge);
+        $oAuthClient = $this->oauthClientFactory->getProviderInstanceClient($provider, $providerInstanceConfig);
 
-        return $this->oauthClientFactory
-            ->getProviderInstanceClient($provider, $providerInstanceConfig)
-            ->getAuthorizationUrlForScopes($state, $scopes)
-        ;
+        if (null !== $codeChallenge && $oAuthClient instanceof CodebergOAuthClient) {
+            return $oAuthClient->getAuthorizationUrlForScopesWithPkce($state, $scopes, $codeChallenge);
+        }
+
+        return $oAuthClient->getAuthorizationUrlForScopes($state, $scopes);
     }
 
     public function exchangeSourceCodeForToken(string $provider, string $code, ?string $codeVerifier = null): array

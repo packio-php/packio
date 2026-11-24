@@ -21,6 +21,7 @@ use Packio\Identity\Infrastructure\Handler\SourceOAuthPopupRenderer;
 use Packio\Identity\Infrastructure\OAuth\OAuthProviderAvailabilityResolver;
 use Packio\Identity\Infrastructure\OAuth\SourceOAuthCallbackWorkflow;
 use Packio\Identity\Infrastructure\Support\OAuthCallbackStateValidator;
+use Packio\Identity\Infrastructure\Support\OAuthPkce;
 use Packio\Identity\Infrastructure\Support\OAuthSessionContext;
 use Packio\Shared\Api\Dto\OrganizationDto;
 use Packio\Shared\Api\Dto\UserDto;
@@ -41,6 +42,7 @@ use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
 use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Get;
 
+use function in_array;
 use function preg_match;
 
 #[CoversClass(OAuthSourceRedirectHandler::class)]
@@ -51,6 +53,7 @@ final class OAuthSourceHandlerTest extends TestCase
     private const string PROVIDER_GITHUB             = 'github';
     private const string PROVIDER_CODEBERG           = 'codeberg';
     private const string PROVIDER_GITLAB_SELF_HOSTED = 'gitlab_self_hosted';
+    private const string PROVIDER_FORGEJO            = 'forgejo_self_hosted';
 
     private InertiaNotificationMessenger $inertiaNotificationMessenger;
     private MockObject&OAuthApiFacadeInterface $oauthApi;
@@ -94,7 +97,7 @@ final class OAuthSourceHandlerTest extends TestCase
         $projectSettings = $this->createMock(ProjectSettingsApiFacadeInterface::class);
         $projectSettings
             ->method('booleanValue')
-            ->willReturnCallback(static fn (string $key, bool $fallback): bool => 'oauth.gitlab_self_hosted.source.enabled' === $key ? true : $fallback)
+            ->willReturnCallback(static fn (string $key, bool $fallback): bool => in_array($key, ['oauth.gitlab_self_hosted.source.enabled', 'oauth.forgejo_self_hosted.source.enabled'], true) ? true : $fallback)
         ;
         $this->oAuthProviderAvailabilityResolver = new OAuthProviderAvailabilityResolver($config, new SourceProviderMetadataCatalog(), $projectSettings);
     }
@@ -366,6 +369,73 @@ final class OAuthSourceHandlerTest extends TestCase
         $decoded = OAuthState::decode($capturedState);
         self::assertInstanceOf(OAuthState::class, $decoded);
         self::assertSame(self::PROVIDER_GITLAB_SELF_HOSTED, $decoded->provider);
+    }
+
+    #[Test]
+    public function sourceRedirectForForgejoSelfHostedRequiresProviderInstance(): void
+    {
+        $serverRequest = $this->buildRequest(new InMemorySession())
+            ->withAttribute('provider', self::PROVIDER_FORGEJO)
+            ->withAttribute('organization', 'my-org')
+        ;
+        $this->sourceApi->expects(self::never())->method('sourceProviderInstanceAuthorizationUrl');
+
+        $response = $this->redirectHandler()->handle($serverRequest);
+
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(422, $response->getStatusCode());
+        self::assertSame([
+            'error' => 'Provider instance is required.',
+        ], $response->getPayload());
+    }
+
+    #[Test]
+    public function sourceRedirectForForgejoSelfHostedReturns404WhenSourceConnectDisabled(): void
+    {
+        $this->oAuthProviderAvailabilityResolver = $this->resolverWithDisabledSelfHosted();
+        $this->sourceApi->method('sourceProviderInstances')->willReturn([$this->forgejoInstance()]);
+        $this->sourceApi->expects(self::never())->method('sourceProviderInstanceAuthorizationUrl');
+
+        $response = $this->redirectHandler()->handle($this->forgejoRedirectRequest(new InMemorySession()));
+
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function sourceRedirectForForgejoSelfHostedUsesInstanceAuthorizationUrlWithPkce(): void
+    {
+        $inMemorySession = new InMemorySession();
+        $codeChallenge   = null;
+        $this->sourceApi->expects(self::once())
+            ->method('sourceProviderInstances')
+            ->with('org-1', self::PROVIDER_FORGEJO)
+            ->willReturn([$this->forgejoInstance()])
+        ;
+        $this->sourceApi->expects(self::once())
+            ->method('sourceProviderInstanceAuthorizationUrl')
+            ->with(
+                'my-org',
+                self::PROVIDER_FORGEJO,
+                'instance-1',
+                self::isString(),
+                self::callback(static function(?string $challenge) use (&$codeChallenge): bool {
+                    $codeChallenge = $challenge;
+
+                    return null !== $challenge && '' !== $challenge;
+                }),
+            )
+            ->willReturn('https://git.company.test/login/oauth/authorize')
+        ;
+
+        $response = $this->redirectHandler()->handle($this->forgejoRedirectRequest($inMemorySession));
+
+        self::assertInstanceOf(RedirectResponse::class, $response);
+        self::assertSame('https://git.company.test/login/oauth/authorize', $response->getHeaderLine('Location'));
+        self::assertSame('instance-1', $inMemorySession->get('oauth_source_provider_instance_id', ''));
+        $codeVerifier = $this->oAuthSessionContext->consumePkceCodeVerifier($inMemorySession);
+        self::assertIsString($codeVerifier);
+        self::assertSame(OAuthPkce::createCodeChallenge($codeVerifier), $codeChallenge);
     }
 
     // ── OAuthSourceCallbackHandler ──────────────────────────────────────────
@@ -837,7 +907,112 @@ final class OAuthSourceHandlerTest extends TestCase
         self::assertSame('/organization/my-org/sources?oauth_just_connected=1', $response->getHeaderLine('Location'));
     }
 
+    #[Test]
+    public function sourceCallbackForForgejoSelfHostedReturns404WhenSourceConnectDisabled(): void
+    {
+        $this->oAuthProviderAvailabilityResolver = $this->resolverWithDisabledSelfHosted();
+        $this->sourceApi->expects(self::never())->method('handleSourceProviderInstanceOAuthCallback');
+
+        $response = $this->callbackHandler()->handle($this->forgejoCallbackRequest(new InMemorySession()));
+
+        self::assertInstanceOf(JsonResponse::class, $response);
+        self::assertSame(404, $response->getStatusCode());
+    }
+
+    #[Test]
+    public function sourceCallbackForForgejoSelfHostedConsumesPkceVerifierAndUsesInstanceCallback(): void
+    {
+        $inMemorySession = new InMemorySession();
+        $this->oAuthSessionContext->storePkceCodeVerifier($inMemorySession, 'stored-verifier');
+
+        $this->sourceApi->expects(self::once())
+            ->method('handleSourceProviderInstanceOAuthCallback')
+            ->with(self::PROVIDER_FORGEJO, 'test-code', 'user-1', 'my-org', 'instance-1', 'stored-verifier')
+            ->willReturn(new SourceOAuthAccountDto('soa-1', self::PROVIDER_FORGEJO, 'forgejo-user', 'forgejo@example.com'))
+        ;
+        $this->sourceApi->expects(self::never())->method('handleSourceOAuthCallback');
+
+        $response = $this->callbackHandler()->handle($this->forgejoCallbackRequest($inMemorySession));
+
+        self::assertInstanceOf(RedirectResponse::class, $response);
+        self::assertSame('/organization/my-org/sources?oauth_just_connected=1', $response->getHeaderLine('Location'));
+        self::assertFalse($inMemorySession->has('oauth_pkce_code_verifier'));
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────
+
+    private function redirectHandler(): OAuthSourceRedirectHandler
+    {
+        return new OAuthSourceRedirectHandler(
+            $this->oauthApi,
+            $this->oAuthSessionContext,
+            $this->oAuthProviderAvailabilityResolver,
+            $this->sourceApi,
+        );
+    }
+
+    private function resolverWithDisabledSelfHosted(): OAuthProviderAvailabilityResolver
+    {
+        $projectSettings = $this->createStub(ProjectSettingsApiFacadeInterface::class);
+        $projectSettings->method('booleanValue')->willReturnArgument(1);
+
+        return new OAuthProviderAvailabilityResolver([], new SourceProviderMetadataCatalog(), $projectSettings);
+    }
+
+    private function forgejoInstance(): SourceProviderInstanceDto
+    {
+        return new SourceProviderInstanceDto(
+            id: 'instance-1',
+            organizationId: 'org-1',
+            providerType: self::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'https://git.company.test',
+            clientId: 'client-id',
+            hasClientSecret: true,
+            authMode: 'oauth2_and_token',
+            status: 'active',
+        );
+    }
+
+    private function forgejoRedirectRequest(InMemorySession $inMemorySession): ServerRequest
+    {
+        return $this->buildRequest($inMemorySession)
+            ->withAttribute('provider', self::PROVIDER_FORGEJO)
+            ->withAttribute('organization', 'my-org')
+            ->withAttribute(RequestContextAttributes::CURRENT_ORGANIZATION, new OrganizationDto(
+                id: 'org-1',
+                slug: 'my-org',
+                name: 'My Org',
+                anonymousAccess: true,
+                active: true,
+            ))
+            ->withQueryParams([
+                'provider_instance_id' => 'instance-1',
+            ])
+        ;
+    }
+
+    private function forgejoCallbackRequest(InMemorySession $inMemorySession): ServerRequest
+    {
+        $rawState = 'stored-raw-state';
+        $this->oAuthSessionContext->storeState($inMemorySession, $rawState);
+        $this->oAuthSessionContext->storeSourceContext($inMemorySession, 'my-org', false, 'instance-1');
+
+        return $this->buildRequest($inMemorySession)
+            ->withAttribute('provider', self::PROVIDER_FORGEJO)
+            ->withQueryParams([
+                'state' => OAuthState::forConnectSource($rawState, 'my-org', self::PROVIDER_FORGEJO)->encode(),
+                'code'  => 'test-code',
+            ])
+            ->withAttribute(RequestContextAttributes::CURRENT_USER, new UserDto(
+                id: 'user-1',
+                email: 'user@example.com',
+                displayName: 'Test User',
+                roles: ['user'],
+                createdAt: '2025-01-01T00:00:00+00:00',
+            ))
+        ;
+    }
 
     private function callbackHandler(): OAuthSourceCallbackHandler
     {

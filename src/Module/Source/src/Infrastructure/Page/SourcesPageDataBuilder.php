@@ -89,7 +89,7 @@ final readonly class SourcesPageDataBuilder
                 && ('oauth2' === $sourceProviderInstanceDto->authMode || 'oauth2_and_token' === $sourceProviderInstanceDto->authMode)
                 && '' !== $sourceProviderInstanceDto->clientId
                 && $sourceProviderInstanceDto->hasClientSecret,
-        ) && $this->oauthApiFacade->gitLabSelfHostedSourceConnectEnabled();
+        ) && $this->oauthApiFacade->selfHostedSourceConnectEnabled('gitlab_self_hosted');
 
         $oauthAvailabilities = [];
         foreach ($this->oauthApiFacade->providerAvailabilities() as $oAuthProviderAvailability) {

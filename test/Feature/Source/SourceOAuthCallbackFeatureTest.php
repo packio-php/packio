@@ -122,7 +122,12 @@ final class SourceOAuthCallbackFeatureTest extends FeatureTestCase
 
         self::assertInstanceOf(SourceOAuthAccount::class, $forgejoAccount);
         self::assertSame($providerInstanceId, $forgejoAccount->providerInstanceId());
-        self::assertNull($accounts->findByCredentialIdentity($owner->id, 'codeberg', 'standard-provider-user', $providerInstanceId));
+        $codebergAccount = $accounts->findByCredentialIdentity($owner->id, 'codeberg', 'standard-provider-user', null);
+
+        self::assertInstanceOf(SourceOAuthAccount::class, $codebergAccount);
+        self::assertSame($codebergAccountDto->id, $codebergAccount->getUuid()->toString());
+        self::assertNotSame($forgejoAccount->getUuid()->toString(), $codebergAccount->getUuid()->toString());
+        self::assertNull($codebergAccount->providerInstanceId());
     }
 
     /** @return array{0: UserDto, 1: OrganizationDto} */

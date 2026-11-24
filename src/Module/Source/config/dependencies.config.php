@@ -330,6 +330,11 @@ return [
                     $factory->create($container->get(GitlabSelfHostedWebhookProviderAdapter::class)),
                     $factory->create($container->get(BitbucketWebhookProviderAdapter::class)),
                     $factory->create($container->get(CodebergWebhookProviderAdapter::class)),
+                    $factory->create(new CodebergWebhookProviderAdapter(
+                        $container->get(BrandingConfig::class),
+                        'forgejo_self_hosted',
+                        'Forgejo',
+                    )),
                 ]);
             },
 

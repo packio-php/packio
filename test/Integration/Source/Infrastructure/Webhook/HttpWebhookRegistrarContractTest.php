@@ -548,6 +548,67 @@ final class HttpWebhookRegistrarContractTest extends TestCase
         self::assertSame('Bearer codeberg-token', $this->request($history, 2)->getHeaderLine('Authorization'));
     }
 
+    #[Test]
+    public function forgejoSelfHostedRegistrarUsesInstanceAddressAndForgejoHookType(): void
+    {
+        $history                     = [];
+        $source                      = $this->buildSource('forgejo_self_hosted', 'owner-four', 'repo-four');
+        $webhookRegistrationTemplate = $this->webhookTemplate('forgejo_self_hosted', [
+            [
+                'status' => 200,
+                'body'   => [],
+            ],
+            [
+                'status' => 201,
+                'body'   => [
+                    'id' => 7,
+                ],
+            ],
+        ], $history, 'forgejo-token');
+
+        $webhookRegistrationResult = $webhookRegistrationTemplate->register($source);
+
+        self::assertTrue($webhookRegistrationResult->success);
+        self::assertSame('7', $webhookRegistrationResult->externalId);
+        self::assertCount(2, $history);
+        self::assertSame('https://forge.company.test/git/api/v1/repos/owner-four/repo-four/hooks', (string) $this->request($history, 0)->getUri());
+        self::assertSame('https://forge.company.test/git/api/v1/repos/owner-four/repo-four/hooks', (string) $this->request($history, 1)->getUri());
+        $payload = $this->payload($this->request($history, 1));
+        self::assertSame('forgejo', $payload['type']);
+        self::assertSame($this->expectedWebhookUrl('forgejo_self_hosted', $source), $payload['config']['url']);
+    }
+
+    #[Test]
+    public function forgejoSelfHostedRegistrarExplainsForbiddenWithForgejoLabel(): void
+    {
+        $history                     = [];
+        $source                      = $this->buildSource('forgejo_self_hosted', 'owner-five', 'repo-five');
+        $webhookRegistrationTemplate = $this->webhookTemplate('forgejo_self_hosted', [
+            [
+                'status' => 403,
+                'body'   => null,
+            ],
+            [
+                'status' => 403,
+                'body'   => null,
+            ],
+            [
+                'status' => 403,
+                'body'   => null,
+            ],
+            [
+                'status' => 403,
+                'body'   => null,
+            ],
+        ], $history, 'forgejo-token');
+
+        $webhookRegistrationResult = $webhookRegistrationTemplate->register($source);
+
+        self::assertFalse($webhookRegistrationResult->success);
+        self::assertStringContainsString('Forgejo webhook API returned status 403', $webhookRegistrationResult->message);
+        self::assertStringNotContainsString('Codeberg', $webhookRegistrationResult->message);
+    }
+
     private function brandingConfig(): BrandingConfig
     {
         return new BrandingConfig([
@@ -630,6 +691,9 @@ final class HttpWebhookRegistrarContractTest extends TestCase
                 ...('gitlab_self_hosted' === $provider ? [
                     'base_url' => 'https://gitlab.company.test',
                 ] : []),
+                ...('forgejo_self_hosted' === $provider ? [
+                    'base_url' => 'https://forge.company.test/git',
+                ] : []),
                 'webhook_secret' => self::SECRET,
             ],
         );
@@ -662,12 +726,13 @@ final class HttpWebhookRegistrarContractTest extends TestCase
     ): WebhookRegistrationTemplate {
         $brandingConfig ??= $this->brandingConfig();
         $webhookProviderAdapter = match ($provider) {
-            'github'             => new GithubWebhookProviderAdapter($brandingConfig),
-            'gitlab'             => new GitlabWebhookProviderAdapter($brandingConfig),
-            'gitlab_self_hosted' => new GitlabSelfHostedWebhookProviderAdapter($brandingConfig),
-            'bitbucket'          => new BitbucketWebhookProviderAdapter($brandingConfig),
-            'codeberg'           => new CodebergWebhookProviderAdapter($brandingConfig),
-            default              => throw new InvalidArgumentException(sprintf('Unsupported webhook provider "%s".', $provider)),
+            'github'              => new GithubWebhookProviderAdapter($brandingConfig),
+            'gitlab'              => new GitlabWebhookProviderAdapter($brandingConfig),
+            'gitlab_self_hosted'  => new GitlabSelfHostedWebhookProviderAdapter($brandingConfig),
+            'bitbucket'           => new BitbucketWebhookProviderAdapter($brandingConfig),
+            'codeberg'            => new CodebergWebhookProviderAdapter($brandingConfig),
+            'forgejo_self_hosted' => new CodebergWebhookProviderAdapter($brandingConfig, 'forgejo_self_hosted', 'Forgejo'),
+            default               => throw new InvalidArgumentException(sprintf('Unsupported webhook provider "%s".', $provider)),
         };
 
         return new WebhookRegistrationTemplate(

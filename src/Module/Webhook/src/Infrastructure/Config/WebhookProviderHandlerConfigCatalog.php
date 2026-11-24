@@ -67,6 +67,15 @@ final readonly class WebhookProviderHandlerConfigCatalog
         );
     }
 
+    public function forgejoSelfHosted(): WebhookProviderHandlerConfig
+    {
+        // Codeberg and self-hosted Forgejo share the same incoming webhook event names.
+        return new WebhookProviderHandlerConfig(
+            provider: 'forgejo_self_hosted',
+            events: $this->events('codeberg', self::DEFAULT_CODEBERG_EVENTS),
+        );
+    }
+
     /**
      * @param list<string> $default
      *

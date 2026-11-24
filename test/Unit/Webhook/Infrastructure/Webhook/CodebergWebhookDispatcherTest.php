@@ -73,6 +73,94 @@ final class CodebergWebhookDispatcherTest extends TestCase
         );
     }
 
+    #[Test]
+    public function forgejoSelfHostedWebhookIsProcessedWhenInstanceUrlMatches(): void
+    {
+        $payload = json_encode([
+            'repository' => [
+                'html_url' => 'https://forge.test/git/owner/repo',
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $event = $this->service()->handleWebhook(
+            new SourceData(id: 'source-02', organizationId: '', provider: 'forgejo_self_hosted', url: 'https://forge.test/git/owner/repo', active: true, webhookSecret: 's'),
+            [
+                'x-forgejo-event'     => 'push',
+                'x-forgejo-delivery'  => 'd-1',
+                'x-forgejo-signature' => hash_hmac('sha256', $payload, 's'),
+            ],
+            $payload,
+        );
+
+        self::assertInstanceOf(WebhookEvent::class, $event);
+        self::assertSame('forgejo_self_hosted', $event->provider());
+        self::assertSame('processed', $event->status());
+    }
+
+    #[Test]
+    public function forgejoSelfHostedFullNameFallbackUsesInstanceBaseUrl(): void
+    {
+        $payload = json_encode([
+            'repository' => [
+                'full_name' => 'owner/repo',
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $event = $this->service()->handleWebhook(
+            new SourceData(id: 'source-02', organizationId: '', provider: 'forgejo_self_hosted', url: 'https://forge.test/git/owner/repo', active: true, webhookSecret: 's'),
+            [
+                'x-forgejo-event'     => 'push',
+                'x-forgejo-delivery'  => 'd-2',
+                'x-forgejo-signature' => hash_hmac('sha256', $payload, 's'),
+            ],
+            $payload,
+        );
+
+        self::assertInstanceOf(WebhookEvent::class, $event);
+        self::assertSame('processed', $event->status());
+        self::assertSame('Sync scheduled for https://forge.test/git/owner/repo.', $event->message());
+    }
+
+    #[Test]
+    public function forgejoSelfHostedWebhookRejectsOtherInstanceUrl(): void
+    {
+        $payload = json_encode([
+            'repository' => [
+                'html_url' => 'https://other.test/owner/repo',
+            ],
+        ], JSON_THROW_ON_ERROR);
+
+        $event = $this->service()->handleWebhook(
+            new SourceData(id: 'source-02', organizationId: '', provider: 'forgejo_self_hosted', url: 'https://forge.test/owner/repo', active: true, webhookSecret: 's'),
+            [
+                'x-forgejo-event'     => 'push',
+                'x-forgejo-delivery'  => 'd-3',
+                'x-forgejo-signature' => hash_hmac('sha256', $payload, 's'),
+            ],
+            $payload,
+        );
+
+        self::assertInstanceOf(WebhookEvent::class, $event);
+        self::assertSame('rejected', $event->status());
+    }
+
+    #[Test]
+    public function forgejoSelfHostedWebhookRejectsInvalidSignature(): void
+    {
+        $this->expectException(InvalidWebhookRequest::class);
+        $this->expectExceptionMessage('Invalid Forgejo signature.');
+
+        $this->service()->handleWebhook(
+            new SourceData(id: 'source-02', organizationId: '', provider: 'forgejo_self_hosted', url: 'https://forge.test/owner/repo', active: true, webhookSecret: 's'),
+            [
+                'x-forgejo-event'     => 'push',
+                'x-forgejo-delivery'  => 'd-4',
+                'x-forgejo-signature' => 'bad',
+            ],
+            '{}',
+        );
+    }
+
     private function service(): WebhookDispatcher
     {
         return new WebhookDispatcher(
@@ -121,6 +209,7 @@ final class CodebergWebhookDispatcherTest extends TestCase
             ),
             new WebhookProviderHandlerRegistry([
                 new CodebergWebhookProviderHandler(new WebhookProviderHandlerConfig('codeberg', ['push', 'create', 'delete'])),
+                new CodebergWebhookProviderHandler(new WebhookProviderHandlerConfig('forgejo_self_hosted', ['push', 'create', 'delete'])),
             ]),
         );
     }

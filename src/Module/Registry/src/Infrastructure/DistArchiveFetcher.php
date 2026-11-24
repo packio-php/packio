@@ -7,6 +7,7 @@ namespace Packio\Registry\Infrastructure;
 use Common\Branding\BrandingConfig;
 use InvalidArgumentException;
 use Packio\Registry\Application\Service\DistArchiveFetcherInterface;
+use RuntimeException;
 
 use function is_string;
 use function rawurlencode;
@@ -71,13 +72,15 @@ final readonly class DistArchiveFetcher implements DistArchiveFetcherInterface
                 $reference,
                 $token,
             ),
-            'forgejo_self_hosted' => $this->codebergDistArchiveFetcher->fetchArchive(
-                $owner,
-                $repository,
-                $reference,
-                $token,
-                $baseUrl,
-            ),
+            'forgejo_self_hosted' => '' === trim($baseUrl)
+                ? throw new RuntimeException('Forgejo self-hosted base URL is required to fetch release archives.')
+                : $this->codebergDistArchiveFetcher->fetchArchive(
+                    $owner,
+                    $repository,
+                    $reference,
+                    $token,
+                    $baseUrl,
+                ),
             'generic_git'         => $this->genericGitDistArchiveFetcher->fetchArchive(
                 $repository,
                 $reference,

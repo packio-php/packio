@@ -12,10 +12,12 @@ use Packio\Publication\Infrastructure\Codeberg\CodebergPackageMetadata;
 use Packio\Publication\Infrastructure\Composer\ComposerReleaseDateMap;
 use Packio\Publication\Infrastructure\Git\GitReference;
 use Packio\Publication\Infrastructure\Readme\CodebergPackageReadmeExtractorInterface;
+use RuntimeException;
 
 use function is_string;
 use function rawurlencode;
 use function sprintf;
+use function trim;
 
 final readonly class CodebergPublicationAdapter implements ProviderPublicationAdapterInterface
 {
@@ -36,9 +38,16 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
         $baseUrl = $source['providerConfig']['base_url'] ?? null;
 
         // Codeberg stays pinned to codeberg.org; only the instance provider honours base_url.
-        return 'codeberg' !== $this->provider && is_string($baseUrl)
-            ? new CodebergAccessCredentials($accessToken, $baseUrl)
-            : new CodebergAccessCredentials($accessToken);
+        if ('codeberg' === $this->provider) {
+            return new CodebergAccessCredentials($accessToken);
+        }
+
+        // Never fall back to codeberg.org here: it would send the instance token there.
+        if (! is_string($baseUrl) || '' === trim($baseUrl)) {
+            throw new RuntimeException('Source is missing base_url in providerConfig.');
+        }
+
+        return new CodebergAccessCredentials($accessToken, $baseUrl);
     }
 
     public function accessToken(object $credentials): ?string

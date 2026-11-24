@@ -25,6 +25,7 @@ use Throwable;
 
 use function hash;
 use function is_array;
+use function sprintf;
 use function str_contains;
 use function substr;
 use function trim;
@@ -385,9 +386,10 @@ final readonly class SourceOAuthTokenResolver
                     'provider'         => $sourceOAuthAccount->provider(),
                 ]);
 
-                throw new SourceTokenRefreshFailedException(
-                    'Codeberg token refresh response did not include a new refresh token. Reauthorization required.',
-                );
+                throw new SourceTokenRefreshFailedException(sprintf(
+                    '%s token refresh response did not include a new refresh token. Reauthorization required.',
+                    $this->forgejoLabel($sourceOAuthAccount->provider()),
+                ));
             }
 
             $result = [
@@ -472,12 +474,22 @@ final readonly class SourceOAuthTokenResolver
 
     private function requiresRotatedRefreshToken(string $provider): bool
     {
-        return 'codeberg' === $provider;
+        return $this->isForgejoFamily($provider);
+    }
+
+    private function isForgejoFamily(string $provider): bool
+    {
+        return 'codeberg' === $provider || 'forgejo_self_hosted' === $provider;
+    }
+
+    private function forgejoLabel(string $provider): string
+    {
+        return 'codeberg' === $provider ? 'Codeberg' : 'Forgejo';
     }
 
     private function isAlreadyUsedRefreshTokenError(string $provider, Throwable $throwable): bool
     {
-        return 'codeberg' === $provider
+        return $this->isForgejoFamily($provider)
             && str_contains($throwable->getMessage(), 'token was already used');
     }
 
@@ -496,7 +508,7 @@ final readonly class SourceOAuthTokenResolver
 
         $currentRefreshToken = $this->sourceOAuthAccountSecrets->decryptRefreshToken($currentAccount);
         if ($currentRefreshToken === $usedRefreshToken || $this->isTokenExpired($currentAccount)) {
-            $this->log('warning', 'Codeberg refresh token was already used and no newer stored token is available', [
+            $this->log('warning', sprintf('%s refresh token was already used and no newer stored token is available', $this->forgejoLabel($sourceOAuthAccount->provider())), [
                 'oauth_account_id'                  => $sourceOAuthAccount->getIdentifier()->toString(),
                 'refresh_token_fingerprint'         => $this->tokenFingerprint($usedRefreshToken),
                 'current_refresh_token_fingerprint' => $this->tokenFingerprint($currentRefreshToken),
@@ -506,7 +518,7 @@ final readonly class SourceOAuthTokenResolver
             return null;
         }
 
-        $this->log('info', 'Recovered from already-used Codeberg refresh token with newer stored token', [
+        $this->log('info', sprintf('Recovered from already-used %s refresh token with newer stored token', $this->forgejoLabel($sourceOAuthAccount->provider())), [
             'oauth_account_id'                  => $sourceOAuthAccount->getIdentifier()->toString(),
             'used_refresh_token_fingerprint'    => $this->tokenFingerprint($usedRefreshToken),
             'current_refresh_token_fingerprint' => $this->tokenFingerprint($currentRefreshToken),

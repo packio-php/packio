@@ -22,6 +22,7 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
+use RuntimeException;
 
 #[CoversClass(DistArchiveFetcher::class)]
 final class DistArchiveFetcherTest extends TestCase
@@ -32,6 +33,14 @@ final class DistArchiveFetcherTest extends TestCase
         $urls = $this->fetchUrls('forgejo_self_hosted', 'https://forgejo.example.test');
 
         self::assertSame(['https://forgejo.example.test/api/v1/repos/vendor/package/archive/v1.0.0.zip'], $urls);
+    }
+
+    #[Test]
+    public function forgejoSelfHostedRejectsEmptyBaseUrl(): void
+    {
+        $this->expectException(RuntimeException::class);
+
+        $this->fetchUrls('forgejo_self_hosted', ' ');
     }
 
     #[Test]

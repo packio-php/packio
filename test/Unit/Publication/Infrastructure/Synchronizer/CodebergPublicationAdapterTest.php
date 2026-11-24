@@ -13,6 +13,7 @@ use Packio\Publication\Infrastructure\Synchronizer\CodebergPublicationAdapter;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 
 #[CoversClass(CodebergPublicationAdapter::class)]
 final class CodebergPublicationAdapterTest extends TestCase
@@ -36,6 +37,26 @@ final class CodebergPublicationAdapterTest extends TestCase
         self::assertInstanceOf(CodebergAccessCredentials::class, $credentials);
         self::assertSame('https://example.com/git', $credentials->baseUrl);
         self::assertSame('forgejo_self_hosted', $adapter->provider());
+    }
+
+    #[Test]
+    public function instanceProviderRejectsMissingBaseUrl(): void
+    {
+        $adapter = new CodebergPublicationAdapter(
+            $this->createStub(CodebergComposerMetadataFetcherInterface::class),
+            $this->createStub(CodebergPackageReadmeExtractorInterface::class),
+            new PackageReadmeSyncService($this->createStub(SynchronizerDependenciesPort::class)),
+            'forgejo_self_hosted',
+        );
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('base_url');
+
+        $adapter->credentials([
+            'providerConfig' => [
+                'base_url' => '  ',
+            ],
+        ], 'token');
     }
 
     #[Test]

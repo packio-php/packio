@@ -534,4 +534,51 @@ describe("SourceConnectionModal", () => {
     expect(screen.getAllByText("forgejo-user").length).toBeGreaterThan(0);
     expect(screen.queryByText("legacy-user")).not.toBeInTheDocument();
   });
+
+  it("keeps the GitLab instance wording for the real catalog name", () => {
+    renderModal({
+      activeModal: "access",
+      providers: [{ ...gitlabProvider, name: "GitLab Self-Hosted" }],
+      sourceProviderInstances: [gitlabInstance],
+      providerAuthorizationsAll: [],
+    });
+
+    expect(screen.getByLabelText("GitLab instance")).toBeInTheDocument();
+  });
+
+  it("submits the Forgejo token form with the selected instance", async () => {
+    const modal = renderModal({
+      activeModal: "access",
+      providers: [{ ...forgejoProvider, name: "Forgejo Self-Hosted" }],
+      sourceProviderInstances: [{ ...forgejoInstance, auth_mode: "token" }],
+      providerAuthorizationsAll: [],
+    });
+
+    expect(screen.getByLabelText("Forgejo instance")).toHaveValue(
+      forgejoInstance.id,
+    );
+    const token = document.querySelector<HTMLInputElement>(
+      'input[name="authorization_token"]',
+    );
+    expect(token).not.toBeNull();
+    await fireEvent.input(token!, { target: { value: "forgejo-token" } });
+    const form = token!.closest("form")!;
+    await fireEvent.submit(form);
+
+    expect(modal.onAccessSubmit).toHaveBeenCalledOnce();
+    const data = new FormData(form);
+    expect(data.get("provider")).toBe("forgejo_self_hosted");
+    expect(data.get("provider_instance_id")).toBe(forgejoInstance.id);
+  });
+
+  it("asks for the Forgejo instance URL when no instance is configured", () => {
+    renderModal({
+      activeModal: "access",
+      providers: [{ ...forgejoProvider, name: "Forgejo Self-Hosted" }],
+      sourceProviderInstances: [],
+      providerAuthorizationsAll: [],
+    });
+
+    expect(screen.getByText("Forgejo instance URL")).toBeInTheDocument();
+  });
 });

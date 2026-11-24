@@ -573,6 +573,9 @@
     providers.find((p) => p.key === selectedProvider)
       ?.supports_self_hosted_instances === true,
   );
+  let selectedProviderNoun = $derived(
+    providerName(selectedProvider).replace(/ Self-Hosted$/, ""),
+  );
   let selectableProviderInstances = $derived(
     sourceProviderInstances.filter(
       (instance) =>
@@ -826,7 +829,7 @@
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
                     <span class="text-sm font-medium ui-title">
-                      {providerName(selectedProvider)} instance
+                      {selectedProviderNoun} instance
                     </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"
@@ -1023,7 +1026,7 @@
                   {#if selectedProviderIsSelfHosted && !providerNeedsInstance}
                     <label class="grid gap-2">
                       <span class="text-sm font-medium ui-title">
-                        {providerName(selectedProvider)} instance URL
+                        {selectedProviderNoun} instance URL
                       </span>
                       <Input
                         className="w-full h-14"
@@ -1088,8 +1091,7 @@
                 <InsetCard className="p-5">
                   <p class="font-medium ui-title">Token authorization</p>
                   <p class="mt-1 text-sm ui-muted">
-                    This {providerName(selectedProvider)} instance is configured for
-                    OAuth only.
+                    This {selectedProviderNoun} instance is configured for OAuth only.
                   </p>
                 </InsetCard>
               {/if}
@@ -1145,7 +1147,7 @@
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
                     <span class="text-sm font-medium ui-title">
-                      {providerName(selectedProvider)} instance
+                      {selectedProviderNoun} instance
                     </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"

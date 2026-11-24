@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { browserBranding, defaultBranding, mergeBranding } from "./branding";
 import { formatDate, formatDuration } from "./date";
 import { jobStatusTone, jobTypeLabel } from "./job";
-import { providerIconKey } from "./providerPresentation";
+import { providerIconKey, providerLabel } from "./providerPresentation";
 
 describe("small frontend helpers", () => {
   it("formats dates and preserves invalid values", () => {
@@ -45,6 +45,12 @@ describe("small frontend helpers", () => {
 
   it("maps provider icon keys", () => {
     expect(providerIconKey("gitlab_self_hosted")).toBe("gitlab");
+    expect(providerIconKey("forgejo_self_hosted")).toBe("forgejo");
     expect(providerIconKey("github")).toBe("github");
+  });
+
+  it("labels self-hosted providers", () => {
+    expect(providerLabel("forgejo_self_hosted")).toBe("Forgejo Self-Hosted");
+    expect(providerLabel("github")).toBeNull();
   });
 });

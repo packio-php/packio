@@ -25,9 +25,11 @@ use Packio\Source\Api\SourceSecretResolverInterface;
 use Packio\Source\Application\Command\SourceCommandService;
 use Packio\Source\Application\Query\SourceQueryService;
 use Packio\Source\Application\Service\SourceJobScheduler;
+use Packio\Source\Domain\Dto\ProviderResourceData;
 use Packio\Source\Domain\Entity\ProviderAuthorization;
 use Packio\Source\Domain\Repository\ProviderAuthorizationRepositoryInterface;
 use Packio\Source\Domain\Repository\SourceRepositoryInterface;
+use Packio\Source\Infrastructure\Provider\Codeberg\CodebergProviderResourceFetcherInterface;
 use Packio\Worker\Application\JobProcessor;
 use Packio\Worker\Domain\Entity\Job;
 use Packio\Worker\Domain\Repository\JobLogRepositoryInterface;
@@ -63,20 +65,27 @@ final class SourceFeatureTest extends FeatureTestCase
 
     private FakeArchiveStorageCleanupApiFacade $fakeArchiveStorageCleanupApiFacade;
 
+    private FakeForgejoResourceFetcher $fakeForgejoResourceFetcher;
+
     /** @var array<string, ?string> */
     private array $originalEnv = [];
 
     protected function setUp(): void
     {
         $this->originalEnv = [
-            'SOURCE_PROVIDER_BITBUCKET_ENABLED'          => $this->envValue('SOURCE_PROVIDER_BITBUCKET_ENABLED'),
-            'SOURCE_PROVIDER_GITLAB_SELF_HOSTED_ENABLED' => $this->envValue('SOURCE_PROVIDER_GITLAB_SELF_HOSTED_ENABLED'),
+            'SOURCE_PROVIDER_BITBUCKET_ENABLED'           => $this->envValue('SOURCE_PROVIDER_BITBUCKET_ENABLED'),
+            'SOURCE_PROVIDER_GITLAB_SELF_HOSTED_ENABLED'  => $this->envValue('SOURCE_PROVIDER_GITLAB_SELF_HOSTED_ENABLED'),
+            'SOURCE_PROVIDER_FORGEJO_SELF_HOSTED_ENABLED' => $this->envValue('SOURCE_PROVIDER_FORGEJO_SELF_HOSTED_ENABLED'),
         ];
 
         $this->setEnv('SOURCE_PROVIDER_BITBUCKET_ENABLED', 'true');
         $this->setEnv('SOURCE_PROVIDER_GITLAB_SELF_HOSTED_ENABLED', 'true');
-        $this->fakeArchiveStorageCleanupApiFacade                               = new FakeArchiveStorageCleanupApiFacade();
-        $this->serviceOverrides[ArchiveStorageCleanupApiFacadeInterface::class] = $this->fakeArchiveStorageCleanupApiFacade;
+        // The provider config is built in parent::setUp(), so the disabled case is picked by test name.
+        $this->setEnv('SOURCE_PROVIDER_FORGEJO_SELF_HOSTED_ENABLED', str_contains($this->name(), 'WhenForgejoIsDisabled') ? 'false' : 'true');
+        $this->fakeForgejoResourceFetcher                                        = new FakeForgejoResourceFetcher();
+        $this->serviceOverrides[CodebergProviderResourceFetcherInterface::class] = $this->fakeForgejoResourceFetcher;
+        $this->fakeArchiveStorageCleanupApiFacade                                = new FakeArchiveStorageCleanupApiFacade();
+        $this->serviceOverrides[ArchiveStorageCleanupApiFacadeInterface::class]  = $this->fakeArchiveStorageCleanupApiFacade;
 
         parent::setUp();
     }
@@ -1267,6 +1276,108 @@ final class SourceFeatureTest extends FeatureTestCase
     }
 
     #[Test]
+    public function itConnectsAForgejoSelfHostedSourceByToken(): void
+    {
+        [$owner, $organization]                      = $this->createOrganizationWithOwner();
+        $baseUrl                                     = 'https://forgejo.example.test';
+        $instanceId                                  = $this->createSourceProviderInstance($organization, $owner->id, 'forgejo_self_hosted', $baseUrl);
+        $resource                                    = $baseUrl . '/team/' . bin2hex(random_bytes(6));
+        $this->fakeForgejoResourceFetcher->resources = [
+            new ProviderResourceData($resource, 'team/package', 'forgejo_self_hosted', $resource, 'main'),
+        ];
+
+        /** @var SourceApiFacadeInterface $sources */
+        $sources                  = $this->getService(SourceApiFacadeInterface::class);
+        $providerAuthorizationDto = $sources->authorizeProvider(new ProviderAuthorizationRequestDto(
+            'forgejo_self_hosted',
+            $organization->id,
+            'token',
+            [
+                'token'                => 'forgejo-feature-token',
+                'provider_instance_id' => $instanceId,
+            ],
+        ));
+
+        $this->logIn($owner->email);
+        $this->get(
+            '/organization/' . $organization->slug . '/sources/authorizations/' . $providerAuthorizationDto->id . '/resources?provider=forgejo_self_hosted',
+            [
+                'Accept' => 'application/json',
+            ],
+        )
+            ->assertStatus(200)
+            ->assertJsonPath('resources.0.canonical_url', $resource)
+        ;
+        self::assertSame([['forgejo-feature-token', $baseUrl, 'forgejo_self_hosted']], $this->fakeForgejoResourceFetcher->calls);
+
+        $this->withCsrf()->post('/organization/' . $organization->slug . '/sources/connect', [
+            'provider'              => 'forgejo_self_hosted',
+            'authorization_id'      => $providerAuthorizationDto->id,
+            'resource_urls'         => [$resource],
+            'resource_default_refs' => [
+                $resource => 'main',
+            ],
+            'visibility'            => 'private',
+        ])->assertRedirect('/organization/' . $organization->slug . '/sources');
+
+        /** @var JobRepositoryInterface $jobs */
+        $jobs   = $this->getService(JobRepositoryInterface::class);
+        $queued = $this->findSourceCreateJobsByResource($jobs, $organization->id, $resource);
+        self::assertCount(1, $queued);
+        self::assertSame('forgejo_self_hosted', $queued[0]->payload()['provider'] ?? null);
+
+        $jobProcessor = $this->getService(JobProcessor::class);
+        self::assertInstanceOf(JobProcessor::class, $jobProcessor);
+        $jobProcessor->process($queued[0]);
+        self::assertSame(Job::STATUS_COMPLETED, $jobs->findById($queued[0]->getIdentifier()->toString())?->status());
+
+        $source = $this->getService(SourceQueryService::class)->findSourceByUrl($resource, $organization->id);
+        self::assertNotNull($source);
+        self::assertSame('forgejo_self_hosted', $source->provider());
+        self::assertSame($baseUrl, $source->providerConfig()['base_url'] ?? null);
+    }
+
+    #[Test]
+    public function itRejectsAForgejoSourceOnAnotherHost(): void
+    {
+        [$owner, $organization] = $this->createOrganizationWithOwner();
+        $instanceId             = $this->createSourceProviderInstance($organization, $owner->id, 'forgejo_self_hosted', 'https://forgejo.example.test');
+
+        /** @var SourceApiFacadeInterface $sources */
+        $sources                  = $this->getService(SourceApiFacadeInterface::class);
+        $providerAuthorizationDto = $sources->authorizeProvider(new ProviderAuthorizationRequestDto(
+            'forgejo_self_hosted',
+            $organization->id,
+            'token',
+            [
+                'token'                => 'forgejo-feature-token',
+                'provider_instance_id' => $instanceId,
+            ],
+        ));
+
+        $this->expectException(RuntimeException::class);
+        $this->expectExceptionMessage('Resource must be a repository URL supported by the selected provider.');
+        $sources->registerSource(new SourceRegistrationRequestDto(
+            'forgejo_self_hosted',
+            'https://other-forgejo.example.test/team/package',
+            $organization->id,
+            providerAuthorizationId: $providerAuthorizationDto->id,
+        ));
+    }
+
+    #[Test]
+    public function itOffersForgejoSelfHostedProviderOnTheSourcesPage(): void
+    {
+        self::assertContains('forgejo_self_hosted', $this->sourcesPageProviderKeys());
+    }
+
+    #[Test]
+    public function itDoesNotOfferForgejoSelfHostedProviderWhenForgejoIsDisabled(): void
+    {
+        self::assertNotContains('forgejo_self_hosted', $this->sourcesPageProviderKeys());
+    }
+
+    #[Test]
     public function itKeepsSourceMetadataWhenArchiveStorageCleanupFails(): void
     {
         [$owner, $organization] = $this->createOrganizationWithOwner();
@@ -1426,6 +1537,23 @@ final class SourceFeatureTest extends FeatureTestCase
     }
 
     /**
+     * @return list<string>
+     */
+    private function sourcesPageProviderKeys(): array
+    {
+        [$owner, $organization] = $this->createOrganizationWithOwner();
+        $this->logIn($owner->email);
+
+        $props = $this->get('/organization/' . $organization->slug . '/sources', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->assertStatus(200)->json()['props'] ?? [];
+        self::assertIsArray($props);
+
+        return array_column($props['providers'] ?? [], 'key');
+    }
+
+    /**
      * @return array{0: UserDto, 1: OrganizationDto}
      */
     private function createOrganizationWithOwner(): array
@@ -1487,17 +1615,21 @@ final class SourceFeatureTest extends FeatureTestCase
         ));
     }
 
-    private function createSourceProviderInstance(OrganizationDto $organizationDto, string $ownerId): string
-    {
+    private function createSourceProviderInstance(
+        OrganizationDto $organizationDto,
+        string $ownerId,
+        string $providerType = 'gitlab_self_hosted',
+        string $baseUrl = ''
+    ): string {
         /** @var SourceApiFacadeInterface $sources */
         $sources = $this->getService(SourceApiFacadeInterface::class);
 
         return $sources->createSourceProviderInstanceInContext(
             new ActorContext($organizationDto->id, $ownerId, 'owner'),
             new SourceProviderInstanceRequestDto(
-                'gitlab_self_hosted',
-                'Feature GitLab',
-                'https://gitlab-' . bin2hex(random_bytes(6)) . '.example.test',
+                $providerType,
+                'Feature instance',
+                '' !== $baseUrl ? $baseUrl : 'https://gitlab-' . bin2hex(random_bytes(6)) . '.example.test',
                 '',
                 null,
                 'token',
@@ -1669,5 +1801,21 @@ final class FakeArchiveStorageCleanupApiFacade implements ArchiveStorageCleanupA
             'scheduled'  => 1,
             'failed'     => 0,
         ];
+    }
+}
+
+final class FakeForgejoResourceFetcher implements CodebergProviderResourceFetcherInterface
+{
+    /** @var list<ProviderResourceData> */
+    public array $resources = [];
+
+    /** @var list<array{0: ?string, 1: string, 2: string}> */
+    public array $calls = [];
+
+    public function fetchResources(?string $accessToken = null, string $baseUrl = 'https://codeberg.org', string $type = 'codeberg'): array
+    {
+        $this->calls[] = [$accessToken, $baseUrl, $type];
+
+        return $this->resources;
     }
 }

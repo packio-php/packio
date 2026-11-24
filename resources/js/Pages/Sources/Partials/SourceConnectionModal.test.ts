@@ -24,6 +24,7 @@ const githubProvider: SourceProviderPayload = {
   oauth_available: true,
   oauth_enabled: true,
   oauth_provider: "github",
+  supports_self_hosted_instances: false,
   capabilities: { supports_synchronization: true },
 };
 
@@ -34,6 +35,7 @@ const disabledProvider: SourceProviderPayload = {
   oauth_available: false,
   oauth_enabled: false,
   oauth_provider: null,
+  supports_self_hosted_instances: false,
   capabilities: { supports_synchronization: false },
 };
 
@@ -44,6 +46,7 @@ const gitlabProvider: SourceProviderPayload = {
   oauth_available: true,
   oauth_enabled: true,
   oauth_provider: "gitlab",
+  supports_self_hosted_instances: true,
   capabilities: { supports_synchronization: true },
 };
 
@@ -53,6 +56,26 @@ const gitlabInstance: SourceProviderInstancePayload = {
   base_url: "https://gitlab.acme.test",
   provider_type: "gitlab_self_hosted",
   auth_mode: "oauth2",
+  status: "active",
+};
+
+const forgejoProvider: SourceProviderPayload = {
+  key: "forgejo_self_hosted",
+  name: "Forgejo",
+  description: "Self-hosted Forgejo repositories",
+  oauth_available: true,
+  oauth_enabled: true,
+  oauth_provider: "forgejo_self_hosted",
+  supports_self_hosted_instances: true,
+  capabilities: { supports_synchronization: true },
+};
+
+const forgejoInstance: SourceProviderInstancePayload = {
+  id: "forgejo-instance-1",
+  label: "Acme Forgejo",
+  base_url: "https://git.acme.test",
+  provider_type: "forgejo_self_hosted",
+  auth_mode: "oauth2_and_token",
   status: "active",
 };
 
@@ -457,5 +480,58 @@ describe("SourceConnectionModal", () => {
         id: "auth-new",
       });
     });
+  });
+
+  it("selects only Forgejo instances and passes the instance to the OAuth popup", async () => {
+    const popup = { closed: false, close: vi.fn() };
+    vi.spyOn(window, "open").mockReturnValue(popup as unknown as Window);
+    renderModal({
+      activeModal: "access",
+      providers: [gitlabProvider, forgejoProvider],
+      sourceProviderInstances: [gitlabInstance, forgejoInstance],
+      providerAuthorizationsAll: [],
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: /Forgejo/ }));
+
+    const select = screen.getByLabelText("Forgejo instance");
+    expect(select).toHaveValue(forgejoInstance.id);
+    expect(screen.queryByText("Acme GitLab")).not.toBeInTheDocument();
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: /Connect with Forgejo/ }),
+    );
+
+    expect(window.open).toHaveBeenCalledWith(
+      "/organization/acme/auth/oauth/forgejo_self_hosted/source-redirect?popup=1&provider_instance_id=forgejo-instance-1",
+      "packio-source-oauth",
+      "popup=yes,width=720,height=760",
+    );
+  });
+
+  it("offers only authorizations scoped to the selected Forgejo instance when connecting", () => {
+    renderModal({
+      providers: [forgejoProvider],
+      sourceProviderInstances: [forgejoInstance],
+      providerAuthorizationsAll: [
+        {
+          ...authorization,
+          id: "forgejo-auth",
+          provider: "forgejo_self_hosted",
+          provider_instance_id: forgejoInstance.id,
+          account_name: "forgejo-user",
+        },
+        {
+          ...authorization,
+          id: "legacy-auth",
+          provider: "forgejo_self_hosted",
+          provider_instance_id: null,
+          account_name: "legacy-user",
+        },
+      ],
+    });
+
+    expect(screen.getAllByText("forgejo-user").length).toBeGreaterThan(0);
+    expect(screen.queryByText("legacy-user")).not.toBeInTheDocument();
   });
 });

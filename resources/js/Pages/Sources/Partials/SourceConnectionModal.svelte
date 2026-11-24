@@ -462,7 +462,7 @@
     const organizationSlugRaw = organization?.slug ?? "";
     const organizationSlug = encodeURIComponent(organizationSlugRaw);
     const query = ["popup=1"];
-    if (provider === "gitlab_self_hosted" && selectedProviderInstanceId) {
+    if (selectedProviderIsSelfHosted && selectedProviderInstanceId) {
       query.push(
         `provider_instance_id=${encodeURIComponent(selectedProviderInstanceId)}`,
       );
@@ -569,6 +569,10 @@
       selectedProvider = providerKeys[0];
     }
   });
+  let selectedProviderIsSelfHosted = $derived(
+    providers.find((p) => p.key === selectedProvider)
+      ?.supports_self_hosted_instances === true,
+  );
   let selectableProviderInstances = $derived(
     sourceProviderInstances.filter(
       (instance) =>
@@ -582,12 +586,10 @@
     ),
   );
   let connectNeedsInstance = $derived(
-    selectedProvider === "gitlab_self_hosted" &&
-      selectableProviderInstances.length > 0,
+    selectedProviderIsSelfHosted && selectableProviderInstances.length > 0,
   );
   let accessNeedsInstance = $derived(
-    selectedProvider === "gitlab_self_hosted" &&
-      manageableProviderInstances.length > 0,
+    selectedProviderIsSelfHosted && manageableProviderInstances.length > 0,
   );
   let providerNeedsInstance = $derived(
     activeModal === "access" ? accessNeedsInstance : connectNeedsInstance,
@@ -615,7 +617,7 @@
         a.provider === selectedProvider &&
         a.configured &&
         a.status === "active" &&
-        (selectedProvider !== "gitlab_self_hosted" ||
+        (!selectedProviderIsSelfHosted ||
           (a.provider_instance_id
             ? selectableProviderInstances.some(
                 (instance) => instance.id === a.provider_instance_id,
@@ -824,7 +826,7 @@
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
                     <span class="text-sm font-medium ui-title">
-                      GitLab instance
+                      {providerName(selectedProvider)} instance
                     </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"
@@ -1018,17 +1020,19 @@
                       value={selectedProviderInstanceId}
                     />
                   {/if}
-                  {#if selectedProvider === "gitlab_self_hosted" && !providerNeedsInstance}
+                  {#if selectedProviderIsSelfHosted && !providerNeedsInstance}
                     <label class="grid gap-2">
                       <span class="text-sm font-medium ui-title">
-                        GitLab instance URL
+                        {providerName(selectedProvider)} instance URL
                       </span>
                       <Input
                         className="w-full h-14"
                         name="instance_url"
                         type="url"
                         autocomplete="off"
-                        placeholder="https://gitlab.mycompany.com"
+                        placeholder={selectedProvider === "gitlab_self_hosted"
+                          ? "https://gitlab.mycompany.com"
+                          : "https://git.mycompany.com"}
                         bind:value={instanceUrl}
                       />
                     </label>
@@ -1084,7 +1088,8 @@
                 <InsetCard className="p-5">
                   <p class="font-medium ui-title">Token authorization</p>
                   <p class="mt-1 text-sm ui-muted">
-                    This GitLab instance is configured for OAuth only.
+                    This {providerName(selectedProvider)} instance is configured for
+                    OAuth only.
                   </p>
                 </InsetCard>
               {/if}
@@ -1140,7 +1145,7 @@
                 <InsetCard className="p-5">
                   <label class="grid gap-2">
                     <span class="text-sm font-medium ui-title">
-                      GitLab instance
+                      {providerName(selectedProvider)} instance
                     </span>
                     <Select
                       className="rounded-2xl px-4 py-3 text-sm w-full h-14"

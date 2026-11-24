@@ -36,6 +36,7 @@ const genericProvider: SourceProviderPayload = {
   oauth_available: false,
   oauth_enabled: false,
   oauth_provider: null,
+  supports_self_hosted_instances: false,
   capabilities: { supports_synchronization: true },
 };
 
@@ -46,6 +47,7 @@ const githubProvider: SourceProviderPayload = {
   oauth_available: true,
   oauth_enabled: true,
   oauth_provider: "github",
+  supports_self_hosted_instances: false,
   capabilities: { supports_synchronization: true },
 };
 

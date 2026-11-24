@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { tick } from "svelte";
   import { apiClient, Endpoints } from "@/lib/api";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -17,10 +17,29 @@
 
   interface Props {
     organizationSlug: string;
-    redirectUri: string;
+    appBaseUrl: string;
+    providers?: { key: string; label: string }[];
   }
 
-  let { organizationSlug, redirectUri }: Props = $props();
+  let { organizationSlug, appBaseUrl, providers = [] }: Props = $props();
+
+  const types = $derived(
+    providers.length > 0
+      ? providers
+      : [{ key: "gitlab_self_hosted", label: "GitLab Self-Hosted" }],
+  );
+  let selectedType = $state("");
+  const providerType = $derived(selectedType || types[0].key);
+  const redirectUri = $derived(
+    `${appBaseUrl.replace(/\/+$/, "")}/auth/oauth/${providerType}/source-callback`,
+  );
+  function typeLabel(key: string): string {
+    return types.find((type) => type.key === key)?.label ?? key;
+  }
+  // "GitLab Self-Hosted" -> "GitLab" for sentences
+  function typeNoun(key: string): string {
+    return typeLabel(key).replace(/ Self-Hosted$/, "");
+  }
 
   type ProviderInstanceResponse = {
     instance: SourceProviderInstancePayload;
@@ -83,6 +102,7 @@
     instance: SourceProviderInstancePayload,
   ): Promise<void> {
     editingProviderInstanceId = instance.id;
+    selectedType = instance.provider_type;
     providerInstanceForm = {
       label: instance.label,
       baseUrl: instance.base_url,
@@ -106,7 +126,7 @@
 
     providerInstancesLoading = true;
     const result = await apiClient.get<ProviderInstancesResponse>(
-      `${Endpoints.sources.providerInstances(org)}?provider_type=gitlab_self_hosted`,
+      `${Endpoints.sources.providerInstances(org)}?provider_type=${providerType}`,
     );
     providerInstancesLoading = false;
 
@@ -126,7 +146,7 @@
 
     providerInstanceSaving = true;
     const payload = {
-      providerType: "gitlab_self_hosted",
+      providerType,
       label: providerInstanceForm.label,
       baseUrl: providerInstanceForm.baseUrl,
       clientId: providerInstanceForm.clientId,
@@ -152,7 +172,7 @@
           )
         : [...providerInstances, saved];
       resetProviderInstanceForm();
-      toast.success("GitLab instance saved.");
+      toast.success(`${typeNoun(saved.provider_type)} instance saved.`);
       return;
     }
 
@@ -204,6 +224,13 @@
     providerInstancePendingDelete = instance;
     providerInstanceDependencies = result.data;
   }
+
+  const pendingNoun = $derived(
+    typeNoun(
+      (providerInstancePendingDelete as SourceProviderInstancePayload | null)
+        ?.provider_type ?? providerType,
+    ),
+  );
 
   function canDeleteProviderInstanceNormally(): boolean {
     return (
@@ -276,10 +303,10 @@
       if ("deleted_inactive_authorizations_count" in result.data) {
         const cleanupResult = result.data as ProviderInstanceCleanupResponse;
         toast.success(
-          `Deleted ${cleanupResult.deleted_inactive_authorizations_count} inactive authorization(s), ${cleanupResult.deleted_source_oauth_accounts_count} OAuth account(s), and the GitLab instance.`,
+          `Deleted ${cleanupResult.deleted_inactive_authorizations_count} inactive authorization(s), ${cleanupResult.deleted_source_oauth_accounts_count} OAuth account(s), and the ${typeNoun(instance.provider_type)} instance.`,
         );
       } else {
-        toast.success("GitLab instance deleted.");
+        toast.success(`${typeNoun(instance.provider_type)} instance deleted.`);
       }
       return;
     }
@@ -293,7 +320,9 @@
       toast.error(result.error);
     }
   }
-  onMount(() => {
+  // Reload the list whenever the selected instance type changes.
+  $effect(() => {
+    void providerType;
     void loadProviderInstances();
   });
 </script>
@@ -302,8 +331,10 @@
   <Card className="rounded-[1.75rem] p-6">
     <SectionHeading
       eyebrow="Source provider instances"
-      title="GitLab self-hosted"
-      description="Register organization GitLab instances for OAuth and token-based source access."
+      title={types.length > 1
+        ? "Self-hosted instances"
+        : `${typeNoun(providerType)} self-hosted`}
+      description="Register organization instances for OAuth and token-based source access."
       className="max-w-xl"
     />
 
@@ -315,13 +346,28 @@
         saveProviderInstance();
       }}
     >
+      {#if types.length > 1}
+        <label class="grid gap-2">
+          <span class="text-sm font-medium ui-title">Instance type</span>
+          <Select
+            bind:value={selectedType}
+            name="provider_type"
+            disabled={editingProviderInstanceId !== ""}
+          >
+            {#each types as type (type.key)}
+              <option value={type.key}>{type.label}</option>
+            {/each}
+          </Select>
+        </label>
+      {/if}
+
       <div class="grid gap-4 md:grid-cols-2">
         <label class="grid gap-2">
           <span class="text-sm font-medium ui-title">Label</span>
           <Input
             name="label"
             bind:value={providerInstanceForm.label}
-            placeholder="Company GitLab"
+            placeholder={`Company ${typeNoun(providerType)}`}
             required
           />
         </label>
@@ -331,7 +377,7 @@
             name="base_url"
             type="url"
             bind:value={providerInstanceForm.baseUrl}
-            placeholder="https://gitlab.company.com"
+            placeholder={`https://${providerType === "forgejo_self_hosted" ? "forgejo" : "gitlab"}.company.com`}
             required
           />
         </label>
@@ -381,8 +427,8 @@
           <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
         </div>
         <p class="text-xs ui-muted">
-          Add this callback URL to the GitLab OAuth application for every
-          self-hosted instance.
+          Add this callback URL to the {typeNoun(providerType)} OAuth application
+          for every self-hosted instance.
         </p>
       </div>
 
@@ -414,10 +460,12 @@
 
     <div class="mt-6 grid gap-3">
       {#if providerInstancesLoading}
-        <p class="text-sm ui-muted">Loading GitLab instances...</p>
+        <p class="text-sm ui-muted">
+          Loading {typeNoun(providerType)} instances...
+        </p>
       {:else if providerInstances.length === 0}
         <p class="text-sm ui-muted">
-          No GitLab self-hosted instances configured yet.
+          No {typeLabel(providerType)} instances configured yet.
         </p>
       {:else}
         {#each providerInstances as instance (instance.id)}
@@ -439,6 +487,11 @@
                     class="ui-badge-muted rounded-full px-2.5 py-1 text-[11px] font-medium"
                   >
                     {authModeLabel(instance.auth_mode)}
+                  </span>
+                  <span
+                    class="ui-badge-muted rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  >
+                    {typeLabel(instance.provider_type)}
                   </span>
                 </div>
                 <p class="mt-1 break-all text-xs ui-muted">
@@ -488,14 +541,14 @@
     open={providerInstancePendingDelete !== null}
     eyebrow="Source provider instance"
     title={canDeleteProviderInstanceNormally()
-      ? "Delete GitLab instance?"
+      ? `Delete ${pendingNoun} instance?`
       : canDeleteProviderInstanceWithInactiveAuthorizations()
-        ? "Delete inactive authorizations and GitLab instance?"
-        : "GitLab instance has dependencies"}
+        ? `Delete inactive authorizations and ${pendingNoun} instance?`
+        : `${pendingNoun} instance has dependencies`}
     description={canDeleteProviderInstanceNormally()
-      ? "This removes the organization-level GitLab self-hosted provider instance. Orphan OAuth accounts for this instance are removed with it."
+      ? `This removes the organization-level ${pendingNoun} self-hosted provider instance. Orphan OAuth accounts for this instance are removed with it.`
       : canDeleteProviderInstanceWithInactiveAuthorizations()
-        ? "This permanently removes the listed inactive authorizations, orphan OAuth accounts for this instance, and then the GitLab instance."
+        ? `This permanently removes the listed inactive authorizations, orphan OAuth accounts for this instance, and then the ${pendingNoun} instance.`
         : "Sources and active authorizations cannot be removed by this action. Resolve or reassign them first."}
     confirmLabel={canDeleteProviderInstanceWithInactiveAuthorizations()
       ? `Delete ${providerInstanceDependencies?.inactive_authorization_count ?? 0} inactive authorization(s) and instance`

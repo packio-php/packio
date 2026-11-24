@@ -193,6 +193,87 @@ describe("Organization settings page", () => {
     });
   });
 
+  it("lets the owner pick the instance type and uses its callback", async () => {
+    const forgejoInstance: SourceProviderInstancePayload = {
+      ...gitlabInstance,
+      id: "instance-f",
+      provider_type: "forgejo_self_hosted",
+      label: "Company Forgejo",
+      base_url: "https://forgejo.example.com",
+    };
+    const get = vi
+      .spyOn(apiClient, "get")
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { instances: [gitlabInstance] },
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        data: { instances: [forgejoInstance] },
+      });
+    const post = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instance: { ...forgejoInstance, id: "instance-g" } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "gitlab_self_hosted", label: "GitLab Self-Hosted" },
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "https://registry.example.com/auth/oauth/gitlab_self_hosted/source-callback",
+      ),
+    ).toBeInTheDocument();
+
+    await fireEvent.change(screen.getByLabelText("Instance type"), {
+      target: { value: "forgejo_self_hosted" },
+    });
+
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith(
+        "/organization/acme/source-provider-instances?provider_type=forgejo_self_hosted",
+      );
+    });
+    expect(await screen.findByText("Company Forgejo")).toBeInTheDocument();
+    expect(screen.getAllByText("Forgejo Self-Hosted").length).toBeGreaterThan(
+      0,
+    );
+    expect(
+      screen.getByText(
+        "https://registry.example.com/auth/oauth/forgejo_self_hosted/source-callback",
+      ),
+    ).toBeInTheDocument();
+
+    await fireEvent.input(screen.getByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "https://forgejo.example.com" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(
+        "/organization/acme/source-provider-instances",
+        expect.objectContaining({ providerType: "forgejo_self_hosted" }),
+      );
+    });
+  });
+
   it("deletes inactive authorizations and the instance when they are the only dependencies", async () => {
     const inactiveDependencies: SourceProviderInstanceDependenciesPayload = {
       ...noDependencies,

@@ -112,6 +112,66 @@ final class SourceProviderInstanceServiceTest extends TestCase
     }
 
     #[Test]
+    public function createAcceptsForgejoSelfHostedInstance(): void
+    {
+        $this->sourceProviderInstanceRepository->expects(self::once())
+            ->method('findByOrganizationProviderAndBaseUrl')
+            ->with('org-1', SourceProviderInstance::PROVIDER_FORGEJO, 'https://forgejo.company.test')
+            ->willReturn(null)
+        ;
+        $this->secretEncryptor->method('encrypt')->willReturn('encrypted-client-secret');
+        $this->sourceProviderInstanceRepository->expects(self::once())->method('save')->willReturnArgument(0);
+
+        $instance = $this->createService()->create(
+            organizationId: 'org-1',
+            providerType: SourceProviderInstance::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'https://forgejo.company.test/',
+            clientId: 'client-id',
+            clientSecret: 'client-secret',
+        );
+
+        self::assertSame(SourceProviderInstance::PROVIDER_FORGEJO, $instance->providerType());
+        self::assertSame('https://forgejo.company.test', $instance->baseUrl());
+        self::assertSame(SourceProviderInstance::STATUS_ACTIVE, $instance->status());
+    }
+
+    #[Test]
+    public function createRejectsPlainHttpForgejoBaseUrl(): void
+    {
+        $this->sourceProviderInstanceRepository->expects(self::never())->method('save');
+
+        $this->expectException(SourceProviderInstanceException::class);
+        $this->expectExceptionMessage('base URL must be an HTTPS origin URL');
+
+        $this->createService()->create(
+            organizationId: 'org-1',
+            providerType: SourceProviderInstance::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'http://forgejo.company.test',
+            clientId: 'client-id',
+            clientSecret: 'client-secret',
+        );
+    }
+
+    #[Test]
+    public function createRejectsUnsupportedProviderType(): void
+    {
+        $this->sourceProviderInstanceRepository->expects(self::never())->method('save');
+
+        $this->expectException(SourceProviderInstanceException::class);
+
+        $this->createService()->create(
+            organizationId: 'org-1',
+            providerType: 'codeberg',
+            label: 'Codeberg',
+            baseUrl: 'https://codeberg.org',
+            clientId: 'client-id',
+            clientSecret: 'client-secret',
+        );
+    }
+
+    #[Test]
     public function createRejectsNonOriginBaseUrl(): void
     {
         $this->sourceProviderInstanceRepository->expects(self::never())->method('save');

@@ -36,6 +36,7 @@ use Sirix\Mezzio\Routing\Attributes\Attribute\Delete;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Get;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Patch;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
+use Yiisoft\Validator\Validator;
 
 use function json_decode;
 use function json_encode;
@@ -313,6 +314,28 @@ final class SourceProviderInstanceHandlerTest extends TestCase
         $body = json_decode((string) $response->getBody(), true, 512, JSON_THROW_ON_ERROR);
         self::assertSame('11111111-1111-4111-8111-111111111111', $body['instance']['id'] ?? null);
         self::assertArrayNotHasKey('client_secret', $body['instance']);
+    }
+
+    #[Test]
+    public function requestAcceptsForgejoAndRejectsPlainHttpAndUnknownType(): void
+    {
+        $validator = new Validator();
+
+        self::assertTrue($validator->validate(new SourceProviderInstanceRequest(
+            providerType: SourceProviderInstance::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'https://forgejo.company.test',
+        ))->isValid());
+        self::assertFalse($validator->validate(new SourceProviderInstanceRequest(
+            providerType: SourceProviderInstance::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'http://forgejo.company.test',
+        ))->isValid());
+        self::assertFalse($validator->validate(new SourceProviderInstanceRequest(
+            providerType: 'codeberg',
+            label: 'Codeberg',
+            baseUrl: 'https://codeberg.org',
+        ))->isValid());
     }
 
     /** @param non-empty-string $method */

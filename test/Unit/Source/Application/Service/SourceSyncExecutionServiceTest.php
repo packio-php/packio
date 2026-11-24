@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace PackioTest\Unit\Source\Application\Service;
 
 use Common\Logging\SafeExceptionContext;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Source\Application\Command\SourceCommandService;
@@ -440,6 +441,7 @@ final class SourceSyncExecutionServiceTest extends TestCase
             ),
             webhookAutoRegistrationService: $this->inertWebhookAutoRegistrationService(),
             sourceWebhookSecrets: new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            sourceProviderMetadataCatalog: new SourceProviderMetadataCatalog(),
         );
     }
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Application\Command;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Source\Application\Command\SourceCommandService;
@@ -63,6 +64,7 @@ final class SourceCommandServiceProviderAuthorizationTest extends TestCase
             $this->inertSourceAuthorizationInvalidationService(),
             $this->inertWebhookAutoRegistrationService(),
             new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            new SourceProviderMetadataCatalog(),
         );
 
         self::assertSame(

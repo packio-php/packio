@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Common\Branding\BrandingConfig;
 use Common\Infrastructure\HttpClient\OutboundUrlPolicy;
 use Common\Infrastructure\HttpClient\UpstreamHttpClient;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\StoredSecretResolver;
 use Cycle\ORM\ORMInterface;
@@ -392,6 +393,7 @@ return [
             SourceAuthorizationInvalidationService::class,
             WebhookAutoRegistrationService::class,
             SourceWebhookSecrets::class,
+            SourceProviderMetadataCatalog::class,
         ],
         SourceQueryService::class                                        => [
             SourceRepositoryInterface::class,
@@ -640,6 +642,7 @@ return [
             SourceApiFacadeInterface::class,
             SourceAuthorizationStrategyResolver::class,
             InertiaNotificationMessenger::class,
+            SourceProviderMetadataCatalog::class,
             LoggerInterface::class,
         ],
         SourceAuthorizationOAuthStoreHandler::class                      => [

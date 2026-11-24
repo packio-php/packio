@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Source\Application\Command;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use InvalidArgumentException;
 use Packio\Shared\Domain\Organization\ActorContext;
 use Packio\Source\Api\Exception\SourceInputException;
@@ -50,6 +51,7 @@ final readonly class SourceCommandService
         private SourceAuthorizationInvalidationService $sourceAuthorizationInvalidationService,
         private WebhookAutoRegistrationService $webhookAutoRegistrationService,
         private SourceWebhookSecrets $sourceWebhookSecrets,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog,
     ) {}
 
     public function authorizeProvider(AuthorizeProviderCommand $authorizeProviderCommand): ProviderAuthorization
@@ -153,14 +155,15 @@ final readonly class SourceCommandService
                 );
             }
 
+            $isSelfHosted       = $this->sourceProviderMetadataCatalog->isSelfHosted($providerName);
             $providerInstanceId = trim((string) $authorization->providerInstanceId());
-            if ('gitlab_self_hosted' === $providerName && '' !== $providerInstanceId) {
+            if ($isSelfHosted && '' !== $providerInstanceId) {
                 if (! $this->sourceProviderInstanceRepository->findActiveByIdInOrganization($providerInstanceId, $organizationId) instanceof SourceProviderInstance) {
                     throw new SourceInputException('Source provider instance is not available.');
                 }
             }
 
-            if ('gitlab_self_hosted' === $providerName) {
+            if ($isSelfHosted) {
                 $requestedProviderInstanceId     = trim($registerSourceCommand->providerInstanceId);
                 $authorizationProviderInstanceId = trim((string) $authorization->providerInstanceId());
                 if ('' !== $requestedProviderInstanceId) {
@@ -168,8 +171,8 @@ final readonly class SourceCommandService
                         || $authorizationProviderInstanceId !== $requestedProviderInstanceId) {
                         throw new SourceInputException('Source provider instance does not match the selected authorization.');
                     }
-                } elseif ('' === $authorizationProviderInstanceId && $this->hasActiveGitlabSelfHostedInstance($organizationId)) {
-                    throw new SourceInputException('An active GitLab instance must be selected for this authorization.');
+                } elseif ('' === $authorizationProviderInstanceId && $this->hasActiveSelfHostedInstance($organizationId, $providerName)) {
+                    throw new SourceInputException('An active provider instance must be selected for this authorization.');
                 }
             }
         }
@@ -218,7 +221,7 @@ final readonly class SourceCommandService
                 );
             }
 
-            if ('gitlab_self_hosted' === $providerName) {
+            if ($this->sourceProviderMetadataCatalog->isSelfHosted($providerName)) {
                 $existing->assignProviderInstance($source->providerInstanceId());
                 $existingConfig = $existing->providerConfig();
                 $sourceConfig   = $source->providerConfig();
@@ -723,7 +726,7 @@ final readonly class SourceCommandService
             return $accountName;
         }
 
-        if ('gitlab_self_hosted' !== $provider) {
+        if (! $this->sourceProviderMetadataCatalog->isSelfHosted($provider)) {
             return '';
         }
 
@@ -744,7 +747,7 @@ final readonly class SourceCommandService
     {
         $providerInstanceId = trim((string) ($payload['provider_instance_id'] ?? ''));
         if (
-            SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED !== $provider
+            ! $this->sourceProviderMetadataCatalog->isSelfHosted($provider)
             || '' === $providerInstanceId
         ) {
             return $payload;
@@ -769,9 +772,9 @@ final readonly class SourceCommandService
         ];
     }
 
-    private function hasActiveGitlabSelfHostedInstance(string $organizationId): bool
+    private function hasActiveSelfHostedInstance(string $organizationId, string $provider): bool
     {
-        return array_any($this->sourceProviderInstanceRepository->findByOrganization($organizationId, SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED), fn ($sourceProviderInstance) => $sourceProviderInstance->isActive());
+        return array_any($this->sourceProviderInstanceRepository->findByOrganization($organizationId, $provider), fn ($sourceProviderInstance) => $sourceProviderInstance->isActive());
     }
 
     private function normalizeAuthorizationStrategy(string $provider, string $authStrategy): string

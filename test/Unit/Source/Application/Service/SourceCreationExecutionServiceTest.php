@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Application\Service;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Source\Application\Command\RegisterSourceCommand;
@@ -192,6 +193,7 @@ final class SourceCreationExecutionServiceTest extends TestCase
             ),
             webhookAutoRegistrationService: new WebhookAutoRegistrationService($this->webhooks, $this->sourceRepository, $this->inertSourceAuthorizationInvalidationService()),
             sourceWebhookSecrets: new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            sourceProviderMetadataCatalog: new SourceProviderMetadataCatalog(),
         );
     }
 }

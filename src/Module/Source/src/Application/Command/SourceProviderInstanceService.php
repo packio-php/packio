@@ -78,7 +78,7 @@ final readonly class SourceProviderInstanceService
             $clientSecret,
         );
 
-        $normalizedBaseUrl = $this->normalizeBaseUrl($baseUrl);
+        $normalizedBaseUrl = $this->normalizeBaseUrl($baseUrl, $providerType);
         $this->assertUnique($organizationId, $providerType, $normalizedBaseUrl);
 
         return $this->sourceProviderInstanceRepository->save(
@@ -146,7 +146,7 @@ final readonly class SourceProviderInstanceService
             $sourceProviderInstance->storedClientSecret(),
         );
 
-        $normalizedBaseUrl = $this->normalizeBaseUrl($baseUrl);
+        $normalizedBaseUrl = $this->normalizeBaseUrl($baseUrl, $sourceProviderInstance->providerType());
         $duplicate         = $this->sourceProviderInstanceRepository->findByOrganizationProviderAndBaseUrl(
             $organizationId,
             $sourceProviderInstance->providerType(),
@@ -364,7 +364,7 @@ final readonly class SourceProviderInstanceService
         return $instance;
     }
 
-    public function normalizeBaseUrl(string $baseUrl): string
+    public function normalizeBaseUrl(string $baseUrl, string $providerType = SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED): string
     {
         $url      = rtrim(trim($baseUrl), '/');
 
@@ -374,11 +374,14 @@ final readonly class SourceProviderInstanceService
             throw SourceProviderInstanceException::invalidBaseUrl();
         }
         $parts = parse_url($url);
-        if (isset($parts['query']) || (isset($parts['path']) && '' !== $parts['path'])) {
+        $path  = $parts['path'] ?? '';
+        // Forgejo can be installed under a path (https://example.com/git); GitLab stays origin-only.
+        $allowsPath = SourceProviderInstance::PROVIDER_FORGEJO === $providerType;
+        if (isset($parts['query']) || ('' !== $path && ! $allowsPath)) {
             throw SourceProviderInstanceException::invalidBaseUrl();
         }
 
-        return $target['origin'];
+        return $target['origin'] . $path;
     }
 
     private function logCleanupConflict(

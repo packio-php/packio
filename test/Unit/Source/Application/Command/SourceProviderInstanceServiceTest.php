@@ -473,6 +473,29 @@ final class SourceProviderInstanceServiceTest extends TestCase
         $this->createService()->normalizeBaseUrl('https://gitlab.company.test:8443');
     }
 
+    #[Test]
+    public function forgejoBaseUrlKeepsNormalizedPath(): void
+    {
+        self::assertSame(
+            'https://example.com/git',
+            $this->createService()->normalizeBaseUrl('https://example.com/git/', SourceProviderInstance::PROVIDER_FORGEJO),
+        );
+    }
+
+    #[Test]
+    public function forgejoBaseUrlRejectsQuery(): void
+    {
+        $this->expectException(SourceProviderInstanceException::class);
+        $this->createService()->normalizeBaseUrl('https://example.com/git?x=1', SourceProviderInstance::PROVIDER_FORGEJO);
+    }
+
+    #[Test]
+    public function gitlabBaseUrlStillRejectsPath(): void
+    {
+        $this->expectException(SourceProviderInstanceException::class);
+        $this->createService()->normalizeBaseUrl('https://gitlab.company.test/git', SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED);
+    }
+
     private function createService(): SourceProviderInstanceService
     {
         return new SourceProviderInstanceService(

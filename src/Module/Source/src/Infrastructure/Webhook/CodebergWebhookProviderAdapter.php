@@ -56,12 +56,16 @@ final readonly class CodebergWebhookProviderAdapter implements WebhookProviderAd
             return new WebhookRegistrationResult(false, '', $this->webhookSecretMissingMessage(), false);
         }
 
+        if ('' === $this->baseUrl($source)) {
+            return new WebhookRegistrationResult(false, '', 'Source is missing base_url in providerConfig.', false);
+        }
+
         return null;
     }
 
     public function canDeregister(Source $source): bool
     {
-        return '' !== $source->owner() && '' !== $source->repository();
+        return '' !== $source->owner() && '' !== $source->repository() && '' !== $this->baseUrl($source);
     }
 
     public function hooksUrl(Source $source): string
@@ -158,8 +162,13 @@ final readonly class CodebergWebhookProviderAdapter implements WebhookProviderAd
 
     private function baseUrl(Source $source): string
     {
+        // Codeberg never trusts providerConfig; self-hosted instances must carry their own base_url.
+        if ('codeberg' === $this->provider) {
+            return self::BASE_URL;
+        }
+
         $baseUrl = $source->providerConfig()['base_url'] ?? null;
 
-        return is_string($baseUrl) && '' !== $baseUrl ? rtrim($baseUrl, '/') : self::BASE_URL;
+        return is_string($baseUrl) ? rtrim($baseUrl, '/') : '';
     }
 }

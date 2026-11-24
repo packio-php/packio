@@ -579,6 +579,49 @@ final class HttpWebhookRegistrarContractTest extends TestCase
     }
 
     #[Test]
+    public function codebergRegistrarIgnoresStrayBaseUrl(): void
+    {
+        $history = [];
+        $source  = $this->buildSource('codeberg', 'owner-six', 'repo-six');
+        $source->replaceProviderConfig([
+            ...$source->providerConfig(),
+            'base_url' => 'https://evil.test',
+        ]);
+        $template = $this->webhookTemplate('codeberg', [
+            [
+                'status' => 200,
+                'body'   => [],
+            ],
+            [
+                'status' => 201,
+                'body'   => [
+                    'id' => 9,
+                ],
+            ],
+        ], $history, 'codeberg-token');
+
+        self::assertTrue($template->register($source)->success);
+        self::assertSame('https://codeberg.org/api/v1/repos/owner-six/repo-six/hooks', (string) $this->request($history, 0)->getUri());
+    }
+
+    #[Test]
+    public function forgejoSelfHostedRegistrarFailsWithoutBaseUrl(): void
+    {
+        $history = [];
+        $source  = $this->buildSource('forgejo_self_hosted', 'owner-seven', 'repo-seven');
+        $config  = $source->providerConfig();
+        unset($config['base_url']);
+        $source->replaceProviderConfig($config);
+        $template = $this->webhookTemplate('forgejo_self_hosted', [], $history, 'forgejo-token');
+
+        $result = $template->register($source);
+
+        self::assertFalse($result->success);
+        self::assertSame('Source is missing base_url in providerConfig.', $result->message);
+        self::assertCount(0, $history);
+    }
+
+    #[Test]
     public function forgejoSelfHostedRegistrarExplainsForbiddenWithForgejoLabel(): void
     {
         $history                     = [];

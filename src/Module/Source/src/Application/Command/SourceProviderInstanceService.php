@@ -26,6 +26,7 @@ use function array_map;
 use function array_values;
 use function in_array;
 use function parse_url;
+use function preg_match;
 use function rtrim;
 use function trim;
 
@@ -364,7 +365,7 @@ final readonly class SourceProviderInstanceService
         return $instance;
     }
 
-    public function normalizeBaseUrl(string $baseUrl, string $providerType = SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED): string
+    public function normalizeBaseUrl(string $baseUrl, string $providerType): string
     {
         $url      = rtrim(trim($baseUrl), '/');
 
@@ -377,7 +378,8 @@ final readonly class SourceProviderInstanceService
         $path  = $parts['path'] ?? '';
         // Forgejo can be installed under a path (https://example.com/git); GitLab stays origin-only.
         $allowsPath = SourceProviderInstance::PROVIDER_FORGEJO === $providerType;
-        if (isset($parts['query']) || ('' !== $path && ! $allowsPath)) {
+        // Reject spellings of the same instance (dot segments, "//", percent-encoding) that would bypass the uniqueness check.
+        if (isset($parts['query']) || ('' !== $path && (! $allowsPath || 1 === preg_match('#//|%|/\.{1,2}(?:/|$)#', $path)))) {
             throw SourceProviderInstanceException::invalidBaseUrl();
         }
 

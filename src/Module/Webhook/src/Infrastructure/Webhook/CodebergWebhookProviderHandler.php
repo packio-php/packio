@@ -11,12 +11,11 @@ use function hash_equals;
 use function hash_hmac;
 use function is_array;
 use function json_decode;
+use function preg_match;
 use function rtrim;
 use function sha1;
 use function sprintf;
 use function str_ends_with;
-use function strlen;
-use function substr;
 use function trim;
 
 final readonly class CodebergWebhookProviderHandler implements WebhookProviderHandlerInterface
@@ -101,20 +100,19 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
 
         $fullName = $repository['full_name'] ?? '';
         if ('' !== $fullName) {
-            $host = 'codeberg' === $this->webhookProviderHandlerConfig->provider ? 'https://codeberg.org' : $this->instanceBaseUrl($sourceUrl, (string) $fullName);
-
-            return sprintf('%s/%s', $host, (string) $fullName);
+            return 'codeberg' === $this->webhookProviderHandlerConfig->provider
+                ? sprintf('https://codeberg.org/%s', (string) $fullName)
+                : $this->instanceRepositoryUrl($sourceUrl, (string) $fullName);
         }
 
         return '';
     }
 
-    /** Instance base URL (may include a path): the source URL without its trailing `/owner/repo`. */
-    private function instanceBaseUrl(string $sourceUrl, string $fullName): string
+    /** Self-hosted fallback: only an exact `owner/repo` that ends the source URL is trusted. */
+    private function instanceRepositoryUrl(string $sourceUrl, string $fullName): string
     {
         $sourceUrl = rtrim($sourceUrl, '/');
-        $suffix    = '/' . $fullName;
 
-        return str_ends_with($sourceUrl, $suffix) ? substr($sourceUrl, 0, -strlen($suffix)) : $sourceUrl;
+        return 1 === preg_match('#^[^/]+/[^/]+$#', $fullName) && str_ends_with($sourceUrl, '/' . $fullName) ? $sourceUrl : '';
     }
 }

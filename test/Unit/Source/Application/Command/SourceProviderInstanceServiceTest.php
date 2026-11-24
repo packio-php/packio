@@ -463,14 +463,14 @@ final class SourceProviderInstanceServiceTest extends TestCase
     public function baseUrlRejectsCredentialsBeforeTheyCanBeDiscardedByNormalization(): void
     {
         $this->expectException(SourceProviderInstanceException::class);
-        $this->createService()->normalizeBaseUrl('https://user:secret@gitlab.company.test');
+        $this->createService()->normalizeBaseUrl('https://user:secret@gitlab.company.test', SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED);
     }
 
     #[Test]
     public function baseUrlRejectsUnapprovedPort(): void
     {
         $this->expectException(SourceProviderInstanceException::class);
-        $this->createService()->normalizeBaseUrl('https://gitlab.company.test:8443');
+        $this->createService()->normalizeBaseUrl('https://gitlab.company.test:8443', SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED);
     }
 
     #[Test]
@@ -487,6 +487,19 @@ final class SourceProviderInstanceServiceTest extends TestCase
     {
         $this->expectException(SourceProviderInstanceException::class);
         $this->createService()->normalizeBaseUrl('https://example.com/git?x=1', SourceProviderInstance::PROVIDER_FORGEJO);
+    }
+
+    #[Test]
+    public function forgejoBaseUrlRejectsAmbiguousPaths(): void
+    {
+        foreach (['https://example.com/git/../x', 'https://example.com//git', 'https://example.com/g%69t'] as $url) {
+            try {
+                $this->createService()->normalizeBaseUrl($url, SourceProviderInstance::PROVIDER_FORGEJO);
+                self::fail($url);
+            } catch (SourceProviderInstanceException) {
+                $this->addToAssertionCount(1);
+            }
+        }
     }
 
     #[Test]

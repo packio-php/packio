@@ -12,7 +12,7 @@ final readonly class ProviderAuthorizationOAuthRequest
 {
     public function __construct(
         #[Required]
-        #[Regex('#^(github|gitlab|gitlab_self_hosted|bitbucket|codeberg)$#')]
+        #[Regex('#^(github|gitlab|gitlab_self_hosted|bitbucket|codeberg|forgejo_self_hosted)$#')]
         public string $provider = '',
         #[Uuid(skipOnEmpty: true)]
         public string $oauthAccountId = '',

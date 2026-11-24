@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Packio\Source\Infrastructure\Page;
 
 use Common\Branding\BrandingConfig;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Packio\Identity\Api\OAuthApiFacadeInterface;
 use Packio\Organization\Api\Policy\OrganizationPolicy;
 use Packio\Shared\Api\Dto\OrganizationDto;
@@ -46,12 +47,13 @@ final readonly class SourcesPageDataBuilder
         private BrandingConfig $brandingConfig,
         private SourceProviderLabelResolver $sourceProviderLabelResolver,
         private OAuthApiFacadeInterface $oauthApiFacade,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog = new SourceProviderMetadataCatalog(),
     ) {}
 
     /**
      * @return array{
      *     can_manage_sources: bool,
-     *     providers: list<array{key: string, name: string, description: string, capabilities: array<string, bool>, oauth_provider: null|string, oauth_enabled: bool, oauth_available: bool}>,
+     *     providers: list<array{key: string, name: string, description: string, capabilities: array<string, bool>, oauth_provider: null|string, oauth_enabled: bool, oauth_available: bool, supports_self_hosted_instances: bool}>,
      *     source_provider_instances: list<array<string, mixed>>,
      *     provider_authorizations: list<array<string, mixed>>,
      *     provider_resources: array<string, list<array<string, mixed>>>,
@@ -81,15 +83,15 @@ final readonly class SourcesPageDataBuilder
             ),
         );
 
-        $sourceProviderInstances          = $this->sourceApiFacade->sourceProviderInstances($organizationDto->id);
-        $hasGitLabSelfHostedOAuthInstance = [] !== array_filter(
+        $sourceProviderInstances  = $this->sourceApiFacade->sourceProviderInstances($organizationDto->id);
+        $selfHostedOAuthAvailable = fn (string $provider): bool => [] !== array_filter(
             $sourceProviderInstances,
-            static fn (SourceProviderInstanceDto $sourceProviderInstanceDto): bool => 'gitlab_self_hosted' === $sourceProviderInstanceDto->providerType
+            static fn (SourceProviderInstanceDto $sourceProviderInstanceDto): bool => $provider === $sourceProviderInstanceDto->providerType
                 && 'active' === $sourceProviderInstanceDto->status
                 && ('oauth2' === $sourceProviderInstanceDto->authMode || 'oauth2_and_token' === $sourceProviderInstanceDto->authMode)
                 && '' !== $sourceProviderInstanceDto->clientId
                 && $sourceProviderInstanceDto->hasClientSecret,
-        ) && $this->oauthApiFacade->selfHostedSourceConnectEnabled('gitlab_self_hosted');
+        ) && $this->oauthApiFacade->selfHostedSourceConnectEnabled($provider);
 
         $oauthAvailabilities = [];
         foreach ($this->oauthApiFacade->providerAvailabilities() as $oAuthProviderAvailability) {
@@ -99,25 +101,24 @@ final readonly class SourcesPageDataBuilder
         }
 
         $providers = array_map(
-            static function(SourceProviderDto $sourceProviderDto) use ($hasGitLabSelfHostedOAuthInstance, $oauthAvailabilities): array {
-                $isGitLabSelfHosted   = 'gitlab_self_hosted' === $sourceProviderDto->key;
-                $sourceOAuthAvailable = null !== $sourceProviderDto->oauthProvider
-                    && ($oauthAvailabilities[$sourceProviderDto->key] ?? null)?->isSourceConnectAvailable() === true;
+            function(SourceProviderDto $sourceProviderDto) use ($selfHostedOAuthAvailable, $oauthAvailabilities): array {
+                $isSelfHosted         = $this->sourceProviderMetadataCatalog->isSelfHosted($sourceProviderDto->key);
+                $sourceOAuthAvailable = $isSelfHosted
+                    ? $selfHostedOAuthAvailable($sourceProviderDto->key)
+                    : null !== $sourceProviderDto->oauthProvider
+                        && ($oauthAvailabilities[$sourceProviderDto->key] ?? null)?->isSourceConnectAvailable() === true;
 
                 return [
-                    'key'             => $sourceProviderDto->key,
-                    'name'            => $sourceProviderDto->name,
-                    'description'     => $sourceProviderDto->description,
-                    'capabilities'    => $sourceProviderDto->capabilities,
-                    'oauth_provider'  => $isGitLabSelfHosted && $hasGitLabSelfHostedOAuthInstance
-                        ? 'gitlab_self_hosted'
+                    'key'                            => $sourceProviderDto->key,
+                    'name'                           => $sourceProviderDto->name,
+                    'description'                    => $sourceProviderDto->description,
+                    'capabilities'                   => $sourceProviderDto->capabilities,
+                    'oauth_provider'                 => $isSelfHosted && $sourceOAuthAvailable
+                        ? $sourceProviderDto->key
                         : $sourceProviderDto->oauthProvider,
-                    'oauth_enabled'   => $isGitLabSelfHosted
-                        ? $hasGitLabSelfHostedOAuthInstance
-                        : $sourceOAuthAvailable,
-                    'oauth_available' => $isGitLabSelfHosted
-                        ? $hasGitLabSelfHostedOAuthInstance
-                        : $sourceOAuthAvailable,
+                    'oauth_enabled'                  => $sourceOAuthAvailable,
+                    'oauth_available'                => $sourceOAuthAvailable,
+                    'supports_self_hosted_instances' => $isSelfHosted,
                 ];
             },
             $this->sourceApiFacade->availableProviders(),

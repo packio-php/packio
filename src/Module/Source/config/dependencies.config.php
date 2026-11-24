@@ -608,6 +608,7 @@ return [
             BrandingConfig::class,
             SourceProviderLabelResolver::class,
             OAuthApiFacadeInterface::class,
+            SourceProviderMetadataCatalog::class,
         ],
         SourceDetailsPageDataBuilder::class                              => [
             PackageApiFacadeInterface::class,

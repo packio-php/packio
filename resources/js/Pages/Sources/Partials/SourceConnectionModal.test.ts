@@ -189,6 +189,55 @@ describe("SourceConnectionModal", () => {
     });
   });
 
+  it("resets visibility to private when switching providers", async () => {
+    renderModal({ providers: [githubProvider, gitlabProvider] });
+    const visibility = screen.getByRole("combobox", { name: "Visibility" });
+
+    await fireEvent.change(visibility, { target: { value: "public" } });
+    await fireEvent.click(screen.getByText("GitLab"));
+
+    expect(screen.getByRole("combobox", { name: "Visibility" })).toHaveValue(
+      "private",
+    );
+  });
+
+  it("warns when a private repository is connected as public", async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: {
+        resources: [
+          {
+            id: "repo-1",
+            name: "vendor/package",
+            canonical_url: "https://github.com/vendor/package",
+            default_ref: "main",
+            private: true,
+            provider: "github",
+          },
+        ],
+      },
+    });
+    renderModal();
+    const warning = /its packages will be publicly available/;
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Load repositories" }),
+    );
+    expect(await screen.findAllByText("vendor/package")).not.toHaveLength(0);
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+
+    const visibility = screen.getByRole("combobox", { name: "Visibility" });
+    await fireEvent.change(visibility, { target: { value: "public" } });
+    expect(screen.getByRole("alert")).toHaveTextContent(warning);
+    expect(
+      screen.getByRole("button", { name: "Connect 1 source" }),
+    ).toBeEnabled();
+
+    await fireEvent.change(visibility, { target: { value: "private" } });
+    expect(screen.queryByText(warning)).not.toBeInTheDocument();
+  });
+
   it("blocks reconnect-required authorizations from loading resources", () => {
     renderModal({
       providerAuthorizationsAll: [

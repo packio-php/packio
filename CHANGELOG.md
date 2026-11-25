@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Twig is updated to 3.31.1, which fixes several sandbox bypass advisories. Packio does not use the Twig sandbox.
 
+### Fixed
+
+- Switching providers in the Add source dialog no longer changes visibility from Private to Public, and a warning appears when a private repository is about to be connected as Public.
+
 ## [0.6.0] - 2026-11-23
 
 ### Added

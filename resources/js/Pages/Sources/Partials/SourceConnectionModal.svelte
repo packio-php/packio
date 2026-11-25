@@ -75,7 +75,7 @@
   let selectedProviderInstanceId = $state("");
   let selectedResources: string[] = $state([]);
   let selectedRepositoryUrl = $state("");
-  let connectVisibility: "private" | "public" = $state("private");
+  let connectVisibility = $state<"private" | "public">("private");
   let keepLastReleases = $state("0");
   let showAdvancedConnect = $state(false);
   let instanceUrl = $state("");
@@ -289,7 +289,7 @@
     selectedProviderInstanceId = "";
     selectedResources = [];
     selectedRepositoryUrl = "";
-    connectVisibility = "public";
+    connectVisibility = "private";
     keepLastReleases = "0";
     showAdvancedConnect = false;
     hasClickedLoad = false;
@@ -722,6 +722,14 @@
   });
   let requiresAuthorizationSelection = $derived(
     filteredAuthorizations.length > 1 && "" === selectedAuthorizationId,
+  );
+  let publishesPrivateRepository = $derived(
+    connectVisibility === "public" &&
+      providerResources.some(
+        (resource) =>
+          resource.private &&
+          selectedResources.includes(resource.canonical_url),
+      ),
   );
   let hasManualRepositoryUrl = $derived(selectedRepositoryUrl.trim() !== "");
   let connectSourceCount = $derived(
@@ -1508,6 +1516,16 @@
                       <option value="private">Private</option>
                     </Select>
                   </label>
+
+                  {#if publishesPrivateRepository}
+                    <p
+                      role="alert"
+                      class="rounded-xl px-3 py-2 text-sm ui-badge-danger"
+                    >
+                      A selected repository is private. With Public visibility,
+                      its packages will be publicly available.
+                    </p>
+                  {/if}
 
                   <label class="grid gap-2">
                     <span class="text-sm font-medium ui-title">

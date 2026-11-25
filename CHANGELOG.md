@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Switching providers in the Add source dialog no longer changes visibility from Private to Public, and a warning appears when a private repository is about to be connected as Public.
+- The app and admin headers are more compact: about 67px tall on desktop instead of 95px.
 
 ## [0.6.0] - 2026-11-23
 

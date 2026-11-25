@@ -358,7 +358,7 @@
 
     <form
       bind:this={providerInstanceFormElement}
-      class="mt-6 grid gap-4"
+      class="mt-6 grid scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)] gap-4"
       onsubmit={(event) => {
         event.preventDefault();
         saveProviderInstance();

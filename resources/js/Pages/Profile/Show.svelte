@@ -260,7 +260,10 @@
       </div>
     </Card>
 
-    <div id="password-settings">
+    <div
+      id="password-settings"
+      class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]"
+    >
       <Card className="rounded-[1.75rem] p-6">
         <SectionHeading
           eyebrow="Security"

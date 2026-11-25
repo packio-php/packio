@@ -140,7 +140,7 @@ describe("Organization settings page", () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      "/organization/acme/source-provider-instances?provider_type=gitlab_self_hosted",
+      "/organization/acme/source-provider-instances",
     );
     expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
 
@@ -207,18 +207,11 @@ describe("Organization settings page", () => {
       label: "Company Forgejo",
       base_url: "https://forgejo.example.com",
     };
-    const get = vi
-      .spyOn(apiClient, "get")
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        data: { instances: [gitlabInstance] },
-      })
-      .mockResolvedValueOnce({
-        ok: true,
-        status: 200,
-        data: { instances: [forgejoInstance] },
-      });
+    const get = vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [gitlabInstance, forgejoInstance] },
+    });
     const post = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
       ok: true,
       status: 200,
@@ -239,6 +232,7 @@ describe("Organization settings page", () => {
     });
 
     expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
+    expect(screen.getByText("Company Forgejo")).toBeInTheDocument();
     expect(
       screen.getByText(
         "https://registry.example.com/auth/oauth/gitlab_self_hosted/source-callback",
@@ -249,12 +243,9 @@ describe("Organization settings page", () => {
       target: { value: "forgejo_self_hosted" },
     });
 
-    await waitFor(() => {
-      expect(get).toHaveBeenCalledWith(
-        "/organization/acme/source-provider-instances?provider_type=forgejo_self_hosted",
-      );
-    });
-    expect(await screen.findByText("Company Forgejo")).toBeInTheDocument();
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Company GitLab")).toBeInTheDocument();
+    expect(screen.getByText("Company Forgejo")).toBeInTheDocument();
     const instanceHeader = screen.getByText("Company Forgejo").parentElement!;
     expect(
       within(instanceHeader).getByText("Forgejo Self-Hosted"),
@@ -302,7 +293,7 @@ describe("Organization settings page", () => {
 
     await waitFor(() => {
       expect(get).toHaveBeenCalledWith(
-        "/organization/acme/source-provider-instances?provider_type=forgejo_self_hosted",
+        "/organization/acme/source-provider-instances",
       );
     });
     expect(

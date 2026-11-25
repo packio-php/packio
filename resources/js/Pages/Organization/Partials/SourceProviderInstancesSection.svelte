@@ -126,7 +126,7 @@
 
     providerInstancesLoading = true;
     const result = await apiClient.get<ProviderInstancesResponse>(
-      `${Endpoints.sources.providerInstances(org)}?provider_type=${providerType}`,
+      Endpoints.sources.providerInstances(org),
     );
     providerInstancesLoading = false;
 
@@ -320,9 +320,8 @@
       toast.error(result.error);
     }
   }
-  // Reload the list whenever the selected instance type changes.
+  // The list shows every type; the selected type only affects the form.
   $effect(() => {
-    void providerType;
     void loadProviderInstances();
   });
 </script>
@@ -460,13 +459,9 @@
 
     <div class="mt-6 grid gap-3">
       {#if providerInstancesLoading}
-        <p class="text-sm ui-muted">
-          Loading {typeNoun(providerType)} instances...
-        </p>
+        <p class="text-sm ui-muted">Loading instances...</p>
       {:else if providerInstances.length === 0}
-        <p class="text-sm ui-muted">
-          No {typeLabel(providerType)} instances configured yet.
-        </p>
+        <p class="text-sm ui-muted">No instances configured yet.</p>
       {:else}
         {#each providerInstances as instance (instance.id)}
           <InsetCard className="p-4">

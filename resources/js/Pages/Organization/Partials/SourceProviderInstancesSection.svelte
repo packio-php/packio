@@ -33,6 +33,8 @@
   );
   let selectedType = $state("");
   const providerType = $derived(selectedType || types[0].key);
+  // With several types the form stays hidden until one is chosen.
+  const typeChosen = $derived(selectedType !== "" || types.length === 1);
   const redirectUri = $derived(
     `${appBaseUrl.replace(/\/+$/, "")}/auth/oauth/${providerType}/source-callback`,
   );
@@ -95,6 +97,7 @@
   function resetProviderInstanceForm(): void {
     providerInstanceErrors = {};
     editingProviderInstanceId = "";
+    selectedType = "";
     providerInstanceForm = {
       label: "",
       baseUrl: "",
@@ -365,6 +368,7 @@
             name="provider_type"
             disabled={editingProviderInstanceId !== ""}
           >
+            <option value="" disabled>Select instance type</option>
             {#each types as type (type.key)}
               <option value={type.key}>{type.label}</option>
             {/each}
@@ -372,109 +376,113 @@
         </label>
       {/if}
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">Label</span>
-          <Input
-            name="label"
-            bind:value={providerInstanceForm.label}
-            placeholder={`Company ${typeNoun(providerType)}`}
-            required
-          />
-        </label>
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">Base URL</span>
-          <Input
-            name="base_url"
-            type="url"
-            bind:value={providerInstanceForm.baseUrl}
-            placeholder={`https://${providerType === "forgejo_self_hosted" ? "forgejo" : "gitlab"}.company.com`}
-            invalid={hasFieldErrors(providerInstanceErrors, "baseUrl")}
-            required
-          />
-          <FieldErrors errors={providerInstanceErrors} field="baseUrl" />
-        </label>
-      </div>
-
-      {#if usesOAuth}
+      {#if typeChosen}
         <div class="grid gap-4 md:grid-cols-2">
           <label class="grid gap-2">
-            <span class="text-sm font-medium ui-title">OAuth client ID</span>
+            <span class="text-sm font-medium ui-title">Label</span>
             <Input
-              name="client_id"
-              bind:value={providerInstanceForm.clientId}
-              autocomplete="off"
-              placeholder="Application ID"
+              name="label"
+              bind:value={providerInstanceForm.label}
+              placeholder={`Company ${typeNoun(providerType)}`}
+              required
             />
           </label>
           <label class="grid gap-2">
-            <span class="text-sm font-medium ui-title">
-              OAuth client secret
-            </span>
+            <span class="text-sm font-medium ui-title">Base URL</span>
             <Input
-              name="client_secret"
-              type="password"
-              bind:value={providerInstanceForm.clientSecret}
-              autocomplete="off"
-              placeholder={editingProviderInstanceId
-                ? "Leave blank to keep current secret"
-                : "Application secret"}
+              name="base_url"
+              type="url"
+              bind:value={providerInstanceForm.baseUrl}
+              placeholder={`https://${providerType === "forgejo_self_hosted" ? "forgejo" : "gitlab"}.company.com`}
+              invalid={hasFieldErrors(providerInstanceErrors, "baseUrl")}
+              required
             />
+            <FieldErrors errors={providerInstanceErrors} field="baseUrl" />
           </label>
         </div>
-      {/if}
 
-      <label class="grid gap-2">
-        <span class="text-sm font-medium ui-title">Authorization mode</span>
-        <Select bind:value={providerInstanceForm.authMode} name="auth_mode">
-          <option value="oauth2_and_token">OAuth and manual token</option>
-          <option value="oauth2">OAuth only</option>
-          <option value="token">Manual token only</option>
-        </Select>
-      </label>
-
-      {#if usesOAuth}
-        <div class="grid gap-2">
-          <span class="text-sm font-medium ui-title"> OAuth redirect URI </span>
-          <div
-            class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
-          >
-            <code class="min-w-0 flex-1 break-all text-xs">
-              {redirectUri}
-            </code>
-            <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+        {#if usesOAuth}
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">OAuth client ID</span>
+              <Input
+                name="client_id"
+                bind:value={providerInstanceForm.clientId}
+                autocomplete="off"
+                placeholder="Application ID"
+              />
+            </label>
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">
+                OAuth client secret
+              </span>
+              <Input
+                name="client_secret"
+                type="password"
+                bind:value={providerInstanceForm.clientSecret}
+                autocomplete="off"
+                placeholder={editingProviderInstanceId
+                  ? "Leave blank to keep current secret"
+                  : "Application secret"}
+              />
+            </label>
           </div>
-          <p class="text-xs ui-muted">
-            Add this callback URL to the {typeNoun(providerType)} OAuth application
-            for every self-hosted instance.
-          </p>
-        </div>
-      {/if}
+        {/if}
 
-      <div class="flex flex-wrap gap-3">
-        <Button
-          className="rounded-full px-5"
-          type="submit"
-          variant="primary"
-          disabled={providerInstanceSaving}
-        >
-          {providerInstanceSaving
-            ? "Saving..."
-            : editingProviderInstanceId
-              ? "Update instance"
-              : "Add instance"}
-        </Button>
-        {#if editingProviderInstanceId}
+        <label class="grid gap-2">
+          <span class="text-sm font-medium ui-title">Authorization mode</span>
+          <Select bind:value={providerInstanceForm.authMode} name="auth_mode">
+            <option value="oauth2_and_token">OAuth and manual token</option>
+            <option value="oauth2">OAuth only</option>
+            <option value="token">Manual token only</option>
+          </Select>
+        </label>
+
+        {#if usesOAuth}
+          <div class="grid gap-2">
+            <span class="text-sm font-medium ui-title">
+              OAuth redirect URI
+            </span>
+            <div
+              class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
+            >
+              <code class="min-w-0 flex-1 break-all text-xs">
+                {redirectUri}
+              </code>
+              <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+            </div>
+            <p class="text-xs ui-muted">
+              Add this callback URL to the {typeNoun(providerType)} OAuth application
+              for every self-hosted instance.
+            </p>
+          </div>
+        {/if}
+
+        <div class="flex flex-wrap gap-3">
           <Button
             className="rounded-full px-5"
-            type="button"
-            variant="secondary"
-            onclick={resetProviderInstanceForm}
+            type="submit"
+            variant="primary"
+            disabled={providerInstanceSaving}
           >
-            Cancel edit
+            {providerInstanceSaving
+              ? "Saving..."
+              : editingProviderInstanceId
+                ? "Update instance"
+                : "Add instance"}
           </Button>
-        {/if}
-      </div>
+          {#if editingProviderInstanceId}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="secondary"
+              onclick={resetProviderInstanceForm}
+            >
+              Cancel edit
+            </Button>
+          {/if}
+        </div>
+      {/if}
     </form>
 
     <div class="mt-6 grid gap-3">

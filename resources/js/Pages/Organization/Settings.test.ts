@@ -233,13 +233,17 @@ describe("Organization settings page", () => {
 
     expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
     expect(screen.getByText("Company Forgejo")).toBeInTheDocument();
+    const typeSelect = screen.getByLabelText(
+      "Instance type",
+    ) as HTMLSelectElement;
+    expect(typeSelect.value).toBe("");
     expect(
-      screen.getByText(
-        "https://registry.example.com/auth/oauth/gitlab_self_hosted/source-callback",
-      ),
+      screen.getByRole("option", { name: "Select instance type" }),
     ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Label")).not.toBeInTheDocument();
+    expect(screen.queryByText("OAuth redirect URI")).not.toBeInTheDocument();
 
-    await fireEvent.change(screen.getByLabelText("Instance type"), {
+    await fireEvent.change(typeSelect, {
       target: { value: "forgejo_self_hosted" },
     });
 
@@ -270,6 +274,8 @@ describe("Organization settings page", () => {
         expect.objectContaining({ providerType: "forgejo_self_hosted" }),
       );
     });
+    await waitFor(() => expect(typeSelect.value).toBe(""));
+    expect(screen.queryByLabelText("Label")).not.toBeInTheDocument();
   });
 
   it("shows the base URL validation error at the field", async () => {

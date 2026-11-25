@@ -310,6 +310,63 @@ describe("Organization settings page", () => {
     ).toBeInTheDocument();
   });
 
+  it("hides OAuth fields in token mode and sends no OAuth values", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+    const post = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      data: { instance: gitlabInstance },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await fireEvent.input(await screen.findByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "https://forgejo.example.com" },
+    });
+    await fireEvent.input(screen.getByLabelText("OAuth client ID"), {
+      target: { value: "stale-id" },
+    });
+    await fireEvent.change(screen.getByLabelText("Authorization mode"), {
+      target: { value: "token" },
+    });
+
+    expect(screen.queryByLabelText("OAuth client ID")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("OAuth client secret"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("OAuth redirect URI")).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          authMode: "token",
+          clientId: "",
+          clientSecret: "",
+        }),
+      ),
+    );
+  });
+
   it("clears the base URL error when editing is cancelled", async () => {
     Element.prototype.scrollIntoView = vi.fn();
     vi.spyOn(apiClient, "get").mockResolvedValue({

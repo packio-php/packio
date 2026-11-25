@@ -79,6 +79,7 @@
     clientSecret: "",
     authMode: "oauth2_and_token",
   });
+  const usesOAuth = $derived(providerInstanceForm.authMode !== "token");
   function authModeLabel(
     authMode: SourceProviderInstancePayload["auth_mode"],
   ): string {
@@ -156,8 +157,9 @@
       providerType,
       label: providerInstanceForm.label,
       baseUrl: providerInstanceForm.baseUrl,
-      clientId: providerInstanceForm.clientId,
-      clientSecret: providerInstanceForm.clientSecret,
+      // Hidden OAuth fields must not send stale values in token mode.
+      clientId: usesOAuth ? providerInstanceForm.clientId : "",
+      clientSecret: usesOAuth ? providerInstanceForm.clientSecret : "",
       authMode: providerInstanceForm.authMode,
     };
     const result = editingProviderInstanceId
@@ -394,29 +396,33 @@
         </label>
       </div>
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">OAuth client ID</span>
-          <Input
-            name="client_id"
-            bind:value={providerInstanceForm.clientId}
-            autocomplete="off"
-            placeholder="Application ID"
-          />
-        </label>
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">OAuth client secret</span>
-          <Input
-            name="client_secret"
-            type="password"
-            bind:value={providerInstanceForm.clientSecret}
-            autocomplete="off"
-            placeholder={editingProviderInstanceId
-              ? "Leave blank to keep current secret"
-              : "Application secret"}
-          />
-        </label>
-      </div>
+      {#if usesOAuth}
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2">
+            <span class="text-sm font-medium ui-title">OAuth client ID</span>
+            <Input
+              name="client_id"
+              bind:value={providerInstanceForm.clientId}
+              autocomplete="off"
+              placeholder="Application ID"
+            />
+          </label>
+          <label class="grid gap-2">
+            <span class="text-sm font-medium ui-title">
+              OAuth client secret
+            </span>
+            <Input
+              name="client_secret"
+              type="password"
+              bind:value={providerInstanceForm.clientSecret}
+              autocomplete="off"
+              placeholder={editingProviderInstanceId
+                ? "Leave blank to keep current secret"
+                : "Application secret"}
+            />
+          </label>
+        </div>
+      {/if}
 
       <label class="grid gap-2">
         <span class="text-sm font-medium ui-title">Authorization mode</span>
@@ -427,21 +433,23 @@
         </Select>
       </label>
 
-      <div class="grid gap-2">
-        <span class="text-sm font-medium ui-title"> OAuth redirect URI </span>
-        <div
-          class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
-        >
-          <code class="min-w-0 flex-1 break-all text-xs">
-            {redirectUri}
-          </code>
-          <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+      {#if usesOAuth}
+        <div class="grid gap-2">
+          <span class="text-sm font-medium ui-title"> OAuth redirect URI </span>
+          <div
+            class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
+          >
+            <code class="min-w-0 flex-1 break-all text-xs">
+              {redirectUri}
+            </code>
+            <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+          </div>
+          <p class="text-xs ui-muted">
+            Add this callback URL to the {typeNoun(providerType)} OAuth application
+            for every self-hosted instance.
+          </p>
         </div>
-        <p class="text-xs ui-muted">
-          Add this callback URL to the {typeNoun(providerType)} OAuth application
-          for every self-hosted instance.
-        </p>
-      </div>
+      {/if}
 
       <div class="flex flex-wrap gap-3">
         <Button

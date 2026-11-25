@@ -92,6 +92,7 @@
     }
   }
   function resetProviderInstanceForm(): void {
+    providerInstanceErrors = {};
     editingProviderInstanceId = "";
     providerInstanceForm = {
       label: "",
@@ -105,6 +106,7 @@
   async function editProviderInstance(
     instance: SourceProviderInstancePayload,
   ): Promise<void> {
+    providerInstanceErrors = {};
     editingProviderInstanceId = instance.id;
     selectedType = instance.provider_type;
     providerInstanceForm = {

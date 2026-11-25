@@ -310,6 +310,52 @@ describe("Organization settings page", () => {
     ).toBeInTheDocument();
   });
 
+  it("clears the base URL error when editing is cancelled", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [gitlabInstance] },
+    });
+    vi.spyOn(apiClient, "patch").mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "Invalid source provider instance data.",
+      data: { messages: { baseUrl: ["Base URL must start with https://."] } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await screen.findByText("Company GitLab");
+    await fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "http://forgejo.example.com" },
+    });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Update instance" }),
+    );
+
+    expect(
+      await screen.findByText("Base URL must start with https://."),
+    ).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
+
+    expect(
+      screen.queryByText("Base URL must start with https://."),
+    ).not.toBeInTheDocument();
+  });
+
   it("shows no type picker when only Forgejo is enabled", async () => {
     const get = vi.spyOn(apiClient, "get").mockResolvedValueOnce({
       ok: true,

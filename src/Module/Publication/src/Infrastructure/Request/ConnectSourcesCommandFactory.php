@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Publication\Infrastructure\Request;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use InvalidArgumentException;
 use Packio\Publication\Application\Command\ConnectSourcesCommand;
 use Packio\Shared\Domain\Organization\ActorContext;
@@ -15,6 +16,10 @@ use function array_values;
 
 final readonly class ConnectSourcesCommandFactory
 {
+    public function __construct(
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog = new SourceProviderMetadataCatalog(),
+    ) {}
+
     public function create(SourceConnectRequest $sourceConnectRequest, ActorContext $actorContext): ConnectSourcesCommand
     {
         $resources = $sourceConnectRequest->resourceUrls;
@@ -28,7 +33,7 @@ final readonly class ConnectSourcesCommandFactory
         $payload = [];
         if ('' !== $sourceConnectRequest->authorizationToken) {
             $payload['token'] = $sourceConnectRequest->authorizationToken;
-            if ('gitlab_self_hosted' === $sourceConnectRequest->provider) {
+            if ($this->sourceProviderMetadataCatalog->isSelfHosted($sourceConnectRequest->provider)) {
                 if ('' !== \trim($sourceConnectRequest->instanceUrl)) {
                     $payload['base_url'] = \trim($sourceConnectRequest->instanceUrl);
                 }

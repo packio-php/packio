@@ -291,8 +291,8 @@ final class OAuthProviderAvailabilityResolverTest extends TestCase
         $oAuthProviderAvailabilityResolver         = $this->resolver($config);
         $disabledOAuthProviderAvailabilityResolver = $this->resolver(self::DEFAULT_CONFIG);
 
-        self::assertTrue($oAuthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled());
-        self::assertFalse($disabledOAuthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled());
+        self::assertTrue($oAuthProviderAvailabilityResolver->selfHostedSourceConnectEnabled('gitlab_self_hosted'));
+        self::assertFalse($disabledOAuthProviderAvailabilityResolver->selfHostedSourceConnectEnabled('gitlab_self_hosted'));
     }
 
     #[Test]
@@ -315,7 +315,49 @@ final class OAuthProviderAvailabilityResolverTest extends TestCase
 
         $oAuthProviderAvailabilityResolver = $this->resolver($config, $settings);
 
-        self::assertFalse($oAuthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled());
+        self::assertFalse($oAuthProviderAvailabilityResolver->selfHostedSourceConnectEnabled('gitlab_self_hosted'));
+    }
+
+    #[Test]
+    public function forgejoSelfHostedSourceConnectUsesItsOwnConfigAndRuntimeKey(): void
+    {
+        $config                           = self::DEFAULT_CONFIG;
+        $config['forgejo']['self_hosted'] = [
+            'source' => [
+                'enabled' => true,
+            ],
+        ];
+
+        self::assertTrue($this->resolver($config)->selfHostedSourceConnectEnabled('forgejo_self_hosted'));
+        self::assertFalse($this->resolver($config)->selfHostedSourceConnectEnabled('gitlab_self_hosted'));
+        self::assertFalse($this->resolver(self::DEFAULT_CONFIG)->selfHostedSourceConnectEnabled('forgejo_self_hosted'));
+        self::assertFalse($this->resolver($config)->selfHostedSourceConnectEnabled('codeberg'));
+
+        $settings = $this->createStub(ProjectSettingsApiFacadeInterface::class);
+        $settings->method('booleanValue')
+            ->willReturnCallback(static fn (string $key, bool $fallback): bool => match ($key) {
+                'oauth.forgejo_self_hosted.source.enabled' => false,
+                default                                    => $fallback,
+            })
+        ;
+
+        self::assertFalse($this->resolver($config, $settings)->selfHostedSourceConnectEnabled('forgejo_self_hosted'));
+    }
+
+    #[Test]
+    public function selfHostedSourceInstanceAvailableRequiresEnabledFlagForThatProvider(): void
+    {
+        $config                           = self::DEFAULT_CONFIG;
+        $config['forgejo']['self_hosted'] = [
+            'source' => [
+                'enabled' => true,
+            ],
+        ];
+        $oAuthProviderAvailabilityResolver = $this->resolver($config);
+
+        self::assertTrue($oAuthProviderAvailabilityResolver->selfHostedSourceInstanceAvailable('forgejo_self_hosted', true, true, true, true));
+        self::assertFalse($oAuthProviderAvailabilityResolver->selfHostedSourceInstanceAvailable('forgejo_self_hosted', true, false, true, true));
+        self::assertFalse($oAuthProviderAvailabilityResolver->selfHostedSourceInstanceAvailable('gitlab_self_hosted', true, true, true, true));
     }
 
     #[Test]

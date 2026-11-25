@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Packio\Source\Infrastructure\Handler;
 
 use Common\Logging\SafeExceptionContext;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
@@ -47,6 +48,7 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
         private SourceApiFacadeInterface $sourceApiFacade,
         private SourceAuthorizationStrategyResolver $sourceAuthorizationStrategyResolver,
         private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -58,6 +60,8 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
         /** @var ProviderAuthorizationRequest $form */
         $form = $request->getAttribute(ProviderAuthorizationRequest::class);
 
+        $isSelfHosted = $this->sourceProviderMetadataCatalog->isSelfHosted($form->provider);
+
         try {
             $this->sourceApiFacade->authorizeProviderInContext(
                 $actorContext,
@@ -67,12 +71,12 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
                     authStrategy: $this->sourceAuthorizationStrategyResolver->defaultFor($form->provider),
                     payload: [
                         'token' => $form->authorizationToken,
-                        ...('gitlab_self_hosted' === $form->provider && '' !== $form->providerInstanceId
+                        ...($isSelfHosted && '' !== $form->providerInstanceId
                             ? [
                                 'provider_instance_id' => $form->providerInstanceId,
                             ]
                             : []),
-                        ...('gitlab_self_hosted' === $form->provider && '' !== $form->instanceUrl
+                        ...($isSelfHosted && '' !== $form->instanceUrl
                             ? [
                                 'base_url' => $form->instanceUrl,
                             ]

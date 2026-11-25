@@ -15,6 +15,7 @@ use GuzzleHttp\Handler\MockHandler;
 use GuzzleHttp\HandlerStack;
 use GuzzleHttp\Middleware;
 use GuzzleHttp\Psr7\Response;
+use Packio\Publication\Infrastructure\Codeberg\CodebergAccessCredentials;
 use Packio\Publication\Infrastructure\Readme\Base64FileContentDecoder;
 use Packio\Publication\Infrastructure\Readme\CodebergPackageReadmeExtractor;
 use Packio\Publication\Infrastructure\Readme\ReadmeCandidateProvider;
@@ -54,6 +55,23 @@ final class CodebergPackageReadmeExtractorTest extends TestCase
         $request = $this->request($history, 0);
         self::assertSame('https://codeberg.org/api/v1/repos/packio/packio/contents/README.md?ref=main', (string) $request->getUri());
         self::assertSame('PackioTest/1.0', $request->getHeaderLine('User-Agent'));
+    }
+
+    #[Test]
+    public function extractsReadmeFromInstanceBaseUrl(): void
+    {
+        $history   = [];
+        $extractor = $this->extractor([[
+            'status' => 200,
+            'body'   => [
+                'content'  => base64_encode('# Packio'),
+                'encoding' => 'base64',
+            ],
+        ]], $history);
+
+        $extractor->extractCodebergReadmeHtml('packio', 'packio', 'main', new CodebergAccessCredentials(null, 'https://example.com/git'));
+
+        self::assertSame('https://example.com/git/api/v1/repos/packio/packio/contents/README.md?ref=main', (string) $this->request($history, 0)->getUri());
     }
 
     /**

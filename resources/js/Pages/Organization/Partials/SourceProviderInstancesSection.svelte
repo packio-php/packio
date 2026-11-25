@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, tick } from "svelte";
+  import { tick } from "svelte";
   import { apiClient, Endpoints } from "@/lib/api";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -9,18 +9,42 @@
   import Input from "@/Components/ui/Input.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import FieldErrors from "@/Components/forms/FieldErrors.svelte";
+  import { hasFieldErrors } from "@/lib/validationErrors";
   import { toast } from "@/lib/toast";
   import type {
     SourceProviderInstanceDependenciesPayload,
     SourceProviderInstancePayload,
+    ValidationErrors,
   } from "@/types/pages";
 
   interface Props {
     organizationSlug: string;
-    redirectUri: string;
+    appBaseUrl: string;
+    providers?: { key: string; label: string }[];
   }
 
-  let { organizationSlug, redirectUri }: Props = $props();
+  let { organizationSlug, appBaseUrl, providers = [] }: Props = $props();
+
+  const types = $derived(
+    providers.length > 0
+      ? providers
+      : [{ key: "gitlab_self_hosted", label: "GitLab Self-Hosted" }],
+  );
+  let selectedType = $state("");
+  const providerType = $derived(selectedType || types[0].key);
+  // With several types the form stays hidden until one is chosen.
+  const typeChosen = $derived(selectedType !== "" || types.length === 1);
+  const redirectUri = $derived(
+    `${appBaseUrl.replace(/\/+$/, "")}/auth/oauth/${providerType}/source-callback`,
+  );
+  function typeLabel(key: string): string {
+    return types.find((type) => type.key === key)?.label ?? key;
+  }
+  // "GitLab Self-Hosted" -> "GitLab" for sentences
+  function typeNoun(key: string): string {
+    return typeLabel(key).replace(/ Self-Hosted$/, "");
+  }
 
   type ProviderInstanceResponse = {
     instance: SourceProviderInstancePayload;
@@ -48,6 +72,7 @@
   let providerInstanceDependencies =
     $state<SourceProviderInstanceDependenciesPayload | null>(null);
   let providerInstanceFormElement: HTMLFormElement | null = $state(null);
+  let providerInstanceErrors: ValidationErrors = $state({});
   let editingProviderInstanceId = $state("");
   let providerInstanceForm = $state({
     label: "",
@@ -56,6 +81,7 @@
     clientSecret: "",
     authMode: "oauth2_and_token",
   });
+  const usesOAuth = $derived(providerInstanceForm.authMode !== "token");
   function authModeLabel(
     authMode: SourceProviderInstancePayload["auth_mode"],
   ): string {
@@ -69,7 +95,9 @@
     }
   }
   function resetProviderInstanceForm(): void {
+    providerInstanceErrors = {};
     editingProviderInstanceId = "";
+    selectedType = "";
     providerInstanceForm = {
       label: "",
       baseUrl: "",
@@ -82,7 +110,9 @@
   async function editProviderInstance(
     instance: SourceProviderInstancePayload,
   ): Promise<void> {
+    providerInstanceErrors = {};
     editingProviderInstanceId = instance.id;
+    selectedType = instance.provider_type;
     providerInstanceForm = {
       label: instance.label,
       baseUrl: instance.base_url,
@@ -106,7 +136,7 @@
 
     providerInstancesLoading = true;
     const result = await apiClient.get<ProviderInstancesResponse>(
-      `${Endpoints.sources.providerInstances(org)}?provider_type=gitlab_self_hosted`,
+      Endpoints.sources.providerInstances(org),
     );
     providerInstancesLoading = false;
 
@@ -125,12 +155,18 @@
     }
 
     providerInstanceSaving = true;
+    providerInstanceErrors = {};
     const payload = {
-      providerType: "gitlab_self_hosted",
+      providerType,
       label: providerInstanceForm.label,
       baseUrl: providerInstanceForm.baseUrl,
-      clientId: providerInstanceForm.clientId,
-      clientSecret: providerInstanceForm.clientSecret,
+      // Hidden OAuth fields must not send stale values in token mode.
+      // On edit the stored client ID is kept; only a new token instance sends none.
+      clientId:
+        usesOAuth || editingProviderInstanceId
+          ? providerInstanceForm.clientId
+          : "",
+      clientSecret: usesOAuth ? providerInstanceForm.clientSecret : "",
       authMode: providerInstanceForm.authMode,
     };
     const result = editingProviderInstanceId
@@ -152,10 +188,13 @@
           )
         : [...providerInstances, saved];
       resetProviderInstanceForm();
-      toast.success("GitLab instance saved.");
+      toast.success(`${typeNoun(saved.provider_type)} instance saved.`);
       return;
     }
 
+    const messages = (result.data as { messages?: ValidationErrors } | null)
+      ?.messages;
+    providerInstanceErrors = messages ?? {};
     toast.error(result.error);
   }
 
@@ -204,6 +243,13 @@
     providerInstancePendingDelete = instance;
     providerInstanceDependencies = result.data;
   }
+
+  const pendingNoun = $derived(
+    typeNoun(
+      (providerInstancePendingDelete as SourceProviderInstancePayload | null)
+        ?.provider_type ?? providerType,
+    ),
+  );
 
   function canDeleteProviderInstanceNormally(): boolean {
     return (
@@ -276,10 +322,10 @@
       if ("deleted_inactive_authorizations_count" in result.data) {
         const cleanupResult = result.data as ProviderInstanceCleanupResponse;
         toast.success(
-          `Deleted ${cleanupResult.deleted_inactive_authorizations_count} inactive authorization(s), ${cleanupResult.deleted_source_oauth_accounts_count} OAuth account(s), and the GitLab instance.`,
+          `Deleted ${cleanupResult.deleted_inactive_authorizations_count} inactive authorization(s), ${cleanupResult.deleted_source_oauth_accounts_count} OAuth account(s), and the ${typeNoun(instance.provider_type)} instance.`,
         );
       } else {
-        toast.success("GitLab instance deleted.");
+        toast.success(`${typeNoun(instance.provider_type)} instance deleted.`);
       }
       return;
     }
@@ -293,7 +339,8 @@
       toast.error(result.error);
     }
   }
-  onMount(() => {
+  // The list shows every type; the selected type only affects the form.
+  $effect(() => {
     void loadProviderInstances();
   });
 </script>
@@ -302,8 +349,10 @@
   <Card className="rounded-[1.75rem] p-6">
     <SectionHeading
       eyebrow="Source provider instances"
-      title="GitLab self-hosted"
-      description="Register organization GitLab instances for OAuth and token-based source access."
+      title={types.length > 1
+        ? "Self-hosted instances"
+        : `${typeNoun(providerType)} self-hosted`}
+      description="Register organization instances for OAuth and token-based source access."
       className="max-w-xl"
     />
 
@@ -315,110 +364,136 @@
         saveProviderInstance();
       }}
     >
-      <div class="grid gap-4 md:grid-cols-2">
+      {#if types.length > 1}
         <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">Label</span>
-          <Input
-            name="label"
-            bind:value={providerInstanceForm.label}
-            placeholder="Company GitLab"
-            required
-          />
+          <span class="text-sm font-medium ui-title">Instance type</span>
+          <Select
+            bind:value={selectedType}
+            name="provider_type"
+            disabled={editingProviderInstanceId !== ""}
+          >
+            <option value="" disabled>Select instance type</option>
+            {#each types as type (type.key)}
+              <option value={type.key}>{type.label}</option>
+            {/each}
+          </Select>
         </label>
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">Base URL</span>
-          <Input
-            name="base_url"
-            type="url"
-            bind:value={providerInstanceForm.baseUrl}
-            placeholder="https://gitlab.company.com"
-            required
-          />
-        </label>
-      </div>
+      {/if}
 
-      <div class="grid gap-4 md:grid-cols-2">
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">OAuth client ID</span>
-          <Input
-            name="client_id"
-            bind:value={providerInstanceForm.clientId}
-            autocomplete="off"
-            placeholder="Application ID"
-          />
-        </label>
-        <label class="grid gap-2">
-          <span class="text-sm font-medium ui-title">OAuth client secret</span>
-          <Input
-            name="client_secret"
-            type="password"
-            bind:value={providerInstanceForm.clientSecret}
-            autocomplete="off"
-            placeholder={editingProviderInstanceId
-              ? "Leave blank to keep current secret"
-              : "Application secret"}
-          />
-        </label>
-      </div>
-
-      <label class="grid gap-2">
-        <span class="text-sm font-medium ui-title">Authorization mode</span>
-        <Select bind:value={providerInstanceForm.authMode} name="auth_mode">
-          <option value="oauth2_and_token">OAuth and manual token</option>
-          <option value="oauth2">OAuth only</option>
-          <option value="token">Manual token only</option>
-        </Select>
-      </label>
-
-      <div class="grid gap-2">
-        <span class="text-sm font-medium ui-title"> OAuth redirect URI </span>
-        <div
-          class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
-        >
-          <code class="min-w-0 flex-1 break-all text-xs">
-            {redirectUri}
-          </code>
-          <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+      {#if typeChosen}
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="grid gap-2">
+            <span class="text-sm font-medium ui-title">Label</span>
+            <Input
+              name="label"
+              bind:value={providerInstanceForm.label}
+              placeholder={`Company ${typeNoun(providerType)}`}
+              required
+            />
+          </label>
+          <label class="grid gap-2">
+            <span class="text-sm font-medium ui-title">Base URL</span>
+            <Input
+              name="base_url"
+              type="url"
+              bind:value={providerInstanceForm.baseUrl}
+              placeholder={`https://${providerType === "forgejo_self_hosted" ? "forgejo" : "gitlab"}.company.com`}
+              invalid={hasFieldErrors(providerInstanceErrors, "baseUrl")}
+              required
+            />
+            <FieldErrors errors={providerInstanceErrors} field="baseUrl" />
+          </label>
         </div>
-        <p class="text-xs ui-muted">
-          Add this callback URL to the GitLab OAuth application for every
-          self-hosted instance.
-        </p>
-      </div>
 
-      <div class="flex flex-wrap gap-3">
-        <Button
-          className="rounded-full px-5"
-          type="submit"
-          variant="primary"
-          disabled={providerInstanceSaving}
-        >
-          {providerInstanceSaving
-            ? "Saving..."
-            : editingProviderInstanceId
-              ? "Update instance"
-              : "Add instance"}
-        </Button>
-        {#if editingProviderInstanceId}
+        {#if usesOAuth}
+          <div class="grid gap-4 md:grid-cols-2">
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">OAuth client ID</span>
+              <Input
+                name="client_id"
+                bind:value={providerInstanceForm.clientId}
+                autocomplete="off"
+                placeholder="Application ID"
+              />
+            </label>
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">
+                OAuth client secret
+              </span>
+              <Input
+                name="client_secret"
+                type="password"
+                bind:value={providerInstanceForm.clientSecret}
+                autocomplete="off"
+                placeholder={editingProviderInstanceId
+                  ? "Leave blank to keep current secret"
+                  : "Application secret"}
+              />
+            </label>
+          </div>
+        {/if}
+
+        <label class="grid gap-2">
+          <span class="text-sm font-medium ui-title">Authorization mode</span>
+          <Select bind:value={providerInstanceForm.authMode} name="auth_mode">
+            <option value="oauth2_and_token">OAuth and manual token</option>
+            <option value="oauth2">OAuth only</option>
+            <option value="token">Manual token only</option>
+          </Select>
+        </label>
+
+        {#if usesOAuth}
+          <div class="grid gap-2">
+            <span class="text-sm font-medium ui-title">
+              OAuth redirect URI
+            </span>
+            <div
+              class="ui-code flex min-w-0 items-center gap-3 rounded-2xl px-4 py-3"
+            >
+              <code class="min-w-0 flex-1 break-all text-xs">
+                {redirectUri}
+              </code>
+              <CopyButton value={redirectUri} label="Copy OAuth redirect URI" />
+            </div>
+            <p class="text-xs ui-muted">
+              Add this callback URL to the {typeNoun(providerType)} OAuth application
+              for every self-hosted instance.
+            </p>
+          </div>
+        {/if}
+
+        <div class="flex flex-wrap gap-3">
           <Button
             className="rounded-full px-5"
-            type="button"
-            variant="secondary"
-            onclick={resetProviderInstanceForm}
+            type="submit"
+            variant="primary"
+            disabled={providerInstanceSaving}
           >
-            Cancel edit
+            {providerInstanceSaving
+              ? "Saving..."
+              : editingProviderInstanceId
+                ? "Update instance"
+                : "Add instance"}
           </Button>
-        {/if}
-      </div>
+          {#if editingProviderInstanceId}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="secondary"
+              onclick={resetProviderInstanceForm}
+            >
+              Cancel edit
+            </Button>
+          {/if}
+        </div>
+      {/if}
     </form>
 
     <div class="mt-6 grid gap-3">
       {#if providerInstancesLoading}
-        <p class="text-sm ui-muted">Loading GitLab instances...</p>
+        <p class="text-sm ui-muted">Loading instances...</p>
       {:else if providerInstances.length === 0}
-        <p class="text-sm ui-muted">
-          No GitLab self-hosted instances configured yet.
-        </p>
+        <p class="text-sm ui-muted">No instances configured yet.</p>
       {:else}
         {#each providerInstances as instance (instance.id)}
           <InsetCard className="p-4">
@@ -439,6 +514,11 @@
                     class="ui-badge-muted rounded-full px-2.5 py-1 text-[11px] font-medium"
                   >
                     {authModeLabel(instance.auth_mode)}
+                  </span>
+                  <span
+                    class="ui-badge-muted rounded-full px-2.5 py-1 text-[11px] font-medium"
+                  >
+                    {typeLabel(instance.provider_type)}
                   </span>
                 </div>
                 <p class="mt-1 break-all text-xs ui-muted">
@@ -488,14 +568,14 @@
     open={providerInstancePendingDelete !== null}
     eyebrow="Source provider instance"
     title={canDeleteProviderInstanceNormally()
-      ? "Delete GitLab instance?"
+      ? `Delete ${pendingNoun} instance?`
       : canDeleteProviderInstanceWithInactiveAuthorizations()
-        ? "Delete inactive authorizations and GitLab instance?"
-        : "GitLab instance has dependencies"}
+        ? `Delete inactive authorizations and ${pendingNoun} instance?`
+        : `${pendingNoun} instance has dependencies`}
     description={canDeleteProviderInstanceNormally()
-      ? "This removes the organization-level GitLab self-hosted provider instance. Orphan OAuth accounts for this instance are removed with it."
+      ? `This removes the organization-level ${pendingNoun} self-hosted provider instance. Orphan OAuth accounts for this instance are removed with it.`
       : canDeleteProviderInstanceWithInactiveAuthorizations()
-        ? "This permanently removes the listed inactive authorizations, orphan OAuth accounts for this instance, and then the GitLab instance."
+        ? `This permanently removes the listed inactive authorizations, orphan OAuth accounts for this instance, and then the ${pendingNoun} instance.`
         : "Sources and active authorizations cannot be removed by this action. Resolve or reassign them first."}
     confirmLabel={canDeleteProviderInstanceWithInactiveAuthorizations()
       ? `Delete ${providerInstanceDependencies?.inactive_authorization_count ?? 0} inactive authorization(s) and instance`

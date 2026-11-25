@@ -27,6 +27,7 @@ final class WebhookProviderHandlerRegistryFactory
             new GithubWebhookProviderHandler($webhookProviderHandlerConfigCatalog->github()),
             new BitbucketWebhookProviderHandler($webhookProviderHandlerConfigCatalog->bitbucket()),
             new CodebergWebhookProviderHandler($webhookProviderHandlerConfigCatalog->codeberg()),
+            new CodebergWebhookProviderHandler($webhookProviderHandlerConfigCatalog->forgejoSelfHosted()),
             new GitlabWebhookProviderHandler($webhookProviderHandlerConfigCatalog->gitlab()),
             new GitlabWebhookProviderHandler($webhookProviderHandlerConfigCatalog->gitlabSelfHosted()),
         ]);

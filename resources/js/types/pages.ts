@@ -550,6 +550,7 @@ export interface SourceProviderPayload {
   oauth_available: boolean;
   oauth_enabled: boolean;
   oauth_provider: string | null;
+  supports_self_hosted_instances: boolean;
 }
 
 export interface ProviderAuthorizationPayload {

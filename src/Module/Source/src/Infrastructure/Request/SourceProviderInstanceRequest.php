@@ -11,12 +11,12 @@ final readonly class SourceProviderInstanceRequest
 {
     public function __construct(
         #[Required]
-        #[Regex('#^(gitlab_self_hosted|forgejo|gitea)$#')]
+        #[Regex('#^(gitlab_self_hosted|forgejo_self_hosted|gitea)$#')]
         public string $providerType = '',
         #[Required]
         public string $label = '',
         #[Required]
-        #[Regex('#^https://\S+$#')]
+        #[Regex('#^https://\S+$#', message: 'Base URL must start with https://.')]
         public string $baseUrl = '',
         public string $clientId = '',
         public string $clientSecret = '',

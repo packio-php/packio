@@ -70,6 +70,18 @@ final class WebhookProviderHandlerConfigCatalogTest extends TestCase
     }
 
     #[Test]
+    public function forgejoSelfHostedReusesCodebergEventConfig(): void
+    {
+        self::assertSame('forgejo_self_hosted', $this->catalog([])->forgejoSelfHosted()->provider);
+        self::assertSame(['push', 'create', 'delete'], $this->catalog([])->forgejoSelfHosted()->events);
+        self::assertSame(['issues'], $this->catalog([
+            'codeberg' => [
+                'events' => ['issues'],
+            ],
+        ])->forgejoSelfHosted()->events);
+    }
+
+    #[Test]
     public function gitlabSelfHostedReusesGitlabEventConfig(): void
     {
         $catalog = $this->catalog([

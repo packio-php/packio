@@ -52,7 +52,8 @@ final readonly class CodebergPackageReadmeExtractor implements CodebergPackageRe
         ?CodebergAccessCredentials $codebergAccessCredentials,
     ): ?string {
         $url = sprintf(
-            'https://codeberg.org/api/v1/repos/%s/%s/contents/%s?ref=%s',
+            '%s/api/v1/repos/%s/%s/contents/%s?ref=%s',
+            $codebergAccessCredentials->baseUrl ?? 'https://codeberg.org',
             rawurlencode($owner),
             rawurlencode($repository),
             rawurlencode($path),

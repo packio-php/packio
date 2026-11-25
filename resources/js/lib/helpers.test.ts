@@ -45,6 +45,7 @@ describe("small frontend helpers", () => {
 
   it("maps provider icon keys", () => {
     expect(providerIconKey("gitlab_self_hosted")).toBe("gitlab");
+    expect(providerIconKey("forgejo_self_hosted")).toBe("forgejo");
     expect(providerIconKey("github")).toBe("github");
   });
 });

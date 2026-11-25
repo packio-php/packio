@@ -12,6 +12,7 @@ use function is_array;
 use function is_int;
 use function is_string;
 use function rawurlencode;
+use function rtrim;
 use function sprintf;
 use function trim;
 
@@ -19,21 +20,25 @@ final readonly class CodebergWebhookProviderAdapter implements WebhookProviderAd
 {
     private const string BASE_URL = 'https://codeberg.org';
 
-    public function __construct(private BrandingConfig $brandingConfig) {}
+    public function __construct(
+        private BrandingConfig $brandingConfig,
+        private string $provider = 'codeberg',
+        private string $label = 'Codeberg',
+    ) {}
 
     public function provider(): string
     {
-        return 'codeberg';
+        return $this->provider;
     }
 
     public function tokenMissingMessage(): string
     {
-        return 'A Codeberg OAuth token or access token is required to register webhooks automatically.';
+        return sprintf('A %s OAuth token or access token is required to register webhooks automatically.', $this->label);
     }
 
     public function missingCreatedHookIdMessage(): string
     {
-        return 'Webhook created but Codeberg did not return an identifier.';
+        return sprintf('Webhook created but %s did not return an identifier.', $this->label);
     }
 
     public function webhookSecretMissingMessage(): string
@@ -51,19 +56,23 @@ final readonly class CodebergWebhookProviderAdapter implements WebhookProviderAd
             return new WebhookRegistrationResult(false, '', $this->webhookSecretMissingMessage(), false);
         }
 
+        if ('' === $this->baseUrl($source)) {
+            return new WebhookRegistrationResult(false, '', 'Source is missing base_url in providerConfig.', false);
+        }
+
         return null;
     }
 
     public function canDeregister(Source $source): bool
     {
-        return '' !== $source->owner() && '' !== $source->repository();
+        return '' !== $source->owner() && '' !== $source->repository() && '' !== $this->baseUrl($source);
     }
 
     public function hooksUrl(Source $source): string
     {
         return sprintf(
             '%s/api/v1/repos/%s/%s/hooks',
-            self::BASE_URL,
+            $this->baseUrl($source),
             rawurlencode($source->owner()),
             rawurlencode($source->repository()),
         );
@@ -140,14 +149,26 @@ final readonly class CodebergWebhookProviderAdapter implements WebhookProviderAd
         if (is_array($body)) {
             $message = $body['message'] ?? $body['error_description'] ?? $body['error'] ?? null;
             if (is_string($message) && '' !== trim($message)) {
-                return sprintf('Codeberg webhook API error (%d): %s', $response['status'], trim($message));
+                return sprintf('%s webhook API error (%d): %s', $this->label, $response['status'], trim($message));
             }
         }
 
         if (403 === $response['status']) {
-            return 'Codeberg webhook API returned status 403. The connected Codeberg account must have repository administration rights.';
+            return sprintf('%1$s webhook API returned status 403. The connected %1$s account must have repository administration rights.', $this->label);
         }
 
-        return sprintf('Codeberg webhook API returned status %d.', $response['status']);
+        return sprintf('%s webhook API returned status %d.', $this->label, $response['status']);
+    }
+
+    private function baseUrl(Source $source): string
+    {
+        // Codeberg never trusts providerConfig; self-hosted instances must carry their own base_url.
+        if ('codeberg' === $this->provider) {
+            return self::BASE_URL;
+        }
+
+        $baseUrl = $source->providerConfig()['base_url'] ?? null;
+
+        return is_string($baseUrl) ? rtrim($baseUrl, '/') : '';
     }
 }

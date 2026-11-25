@@ -12,11 +12,11 @@ use PHPUnit\Framework\Attributes\CoversClass;
 #[CoversClass(SourcePublicationSynchronizerRegistry::class)]
 final class SourcePublicationSynchronizerRegistryTest extends IntegrationTestCase
 {
-    public function testRegistryResolvesAllSixProviders(): void
+    public function testRegistryResolvesAllSevenProviders(): void
     {
         $registry = $this->container->get(SourcePublicationSynchronizerRegistry::class);
 
-        foreach (['github', 'gitlab', 'gitlab_self_hosted', 'generic_git', 'bitbucket', 'codeberg'] as $provider) {
+        foreach (['github', 'gitlab', 'gitlab_self_hosted', 'generic_git', 'bitbucket', 'codeberg', 'forgejo_self_hosted'] as $provider) {
             self::assertSame($provider, $registry->forProvider($provider)->provider());
         }
 

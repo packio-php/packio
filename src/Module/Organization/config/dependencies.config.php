@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use Common\Branding\BrandingConfig;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Cycle\ORM\ORMInterface;
 use Laminas\ServiceManager\AbstractFactory\ConfigAbstractFactory;
@@ -202,6 +203,7 @@ return [
         OrganizationSettingsHandler::class             => [
             OrganizationApiFacadeInterface::class,
             SourceApiFacadeInterface::class,
+            SourceProviderMetadataCatalog::class,
         ],
         OrganizationCreateHandler::class               => [
             OrganizationApiFacadeInterface::class,

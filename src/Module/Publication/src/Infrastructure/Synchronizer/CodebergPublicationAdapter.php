@@ -12,9 +12,12 @@ use Packio\Publication\Infrastructure\Codeberg\CodebergPackageMetadata;
 use Packio\Publication\Infrastructure\Composer\ComposerReleaseDateMap;
 use Packio\Publication\Infrastructure\Git\GitReference;
 use Packio\Publication\Infrastructure\Readme\CodebergPackageReadmeExtractorInterface;
+use RuntimeException;
 
+use function is_string;
 use function rawurlencode;
 use function sprintf;
+use function trim;
 
 final readonly class CodebergPublicationAdapter implements ProviderPublicationAdapterInterface
 {
@@ -22,16 +25,29 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
         private CodebergComposerMetadataFetcherInterface $codebergComposerMetadataFetcher,
         private CodebergPackageReadmeExtractorInterface $codebergPackageReadmeExtractor,
         private PackageReadmeSyncService $packageReadmeSyncService,
+        private string $provider = 'codeberg',
     ) {}
 
     public function provider(): string
     {
-        return 'codeberg';
+        return $this->provider;
     }
 
     public function credentials(array $source, ?string $accessToken): object
     {
-        return new CodebergAccessCredentials($accessToken);
+        $baseUrl = $source['providerConfig']['base_url'] ?? null;
+
+        // Codeberg stays pinned to codeberg.org; only the instance provider honours base_url.
+        if ('codeberg' === $this->provider) {
+            return new CodebergAccessCredentials($accessToken);
+        }
+
+        // Never fall back to codeberg.org here: it would send the instance token there.
+        if (! is_string($baseUrl) || '' === trim($baseUrl)) {
+            throw new RuntimeException('Source is missing base_url in providerConfig.');
+        }
+
+        return new CodebergAccessCredentials($accessToken, $baseUrl);
     }
 
     public function accessToken(object $credentials): ?string
@@ -72,7 +88,8 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
         $codebergPackageMetadata = $this->metadataOf($providerPackageMetadata);
 
         return sprintf(
-            'https://codeberg.org/%s/%s',
+            '%s/%s/%s',
+            $codebergPackageMetadata->baseUrl,
             $codebergPackageMetadata->owner,
             $codebergPackageMetadata->repository,
         );
@@ -99,7 +116,8 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
                 'source_id' => $sourceId,
                 'type'      => 'git',
                 'url'       => sprintf(
-                    'https://codeberg.org/%s/%s.git',
+                    '%s/%s/%s.git',
+                    $codebergPackageMetadata->baseUrl,
                     $codebergPackageMetadata->owner,
                     $codebergPackageMetadata->repository,
                 ),
@@ -108,7 +126,8 @@ final readonly class CodebergPublicationAdapter implements ProviderPublicationAd
             'dist'              => [
                 'type'      => 'zip',
                 'url'       => sprintf(
-                    'https://codeberg.org/%s/%s/archive/%s.zip',
+                    '%s/%s/%s/archive/%s.zip',
+                    $codebergPackageMetadata->baseUrl,
                     $codebergPackageMetadata->owner,
                     $codebergPackageMetadata->repository,
                     rawurlencode($codebergPackageMetadata->commitReference),

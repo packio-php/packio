@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Organization\Infrastructure\Handler;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Middleware\RequireExistingOrganizationMiddleware;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
@@ -16,7 +17,9 @@ use Sirix\Mezzio\Authentication\Attribute\Authenticated;
 use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Get;
 
-use function array_any;
+use function array_filter;
+use function array_map;
+use function array_values;
 
 #[Authenticated]
 #[Can('organizations.view', [
@@ -32,13 +35,15 @@ final readonly class OrganizationSettingsHandler implements RequestHandlerInterf
 {
     public function __construct(
         private OrganizationApiFacadeInterface $organizationApiFacade,
-        private SourceApiFacadeInterface $sourceApiFacade
+        private SourceApiFacadeInterface $sourceApiFacade,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
     {
         $inertia         = $request->getAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE);
         $organizationDto = RequestContextAttributes::requireCurrentOrganization($request);
+        $selfHosted      = $this->selfHostedProviders();
 
         return $inertia->render('Organization/Settings', [
             'settings'                          => [
@@ -50,12 +55,27 @@ final readonly class OrganizationSettingsHandler implements RequestHandlerInterf
                 'updated_at'       => $organizationDto->updatedAt,
             ],
             'members_count'                     => $this->organizationApiFacade->membersCount($organizationDto->id),
-            'source_provider_instances_enabled' => $this->isSourceProviderEnabled(),
+            'source_provider_instances_enabled' => [] !== $selfHosted,
+            'self_hosted_source_providers'      => $selfHosted,
         ]);
     }
 
-    private function isSourceProviderEnabled(): bool
+    /**
+     * @return list<array{key: string, label: string}>
+     */
+    private function selfHostedProviders(): array
     {
-        return array_any($this->sourceApiFacade->availableProviders(), fn ($sourceProviderDto) => 'gitlab_self_hosted' === $sourceProviderDto->key);
+        $available = array_filter(
+            $this->sourceApiFacade->availableProviders(),
+            fn ($sourceProviderDto): bool => $this->sourceProviderMetadataCatalog->isSelfHosted($sourceProviderDto->key),
+        );
+
+        return array_values(array_map(
+            fn ($sourceProviderDto): array => [
+                'key'   => $sourceProviderDto->key,
+                'label' => $this->sourceProviderMetadataCatalog->get($sourceProviderDto->key)->label ?? $sourceProviderDto->name,
+            ],
+            $available,
+        ));
     }
 }

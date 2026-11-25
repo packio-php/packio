@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Packio\Identity\Infrastructure\Handler;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Laminas\Diactoros\Response\JsonResponse;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
@@ -34,6 +35,7 @@ final readonly class OAuthSourceCallbackHandler implements RequestHandlerInterfa
         private SourceOAuthCallbackWorkflow $sourceOAuthCallbackWorkflow,
         private InertiaNotificationMessenger $inertiaNotificationMessenger,
         private SourceOAuthPopupRenderer $sourceOAuthPopupRenderer,
+        private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog = new SourceProviderMetadataCatalog(),
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -46,16 +48,17 @@ final readonly class OAuthSourceCallbackHandler implements RequestHandlerInterfa
             ], 404);
         }
 
-        $providerEnum = 'gitlab_self_hosted' === $provider
+        $isSelfHosted = $this->sourceProviderMetadataCatalog->isSelfHosted($provider);
+        $providerEnum = $isSelfHosted
             ? null
             : $this->oauthProviderAvailabilityResolver->resolveSourceConnectProvider($provider);
-        if ('gitlab_self_hosted' === $provider && ! $this->oauthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled()) {
+        if ($isSelfHosted && ! $this->oauthProviderAvailabilityResolver->selfHostedSourceConnectEnabled($provider)) {
             return new JsonResponse([
                 'error' => 'OAuth provider not supported.',
             ], 404);
         }
 
-        if ('gitlab_self_hosted' !== $provider && ! $providerEnum instanceof OAuthProvider) {
+        if (! $isSelfHosted && ! $providerEnum instanceof OAuthProvider) {
             return new JsonResponse([
                 'error' => 'OAuth provider not supported.',
             ], 404);
@@ -72,7 +75,7 @@ final readonly class OAuthSourceCallbackHandler implements RequestHandlerInterfa
         }
 
         $this->oAuthSessionContext->clearState($session);
-        $codeVerifier = OAuthProvider::Codeberg === $providerEnum
+        $codeVerifier = OAuthProvider::Codeberg === $providerEnum || 'forgejo_self_hosted' === $provider
             ? $this->oAuthSessionContext->consumePkceCodeVerifier($session)
             : null;
 

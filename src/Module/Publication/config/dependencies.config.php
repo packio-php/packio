@@ -71,6 +71,7 @@ use Packio\Release\Api\ReleaseApiFacadeInterface;
 use Packio\Source\Api\SourceApiFacadeInterface;
 use Packio\Source\Api\SourceSecretResolverInterface;
 use Packio\Worker\Api\JobApiFacadeInterface;
+use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 
 return [
@@ -105,48 +106,54 @@ return [
             ReadmeCandidateProvider::class      => ReadmeCandidateProvider::class,
         ],
         'factories'  => [
-            GitCommandRunner::class                              => ConfigAbstractFactory::class,
-            ConnectSourcesUseCase::class                         => ConfigAbstractFactory::class,
-            SourceConnectAdapter::class                          => ConfigAbstractFactory::class,
+            GitCommandRunner::class                                                   => ConfigAbstractFactory::class,
+            ConnectSourcesUseCase::class                                              => ConfigAbstractFactory::class,
+            SourceConnectAdapter::class                                               => ConfigAbstractFactory::class,
             // --- Facade ---
-            PublicationApiFacade::class                          => ConfigAbstractFactory::class,
-            ConnectSourceService::class                          => ConfigAbstractFactory::class,
-            PackageReadmeSyncService::class                      => ConfigAbstractFactory::class,
-            ComposerReleaseDateProvider::class                   => ConfigAbstractFactory::class,
+            PublicationApiFacade::class                                               => ConfigAbstractFactory::class,
+            ConnectSourceService::class                                               => ConfigAbstractFactory::class,
+            PackageReadmeSyncService::class                                           => ConfigAbstractFactory::class,
+            ComposerReleaseDateProvider::class                                        => ConfigAbstractFactory::class,
 
             // --- Adapters ---
-            PublicationSynchronizationAdapter::class             => ConfigAbstractFactory::class,
+            PublicationSynchronizationAdapter::class                                  => ConfigAbstractFactory::class,
 
             // --- Synchronizers ---
-            SourcePublicationSynchronizerRegistry::class         => SourcePublicationSynchronizerRegistryFactory::class,
-            ProviderPublicationSynchronizer::class               => ConfigAbstractFactory::class,
-            GithubPublicationAdapter::class                      => ConfigAbstractFactory::class,
-            GitlabPublicationAdapter::class                      => ConfigAbstractFactory::class,
-            GitlabSelfHostedPublicationAdapter::class            => ConfigAbstractFactory::class,
-            GenericGitPublicationAdapter::class                  => ConfigAbstractFactory::class,
-            BitbucketPublicationAdapter::class                   => ConfigAbstractFactory::class,
-            CodebergPublicationAdapter::class                    => ConfigAbstractFactory::class,
+            SourcePublicationSynchronizerRegistry::class                              => SourcePublicationSynchronizerRegistryFactory::class,
+            ProviderPublicationSynchronizer::class                                    => ConfigAbstractFactory::class,
+            GithubPublicationAdapter::class                                           => ConfigAbstractFactory::class,
+            GitlabPublicationAdapter::class                                           => ConfigAbstractFactory::class,
+            GitlabSelfHostedPublicationAdapter::class                                 => ConfigAbstractFactory::class,
+            GenericGitPublicationAdapter::class                                       => ConfigAbstractFactory::class,
+            BitbucketPublicationAdapter::class                                        => ConfigAbstractFactory::class,
+            CodebergPublicationAdapter::class                                         => ConfigAbstractFactory::class,
+            SourcePublicationSynchronizerRegistryFactory::FORGEJO_SELF_HOSTED_ADAPTER => static fn (ContainerInterface $container): CodebergPublicationAdapter => new CodebergPublicationAdapter(
+                $container->get(CodebergComposerMetadataFetcherInterface::class),
+                $container->get(CodebergPackageReadmeExtractorInterface::class),
+                $container->get(PackageReadmeSyncService::class),
+                'forgejo_self_hosted',
+            ),
 
             // --- Fetchers ---
-            HttpGithubComposerMetadataFetcher::class             => ConfigAbstractFactory::class,
-            HttpGitlabComposerMetadataFetcher::class             => ConfigAbstractFactory::class,
-            HttpGitlabSelfHostedComposerMetadataFetcher::class   => ConfigAbstractFactory::class,
-            HttpGenericGitComposerMetadataFetcher::class         => ConfigAbstractFactory::class,
-            HttpBitbucketComposerMetadataFetcher::class          => ConfigAbstractFactory::class,
-            HttpCodebergComposerMetadataFetcher::class           => ConfigAbstractFactory::class,
-            GitRemoteReferenceReader::class                      => ConfigAbstractFactory::class,
+            HttpGithubComposerMetadataFetcher::class                                  => ConfigAbstractFactory::class,
+            HttpGitlabComposerMetadataFetcher::class                                  => ConfigAbstractFactory::class,
+            HttpGitlabSelfHostedComposerMetadataFetcher::class                        => ConfigAbstractFactory::class,
+            HttpGenericGitComposerMetadataFetcher::class                              => ConfigAbstractFactory::class,
+            HttpBitbucketComposerMetadataFetcher::class                               => ConfigAbstractFactory::class,
+            HttpCodebergComposerMetadataFetcher::class                                => ConfigAbstractFactory::class,
+            GitRemoteReferenceReader::class                                           => ConfigAbstractFactory::class,
 
             // --- Readme extractors ---
-            GithubPackageReadmeExtractor::class                  => ConfigAbstractFactory::class,
-            ReadmeExtractorTemplate::class                       => ConfigAbstractFactory::class,
-            GitlabPackageReadmeExtractor::class                  => ConfigAbstractFactory::class,
-            GitlabSelfHostedPackageReadmeExtractor::class        => ConfigAbstractFactory::class,
-            GenericGitPackageReadmeExtractor::class              => ConfigAbstractFactory::class,
-            BitbucketPackageReadmeExtractor::class               => ConfigAbstractFactory::class,
-            CodebergPackageReadmeExtractor::class                => ConfigAbstractFactory::class,
+            GithubPackageReadmeExtractor::class                                       => ConfigAbstractFactory::class,
+            ReadmeExtractorTemplate::class                                            => ConfigAbstractFactory::class,
+            GitlabPackageReadmeExtractor::class                                       => ConfigAbstractFactory::class,
+            GitlabSelfHostedPackageReadmeExtractor::class                             => ConfigAbstractFactory::class,
+            GenericGitPackageReadmeExtractor::class                                   => ConfigAbstractFactory::class,
+            BitbucketPackageReadmeExtractor::class                                    => ConfigAbstractFactory::class,
+            CodebergPackageReadmeExtractor::class                                     => ConfigAbstractFactory::class,
 
             // --- Handlers ---
-            SourceConnectHandler::class                          => ConfigAbstractFactory::class,
+            SourceConnectHandler::class                                               => ConfigAbstractFactory::class,
         ],
     ],
     ConfigAbstractFactory::class => [

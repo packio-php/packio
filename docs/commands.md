@@ -135,7 +135,7 @@ Options:
 
 | Option                       | Required | Description                                                                           |
 | ---------------------------- | -------: | ------------------------------------------------------------------------------------- |
-| `--provider`, `-p`           |       no | Limit maintenance to one provider, for example `github` or `gitlab_self_hosted`.      |
+| `--provider`, `-p`           |       no | Limit maintenance to one provider, for example `github`, `gitlab_self_hosted` or `forgejo_self_hosted`. |
 | `--provider-instance`        |       no | Limit maintenance to a source provider instance id.                                   |
 | `--organization`, `-o`       |       no | Limit maintenance to an organization id or slug.                                      |
 | `--limit`, `-l`              |       no | Maximum Source OAuth accounts to inspect.                                             |

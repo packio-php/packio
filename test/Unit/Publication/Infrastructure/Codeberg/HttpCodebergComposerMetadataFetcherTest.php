@@ -29,6 +29,7 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\RequestInterface;
 use ReflectionMethod;
 use RuntimeException;
+use Throwable;
 
 use function array_map;
 use function base64_encode;
@@ -58,6 +59,52 @@ final class HttpCodebergComposerMetadataFetcherTest extends TestCase
         self::assertSame('tag', $codebergPackageMetadata->refType);
         self::assertSame('main', $codebergPackageMetadata->defaultBranch);
         self::assertSame('v1.0.0', $codebergPackageMetadata->refName);
+    }
+
+    #[Test]
+    public function fetchReferenceUsesInstanceBaseUrlAndStoresItInMetadata(): void
+    {
+        $runner = $this->createStub(GitCommandRunnerInterface::class);
+        $client = $this->createMock(ClientInterface::class);
+        $client->expects(self::once())->method('request')->with('GET', 'https://example.com/git/api/v1/repos/team/repo/contents/composer.json?ref=v1.0.0', self::anything())->willReturn(new Response(200, [], json_encode([
+            'content' => base64_encode('{"name":"team/repo"}'),
+        ], JSON_THROW_ON_ERROR)));
+        $fetcher = new HttpCodebergComposerMetadataFetcher(new UpstreamHttpClient($client), new BrandingConfig([]), new StoredSecretResolver(new SecretEncryptorStub()), new GitRemoteReferenceReader($runner, OutboundPolicyFixture::git()));
+
+        $metadata = $fetcher->fetchReference('team', 'repo', new GitReference('v1.0.0', str_repeat('b', 40), GitReference::TYPE_TAG), 'main', new CodebergAccessCredentials(null, 'https://example.com/git/'));
+
+        self::assertSame('https://example.com/git', $metadata->baseUrl);
+    }
+
+    #[Test]
+    public function snapshotListsRemoteUnderInstanceBaseUrlPath(): void
+    {
+        $runner = new class implements GitCommandRunnerInterface {
+            /** @var list<string> */
+            public array $commands = [];
+
+            public function run(string $command, array $environment = []): GitCommandResult
+            {
+                unset($environment);
+                $this->commands[] = $command;
+
+                return new GitCommandResult('', '', 0);
+            }
+        };
+        $client = $this->createStub(ClientInterface::class);
+        $client->method('request')->willReturn(new Response(200, [], json_encode([
+            'default_branch' => 'main',
+        ], JSON_THROW_ON_ERROR)));
+        $fetcher = new HttpCodebergComposerMetadataFetcher(new UpstreamHttpClient($client), new BrandingConfig([]), new StoredSecretResolver(new SecretEncryptorStub()), new GitRemoteReferenceReader($runner, OutboundPolicyFixture::git()));
+
+        try {
+            $fetcher->snapshot('team', 'repo', new CodebergAccessCredentials(null, 'https://example.com/git'));
+        } catch (Throwable) {
+            // Only the ls-remote command line matters here.
+        }
+
+        self::assertNotSame([], $runner->commands);
+        self::assertStringContainsString('https://example.com/git/team/repo.git', $runner->commands[0]);
     }
 
     #[Test]

@@ -177,6 +177,47 @@ final class SourceProviderInstanceCleanupRepositoryTest extends IntegrationTestC
     }
 
     #[Test]
+    public function forgejoInstanceWithSourceAndInactiveAuthorizationIsReportedAsDependency(): void
+    {
+        $organizationId = Uuid::uuid7()->toString();
+        $instance       = $this->instance($organizationId, 'https://forgejo-dependency.example.test', SourceProviderInstance::PROVIDER_FORGEJO);
+        $this->instances()->save($instance);
+        $instanceId    = $instance->getIdentifier()->toString();
+        $authorization = $this->authorization($organizationId, $instanceId, SourceProviderInstance::PROVIDER_FORGEJO);
+        $this->authorizations()->save($authorization);
+
+        $source = Source::register($organizationId, SourceProviderInstance::PROVIDER_FORGEJO, 'https://forgejo-dependency.example.test/group/project', 'Forgejo source', 'main');
+        $source->assignProviderInstance($instanceId);
+        $source->setIdentifier(Uuid::uuid7());
+        $this->sources()->save($source);
+
+        $dependencies = $this->service()->dependencies($organizationId, $instanceId);
+
+        self::assertCount(1, $dependencies->sources);
+        self::assertCount(1, $dependencies->authorizations);
+    }
+
+    #[Test]
+    public function gitlabAndForgejoInstancesMayShareBaseUrlInOneOrganization(): void
+    {
+        $organizationId = Uuid::uuid7()->toString();
+        $gitlab         = $this->instance($organizationId, 'https://shared.example.test');
+        $forgejo        = $this->instance($organizationId, 'https://shared.example.test', SourceProviderInstance::PROVIDER_FORGEJO);
+
+        $this->instances()->save($gitlab);
+        $this->instances()->save($forgejo);
+
+        self::assertSame(
+            $gitlab->getIdentifier()->toString(),
+            $this->instances()->findByOrganizationProviderAndBaseUrl($organizationId, SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED, 'https://shared.example.test')?->getIdentifier()->toString(),
+        );
+        self::assertSame(
+            $forgejo->getIdentifier()->toString(),
+            $this->instances()->findByOrganizationProviderAndBaseUrl($organizationId, SourceProviderInstance::PROVIDER_FORGEJO, 'https://shared.example.test')?->getIdentifier()->toString(),
+        );
+    }
+
+    #[Test]
     public function dependencySummaryDeduplicatesASourceLinkedThroughBothInstanceAndAuthorization(): void
     {
         $organizationId = Uuid::uuid7()->toString();
@@ -493,11 +534,14 @@ final class SourceProviderInstanceCleanupRepositoryTest extends IntegrationTestC
         );
     }
 
-    private function instance(string $organizationId, string $baseUrl): SourceProviderInstance
-    {
+    private function instance(
+        string $organizationId,
+        string $baseUrl,
+        string $providerType = SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED
+    ): SourceProviderInstance {
         $sourceProviderInstance = SourceProviderInstance::create(
             organizationId: $organizationId,
-            providerType: SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED,
+            providerType: $providerType,
             label: 'Company GitLab',
             baseUrl: $baseUrl,
             clientId: 'client-id',
@@ -509,11 +553,14 @@ final class SourceProviderInstanceCleanupRepositoryTest extends IntegrationTestC
         return $sourceProviderInstance;
     }
 
-    private function authorization(string $organizationId, string $instanceId): ProviderAuthorization
-    {
+    private function authorization(
+        string $organizationId,
+        string $instanceId,
+        string $providerType = SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED
+    ): ProviderAuthorization {
         $providerAuthorization = ProviderAuthorization::authorize(
             $organizationId,
-            SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED,
+            $providerType,
             'oauth',
             [],
             'Former administrator',

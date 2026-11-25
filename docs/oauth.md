@@ -33,7 +33,7 @@ This avoids several bad states:
 | `UserOAuthAccount` | Identity | External OAuth identity linked to a Packio user for login/profile purposes |
 | `SourceOAuthAccount` | Source | Provider API credentials granted by a logged-in user for source operations |
 | `ProviderAuthorization` | Source | Organization-scoped provider authorization used by sources, resource loading and webhooks |
-| `SourceProviderInstance` | Source | Organization-owned self-hosted provider configuration, for example GitLab self-hosted |
+| `SourceProviderInstance` | Source | Organization-owned self-hosted provider configuration, for example GitLab self-hosted or Forgejo self-hosted |
 
 ## OAuth login flow
 
@@ -232,8 +232,8 @@ This lets the same Packio user connect the same provider identity globally and f
 
 ### Deleting a self-hosted provider instance
 
-An inactive `ProviderAuthorization` still belongs to its GitLab self-hosted
-instance and remains a deletion dependency. Organization Settings lists the
+An inactive `ProviderAuthorization` still belongs to its self-hosted
+(GitLab or Forgejo) instance and remains a deletion dependency. Organization Settings lists the
 sources, active authorizations, and inactive authorizations before attempting
 to delete an instance. It exposes only safe summary data and never OAuth
 tokens, client secrets, or authorization configuration.
@@ -366,18 +366,20 @@ Each provider also has source config:
 | `forSourceProvider()` | Availability for a source provider, or `null` |
 | `supportsAuthLogin()` | Provider can be used for login |
 | `supportsSourceConnect()` | Source provider has an enabled OAuth connection flow |
-| `gitLabSelfHostedSourceConnectEnabled()` | GitLab self-hosted source OAuth is switched on |
-| `gitLabSelfHostedSourceInstanceAvailable()` | The given self-hosted instance state allows source OAuth |
+| `selfHostedSourceConnectEnabled(string $provider)` | Self-hosted source OAuth is switched on for the given provider (`gitlab_self_hosted` or `forgejo_self_hosted`) |
+| `selfHostedSourceInstanceAvailable(...)` | The given self-hosted instance state allows source OAuth |
 
 Runtime availability also requires credentials. For login OAuth, `client_id` and
 `client_secret` must be configured. For source OAuth, `source.client_id` and
 `source.client_secret` must be configured. Source OAuth does not depend on login
 OAuth being enabled.
 
-GitLab self-hosted source OAuth is controlled by the runtime setting
-`oauth.gitlab_self_hosted.source.enabled`. It falls back to the config key
-`oauth.gitlab.self_hosted.source.enabled`
-(`OAUTH_GITLAB_SELF_HOSTED_SOURCE_ENABLED`), and additionally requires an active
+Self-hosted source OAuth is controlled per provider by the runtime setting
+`oauth.gitlab_self_hosted.source.enabled` or
+`oauth.forgejo_self_hosted.source.enabled`. They fall back to the config keys
+`oauth.gitlab.self_hosted.source.enabled` (`OAUTH_GITLAB_SELF_HOSTED_SOURCE_ENABLED`)
+and `oauth.forgejo.self_hosted.source.enabled`
+(`OAUTH_FORGEJO_SELF_HOSTED_SOURCE_ENABLED`). Source OAuth also requires an active
 organization provider instance with OAuth-capable auth mode and configured
 instance credentials.
 
@@ -394,6 +396,7 @@ composer clear-config-cache
 | GitHub | supported | supported | Source scopes default to repository and organization access |
 | GitLab | supported | supported | Supports base URL overrides |
 | GitLab self-hosted | not a normal login provider | supported through `SourceProviderInstance` | Uses organization-owned provider instance OAuth config |
+| Forgejo self-hosted | not a normal login provider | supported through `SourceProviderInstance` | Callback `/auth/oauth/forgejo_self_hosted/source-callback`, PKCE S256, no scopes requested, instance base URL may contain a path (GitLab self-hosted accepts the origin only) |
 | Bitbucket | supported | supported | Source scopes default to repository and webhook access |
 | Codeberg | supported | supported | Uses PKCE in current handlers |
 

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Application\Service;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Shared\Domain\Organization\ActorContext;
@@ -67,6 +68,7 @@ final class SourceJobSchedulerTest extends TestCase
             $this->inertSourceAuthorizationInvalidationService(),
             $this->inertWebhookAutoRegistrationService(),
             new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            new SourceProviderMetadataCatalog(),
         );
 
         $this->sourceJobScheduler = new SourceJobScheduler(

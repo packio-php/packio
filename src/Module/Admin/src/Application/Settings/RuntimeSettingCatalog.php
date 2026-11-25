@@ -179,6 +179,12 @@ final readonly class RuntimeSettingCatalog
                 'oauth.gitlab_self_hosted.source.enabled',
                 'oauth.gitlab.self_hosted.source.enabled',
             ),
+            $this->sourceOAuthDefinition(
+                'forgejo_self_hosted',
+                'Forgejo Self-Hosted',
+                'oauth.forgejo_self_hosted.source.enabled',
+                'oauth.forgejo.self_hosted.source.enabled',
+            ),
         ];
     }
 

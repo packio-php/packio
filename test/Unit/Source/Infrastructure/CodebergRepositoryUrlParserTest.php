@@ -34,6 +34,46 @@ final class CodebergRepositoryUrlParserTest extends TestCase
         ];
     }
 
+    #[DataProvider('instanceUrls')]
+    #[Test]
+    public function parseAcceptsInstanceUrlsWithPath(string $url): void
+    {
+        $parsed = new CodebergRepositoryUrlParser()->parse($url, 'https://example.com/git');
+
+        self::assertSame('owner', $parsed['owner']);
+        self::assertSame('repo', $parsed['repository']);
+        self::assertSame('https://example.com/git/owner/repo', $parsed['normalized_url']);
+        self::assertSame('https://example.com/git', $parsed['base_url']);
+    }
+
+    /** @return iterable<string, array{string}> */
+    public static function instanceUrls(): iterable
+    {
+        return [
+            'https'            => ['https://example.com/git/owner/repo'],
+            'https git suffix' => ['https://example.com/git/owner/repo.git'],
+        ];
+    }
+
+    #[Test]
+    public function parseAcceptsSshFormOnlyForBaseUrlWithoutPath(): void
+    {
+        $codebergRepositoryUrlParser = new CodebergRepositoryUrlParser();
+
+        self::assertSame('https://example.com/owner/repo', $codebergRepositoryUrlParser->parse('git@example.com:owner/repo.git', 'https://example.com/')['normalized_url']);
+
+        $this->expectException(InvalidArgumentException::class);
+        $codebergRepositoryUrlParser->parse('git@example.com:owner/repo', 'https://example.com/git');
+    }
+
+    #[Test]
+    public function parseRejectsForeignHostForInstance(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        new CodebergRepositoryUrlParser()->parse('https://codeberg.org/owner/repo', 'https://example.com/git');
+    }
+
     #[Test]
     public function parseRejectsOtherHosts(): void
     {

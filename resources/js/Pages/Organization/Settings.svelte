@@ -29,6 +29,7 @@
     old?: { name?: string; anonymous_access?: string };
     members_count?: number;
     source_provider_instances_enabled?: boolean;
+    self_hosted_source_providers?: { key: string; label: string }[];
   }
 
   let {
@@ -40,15 +41,13 @@
     old = {},
     members_count = 0,
     source_provider_instances_enabled = false,
+    self_hosted_source_providers = [],
   }: Props = $props();
 
   let organizationDeleteFormElement: HTMLFormElement | null = $state(null);
   let organizationDeleteConfirmOpen = $state(false);
   let organizationDeleting = $state(false);
   let resolvedBranding = $derived(mergeBranding(branding ?? {}));
-  let gitlabSelfHostedRedirectUri = $derived(
-    `${resolvedBranding.appBaseUrl.replace(/\/+$/, "")}/auth/oauth/gitlab_self_hosted/source-callback`,
-  );
   let organizationName = $derived(old?.name ?? settings?.name ?? "");
   let anonymousAccessChecked = $derived(
     (old?.anonymous_access ?? (settings?.anonymous_access ? "1" : "")) === "1",
@@ -249,7 +248,8 @@
     {#if source_provider_instances_enabled}
       <SourceProviderInstancesSection
         organizationSlug={organization?.slug ?? ""}
-        redirectUri={gitlabSelfHostedRedirectUri}
+        appBaseUrl={resolvedBranding.appBaseUrl}
+        providers={self_hosted_source_providers}
       />
     {/if}
   </section>

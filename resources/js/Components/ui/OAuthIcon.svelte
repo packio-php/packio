@@ -1,10 +1,17 @@
 <script lang="ts">
   import { providerIconKey } from "@/lib/providerPresentation";
-  import { siBitbucket, siCodeberg, siGithub, siGitlab } from "simple-icons";
+  import {
+    siBitbucket,
+    siCodeberg,
+    siForgejo,
+    siGithub,
+    siGitlab,
+  } from "simple-icons";
 
   const providerIcons = {
     bitbucket: siBitbucket,
     codeberg: siCodeberg,
+    forgejo: siForgejo,
     github: siGithub,
     gitlab: siGitlab,
   };

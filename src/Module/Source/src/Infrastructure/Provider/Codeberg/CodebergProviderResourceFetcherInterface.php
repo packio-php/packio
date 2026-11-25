@@ -11,5 +11,5 @@ interface CodebergProviderResourceFetcherInterface
     /**
      * @return list<ProviderResourceData>
      */
-    public function fetchResources(?string $accessToken = null): array;
+    public function fetchResources(?string $accessToken = null, string $baseUrl = 'https://codeberg.org', string $type = 'codeberg'): array;
 }

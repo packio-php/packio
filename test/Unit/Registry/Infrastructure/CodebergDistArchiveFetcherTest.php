@@ -55,6 +55,20 @@ final class CodebergDistArchiveFetcherTest extends TestCase
     }
 
     #[Test]
+    public function itFetchesArchiveFromInstanceBaseUrl(): void
+    {
+        $history                    = [];
+        $codebergDistArchiveFetcher = $this->fetcher([[
+            'status' => 200,
+            'body'   => 'zip-content',
+        ]], $history);
+
+        $codebergDistArchiveFetcher->fetchArchive('vendor', 'package', 'v1.0.0', 'token', 'https://example.com/git');
+
+        self::assertSame('https://example.com/git/api/v1/repos/vendor/package/archive/v1.0.0.zip', (string) $this->request($history, 0)->getUri());
+    }
+
+    #[Test]
     public function itRetriesWithTokenAuthorizationForManualTokens(): void
     {
         $history                    = [];

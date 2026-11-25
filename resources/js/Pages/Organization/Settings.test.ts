@@ -1,4 +1,10 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api";
 import { router } from "@/test/inertia";
@@ -134,7 +140,7 @@ describe("Organization settings page", () => {
     });
 
     expect(apiClient.get).toHaveBeenCalledWith(
-      "/organization/acme/source-provider-instances?provider_type=gitlab_self_hosted",
+      "/organization/acme/source-provider-instances",
     );
     expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
 
@@ -191,6 +197,301 @@ describe("Organization settings page", () => {
         "/organization/acme/source-provider-instances/instance-1",
       );
     });
+  });
+
+  it("lets the owner pick the instance type and uses its callback", async () => {
+    const forgejoInstance: SourceProviderInstancePayload = {
+      ...gitlabInstance,
+      id: "instance-f",
+      provider_type: "forgejo_self_hosted",
+      label: "Company Forgejo",
+      base_url: "https://forgejo.example.com",
+    };
+    const get = vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [gitlabInstance, forgejoInstance] },
+    });
+    const post = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instance: { ...forgejoInstance, id: "instance-g" } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "gitlab_self_hosted", label: "GitLab Self-Hosted" },
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    expect(await screen.findByText("Company GitLab")).toBeInTheDocument();
+    expect(screen.getByText("Company Forgejo")).toBeInTheDocument();
+    const typeSelect = screen.getByLabelText(
+      "Instance type",
+    ) as HTMLSelectElement;
+    expect(typeSelect.value).toBe("");
+    expect(
+      screen.getByRole("option", { name: "Select instance type" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Label")).not.toBeInTheDocument();
+    expect(screen.queryByText("OAuth redirect URI")).not.toBeInTheDocument();
+
+    await fireEvent.change(typeSelect, {
+      target: { value: "forgejo_self_hosted" },
+    });
+
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(screen.getByText("Company GitLab")).toBeInTheDocument();
+    expect(screen.getByText("Company Forgejo")).toBeInTheDocument();
+    const instanceHeader = screen.getByText("Company Forgejo").parentElement!;
+    expect(
+      within(instanceHeader).getByText("Forgejo Self-Hosted"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "https://registry.example.com/auth/oauth/forgejo_self_hosted/source-callback",
+      ),
+    ).toBeInTheDocument();
+
+    await fireEvent.input(screen.getByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "https://forgejo.example.com" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    await waitFor(() => {
+      expect(post).toHaveBeenCalledWith(
+        "/organization/acme/source-provider-instances",
+        expect.objectContaining({ providerType: "forgejo_self_hosted" }),
+      );
+    });
+    await waitFor(() => expect(typeSelect.value).toBe(""));
+    expect(screen.queryByLabelText("Label")).not.toBeInTheDocument();
+  });
+
+  it("shows the base URL validation error at the field", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+    vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "Invalid source provider instance data.",
+      data: { messages: { baseUrl: ["Base URL must start with https://."] } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await fireEvent.input(await screen.findByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "http://forgejo.example.com" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    expect(
+      await screen.findByText("Base URL must start with https://."),
+    ).toBeInTheDocument();
+  });
+
+  it("hides OAuth fields in token mode and sends no OAuth values", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+    const post = vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: true,
+      status: 201,
+      data: { instance: gitlabInstance },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await fireEvent.input(await screen.findByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "https://forgejo.example.com" },
+    });
+    await fireEvent.input(screen.getByLabelText("OAuth client ID"), {
+      target: { value: "stale-id" },
+    });
+    await fireEvent.change(screen.getByLabelText("Authorization mode"), {
+      target: { value: "token" },
+    });
+
+    expect(screen.queryByLabelText("OAuth client ID")).not.toBeInTheDocument();
+    expect(
+      screen.queryByLabelText("OAuth client secret"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("OAuth redirect URI")).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    await waitFor(() =>
+      expect(post).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          authMode: "token",
+          clientId: "",
+          clientSecret: "",
+        }),
+      ),
+    );
+  });
+
+  it("keeps the stored client ID when saving a token-mode instance", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [{ ...gitlabInstance, auth_mode: "token" }] },
+    });
+    const patch = vi.spyOn(apiClient, "patch").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instance: { ...gitlabInstance, auth_mode: "token" } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await screen.findByText("Company GitLab");
+    await fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Update instance" }),
+    );
+
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          authMode: "token",
+          clientId: "client-id",
+          clientSecret: "",
+        }),
+      ),
+    );
+  });
+
+  it("clears the base URL error when editing is cancelled", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [gitlabInstance] },
+    });
+    vi.spyOn(apiClient, "patch").mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "Invalid source provider instance data.",
+      data: { messages: { baseUrl: ["Base URL must start with https://."] } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await screen.findByText("Company GitLab");
+    await fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "http://forgejo.example.com" },
+    });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Update instance" }),
+    );
+
+    expect(
+      await screen.findByText("Base URL must start with https://."),
+    ).toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cancel edit" }));
+
+    expect(
+      screen.queryByText("Base URL must start with https://."),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows no type picker when only Forgejo is enabled", async () => {
+    const get = vi.spyOn(apiClient, "get").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await waitFor(() => {
+      expect(get).toHaveBeenCalledWith(
+        "/organization/acme/source-provider-instances",
+      );
+    });
+    expect(
+      screen.getByText(
+        "https://registry.example.com/auth/oauth/forgejo_self_hosted/source-callback",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByLabelText("Instance type")).toBeNull();
   });
 
   it("deletes inactive authorizations and the instance when they are the only dependencies", async () => {

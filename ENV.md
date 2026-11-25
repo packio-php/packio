@@ -320,7 +320,8 @@ instance with the redirect URI `{APP_URL}/auth/oauth/forgejo_self_hosted/source-
 Packio uses PKCE (S256) and requests no scopes, because Forgejo OAuth2 scopes
 are not fine-grained permission controls. Webhook events come from
 `SOURCE_WEBHOOKS_CODEBERG_EVENTS`. Release dates are taken from the sync time,
-because Packio does not run Composer against the instance.
+because Packio does not run Composer against the instance. Tested with
+Forgejo 15.0.11.
 
 | Variable | Default | Description |
 |---|---|---|

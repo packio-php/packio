@@ -373,6 +373,49 @@ describe("Organization settings page", () => {
     );
   });
 
+  it("keeps the stored client ID when saving a token-mode instance", async () => {
+    Element.prototype.scrollIntoView = vi.fn();
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [{ ...gitlabInstance, auth_mode: "token" }] },
+    });
+    const patch = vi.spyOn(apiClient, "patch").mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      data: { instance: { ...gitlabInstance, auth_mode: "token" } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await screen.findByText("Company GitLab");
+    await fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Update instance" }),
+    );
+
+    await waitFor(() =>
+      expect(patch).toHaveBeenCalledWith(
+        expect.any(String),
+        expect.objectContaining({
+          authMode: "token",
+          clientId: "client-id",
+          clientSecret: "",
+        }),
+      ),
+    );
+  });
+
   it("clears the base URL error when editing is cancelled", async () => {
     Element.prototype.scrollIntoView = vi.fn();
     vi.spyOn(apiClient, "get").mockResolvedValue({

@@ -161,7 +161,11 @@
       label: providerInstanceForm.label,
       baseUrl: providerInstanceForm.baseUrl,
       // Hidden OAuth fields must not send stale values in token mode.
-      clientId: usesOAuth ? providerInstanceForm.clientId : "",
+      // On edit the stored client ID is kept; only a new token instance sends none.
+      clientId:
+        usesOAuth || editingProviderInstanceId
+          ? providerInstanceForm.clientId
+          : "",
       clientSecret: usesOAuth ? providerInstanceForm.clientSecret : "",
       authMode: providerInstanceForm.authMode,
     };

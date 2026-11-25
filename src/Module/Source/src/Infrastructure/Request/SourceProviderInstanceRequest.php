@@ -16,7 +16,7 @@ final readonly class SourceProviderInstanceRequest
         #[Required]
         public string $label = '',
         #[Required]
-        #[Regex('#^https://\S+$#')]
+        #[Regex('#^https://\S+$#', message: 'Base URL must start with https://.')]
         public string $baseUrl = '',
         public string $clientId = '',
         public string $clientSecret = '',

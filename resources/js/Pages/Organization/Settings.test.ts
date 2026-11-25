@@ -272,6 +272,44 @@ describe("Organization settings page", () => {
     });
   });
 
+  it("shows the base URL validation error at the field", async () => {
+    vi.spyOn(apiClient, "get").mockResolvedValue({
+      ok: true,
+      status: 200,
+      data: { instances: [] },
+    });
+    vi.spyOn(apiClient, "post").mockResolvedValueOnce({
+      ok: false,
+      status: 422,
+      error: "Invalid source provider instance data.",
+      data: { messages: { baseUrl: ["Base URL must start with https://."] } },
+    });
+
+    render(Settings, {
+      props: {
+        organization,
+        settings,
+        branding: { appBaseUrl: "https://registry.example.com" },
+        source_provider_instances_enabled: true,
+        self_hosted_source_providers: [
+          { key: "forgejo_self_hosted", label: "Forgejo Self-Hosted" },
+        ],
+      },
+    });
+
+    await fireEvent.input(await screen.findByLabelText("Label"), {
+      target: { value: "Company Forgejo" },
+    });
+    await fireEvent.input(screen.getByLabelText("Base URL"), {
+      target: { value: "http://forgejo.example.com" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Add instance" }));
+
+    expect(
+      await screen.findByText("Base URL must start with https://."),
+    ).toBeInTheDocument();
+  });
+
   it("shows no type picker when only Forgejo is enabled", async () => {
     const get = vi.spyOn(apiClient, "get").mockResolvedValueOnce({
       ok: true,

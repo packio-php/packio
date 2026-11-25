@@ -326,11 +326,13 @@ final class SourceProviderInstanceHandlerTest extends TestCase
             label: 'Company Forgejo',
             baseUrl: 'https://forgejo.company.test',
         ))->isValid());
-        self::assertFalse($validator->validate(new SourceProviderInstanceRequest(
+        $httpResult = $validator->validate(new SourceProviderInstanceRequest(
             providerType: SourceProviderInstance::PROVIDER_FORGEJO,
             label: 'Company Forgejo',
             baseUrl: 'http://forgejo.company.test',
-        ))->isValid());
+        ));
+        self::assertFalse($httpResult->isValid());
+        self::assertSame(['Base URL must start with https://.'], $httpResult->getErrorMessagesIndexedByPath()['baseUrl'] ?? null);
         self::assertFalse($validator->validate(new SourceProviderInstanceRequest(
             providerType: 'codeberg',
             label: 'Codeberg',

@@ -9,10 +9,13 @@
   import Input from "@/Components/ui/Input.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import FieldErrors from "@/Components/forms/FieldErrors.svelte";
+  import { hasFieldErrors } from "@/lib/validationErrors";
   import { toast } from "@/lib/toast";
   import type {
     SourceProviderInstanceDependenciesPayload,
     SourceProviderInstancePayload,
+    ValidationErrors,
   } from "@/types/pages";
 
   interface Props {
@@ -67,6 +70,7 @@
   let providerInstanceDependencies =
     $state<SourceProviderInstanceDependenciesPayload | null>(null);
   let providerInstanceFormElement: HTMLFormElement | null = $state(null);
+  let providerInstanceErrors: ValidationErrors = $state({});
   let editingProviderInstanceId = $state("");
   let providerInstanceForm = $state({
     label: "",
@@ -145,6 +149,7 @@
     }
 
     providerInstanceSaving = true;
+    providerInstanceErrors = {};
     const payload = {
       providerType,
       label: providerInstanceForm.label,
@@ -176,6 +181,9 @@
       return;
     }
 
+    const messages = (result.data as { messages?: ValidationErrors } | null)
+      ?.messages;
+    providerInstanceErrors = messages ?? {};
     toast.error(result.error);
   }
 
@@ -377,8 +385,10 @@
             type="url"
             bind:value={providerInstanceForm.baseUrl}
             placeholder={`https://${providerType === "forgejo_self_hosted" ? "forgejo" : "gitlab"}.company.com`}
+            invalid={hasFieldErrors(providerInstanceErrors, "baseUrl")}
             required
           />
+          <FieldErrors errors={providerInstanceErrors} field="baseUrl" />
         </label>
       </div>
 

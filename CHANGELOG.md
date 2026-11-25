@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- Twig is updated to 3.31.1, which fixes several sandbox bypass advisories. Packio does not use the Twig sandbox.
+
 ## [0.6.0] - 2026-11-23
 
 ### Added

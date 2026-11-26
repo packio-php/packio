@@ -33,3 +33,25 @@ export function formatDuration(seconds: number | null): string {
   const mins = Math.floor((seconds % 3600) / 60);
   return `${hours}h ${mins}m`;
 }
+
+export function addCalendarMonths(date: Date, months: number): Date {
+  const target = new Date(
+    date.getFullYear(),
+    date.getMonth() + months,
+    1,
+    date.getHours(),
+    date.getMinutes(),
+  );
+  const lastDay = new Date(
+    target.getFullYear(),
+    target.getMonth() + 1,
+    0,
+  ).getDate();
+  target.setDate(Math.min(date.getDate(), lastDay));
+
+  return target;
+}
+
+export function browserTimeZone(): string {
+  return Intl.DateTimeFormat().resolvedOptions().timeZone;
+}

@@ -79,6 +79,13 @@ final class ChangePasswordFeatureTest extends FeatureTestCase
             'new_password'              => self::NEW_PASSWORD,
             'new_password_confirmation' => self::NEW_PASSWORD,
         ])->assertRedirect('/profile');
+
+        $page = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json();
+        self::assertSame('Password changed', $page['flash']['success'] ?? null);
+
         // The session is re-issued with a rotated CSRF token; the browser picks it up from the /profile page.
         $this->loadCsrfToken('/profile');
 

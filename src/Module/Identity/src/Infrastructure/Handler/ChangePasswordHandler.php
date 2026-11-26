@@ -80,7 +80,7 @@ final readonly class ChangePasswordHandler implements RequestHandlerInterface
             return $inertia->render('Profile/Show', $profileData);
         }
 
-        $message = 'changePassword' === $updateMethod ? 'Password updated successfully.' : 'Password set successfully.';
+        $message = 'changePassword' === $updateMethod ? 'Password changed' : 'Password set';
         $this->inertiaNotificationMessenger->flash($request, 'success', $message);
 
         // Re-issue this session with the new fingerprint; other sessions keep the old one and are rejected.

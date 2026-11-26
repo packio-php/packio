@@ -16,7 +16,6 @@ const profile: ProfilePayload = {
   has_password: true,
   roles: ["user"],
   created_at: "2026-01-01T00:00:00Z",
-  updated_at: null,
 };
 
 const revokedToken: ApiAccessTokenPayload = {
@@ -78,7 +77,48 @@ describe("Profile show page", () => {
       },
     });
 
-    expect(screen.getByText("Sign-in history")).toBeInTheDocument();
+    expect(
+      screen.getByRole("heading", { name: "Sign-in history" }),
+    ).toBeInTheDocument();
     expect(screen.getByText("203.0.113.5")).toBeInTheDocument();
+  });
+
+  it("shows the heading and a compact account card", () => {
+    render(ProfileShow, { props: { profile } });
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Profile" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Test User")).toBeInTheDocument();
+    expect(screen.getByText("user@example.test")).toBeInTheDocument();
+    expect(screen.getByText("user")).toBeInTheDocument();
+    expect(screen.getByText(/^Created /)).toBeInTheDocument();
+    expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
+  });
+
+  it("links to the sections in page order and keeps forms collapsed", () => {
+    const { container } = render(ProfileShow, { props: { profile } });
+
+    const hrefs = screen
+      .getAllByRole("link", {
+        name: /^(API tokens|Sign-in methods|Sign-in history)$/,
+      })
+      .map((link) => link.getAttribute("href"));
+    expect(hrefs).toEqual([
+      "#api-tokens",
+      "#sign-in-methods",
+      "#sign-in-history",
+    ]);
+
+    const ids = hrefs.map((href) =>
+      Array.from(container.querySelectorAll("[id]")).findIndex(
+        (el) => `#${el.id}` === href,
+      ),
+    );
+    expect(ids.every((i) => i >= 0)).toBe(true);
+    expect([...ids].sort((a, b) => a - b)).toEqual(ids);
+
+    expect(screen.queryByLabelText("Token name")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();
   });
 });

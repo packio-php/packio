@@ -68,7 +68,6 @@ final class ProfileViewModelFactoryTest extends TestCase
                 'roles'        => ['user', 'admin'],
                 'has_password' => true,
                 'created_at'   => 'created',
-                'updated_at'   => $expectedTimestamp,
             ],
             'oauth_accounts'  => [],
             'api_tokens'      => [[

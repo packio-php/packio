@@ -57,7 +57,6 @@ final readonly class ProfileViewModelFactory
                 'roles'        => $userDto->roles,
                 'has_password' => $userDto->hasPassword,
                 'created_at'   => $userDto->createdAt,
-                'updated_at'   => '' !== $userDto->updatedAt ? $userDto->updatedAt : null,
             ] : null,
             'oauth_accounts'  => $oauthAccounts,
             'api_tokens'      => $apiAccessTokens,

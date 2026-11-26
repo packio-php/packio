@@ -155,30 +155,21 @@ final class ChangePasswordFeatureTest extends FeatureTestCase
     }
 
     #[Test]
-    public function incorrectCurrentPasswordRendersTheSameProfileData(): void
+    public function incorrectCurrentPasswordRedirectsBackToTheProfileWithAFieldError(): void
     {
         $userDto = $this->createPasswordUser();
-        $this->identity()->issueApiAccessTokenForUser($userDto->id, 'Profile contract token', ['read']);
         $this->logIn($userDto);
 
-        $headers = [
+        // A redirect keeps the browser on /profile; a render would leave it on this POST-only URL.
+        $this->wrongPasswordAttempt()->assertRedirect('/profile');
+
+        $page = $this->get('/profile', [
             'Accept'    => 'application/json',
             'X-Inertia' => 'true',
-        ];
-        $before       = $this->get('/profile', $headers)->json()['props'];
-        $testResponse = $this->withCsrf()->post('/profile/password', [
-            'current_password'          => 'WrongPassword3!',
-            'new_password'              => self::NEW_PASSWORD,
-            'new_password_confirmation' => self::NEW_PASSWORD,
-        ], $headers);
-        $testResponse->assertStatus(200);
-        $after = $testResponse->json()['props'];
-
-        self::assertSame('Profile contract token', $after['api_tokens'][0]['name']);
-        foreach (['profile', 'oauth_accounts', 'api_tokens'] as $key) {
-            self::assertSame($before[$key], $after[$key]);
-        }
-        self::assertSame(['Current password is incorrect.'], $after['errors']['current_password']);
+        ])->json();
+        self::assertSame('Profile/Show', $page['component']);
+        self::assertSame(['Current password is incorrect.'], $page['props']['errors']['current_password'] ?? null);
+        self::assertArrayNotHasKey('error', $page['flash'] ?? []);
     }
 
     #[Test]
@@ -188,7 +179,7 @@ final class ChangePasswordFeatureTest extends FeatureTestCase
         $this->logIn($userDto);
 
         for ($i = 0; $i < 5; ++$i) {
-            $this->wrongPasswordAttempt()->assertStatus(200);
+            $this->wrongPasswordAttempt()->assertRedirect('/profile');
         }
 
         $this->wrongPasswordAttempt()->assertRedirect('/profile');
@@ -206,7 +197,12 @@ final class ChangePasswordFeatureTest extends FeatureTestCase
         ]);
         $this->logIn($userB);
 
-        $this->wrongPasswordAttempt()->assertStatus(200);
+        $this->wrongPasswordAttempt()->assertRedirect('/profile');
+        $page = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json();
+        self::assertSame(['Current password is incorrect.'], $page['props']['errors']['current_password'] ?? null);
     }
 
     private function wrongPasswordAttempt(): TestResponse

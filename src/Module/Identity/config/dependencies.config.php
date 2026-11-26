@@ -619,7 +619,7 @@ return [
             IdentityApiFacadeInterface::class,
             IdentityQueryService::class,
             InertiaNotificationMessenger::class,
-            ProfileViewModelFactory::class,
+            ValidationRedirectState::class,
             AuthManagerInterface::class,
         ],
         DisconnectOAuthAccountHandler::class                    => [

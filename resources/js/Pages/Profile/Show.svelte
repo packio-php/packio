@@ -41,7 +41,7 @@
       Profile
     </h2>
 
-    <div class="grid items-start gap-6 md:grid-cols-2">
+    <div class="grid items-start gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] p-6">
         <section aria-label="Account">
           <div class="min-w-0">

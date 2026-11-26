@@ -8,9 +8,9 @@
   import Card from "@/Components/ui/Card.svelte";
   import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import FieldErrors from "@/Components/forms/FieldErrors.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import Input from "@/Components/ui/Input.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
+  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import { addCalendarMonths, browserTimeZone, formatDate } from "@/lib/date";
   import { hasFieldErrors } from "@/lib/validationErrors";
   import type { AppPageProps } from "@/types/app";
@@ -212,6 +212,7 @@
     <SectionHeading
       eyebrow="API"
       title="API tokens"
+      titleTag="h3"
       description="Create personal tokens for REST API automation."
     />
 

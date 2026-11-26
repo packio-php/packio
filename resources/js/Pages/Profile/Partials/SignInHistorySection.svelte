@@ -26,6 +26,7 @@
     <SectionHeading
       eyebrow="Security"
       title="Sign-in history"
+      titleTag="h3"
       description="Your most recent successful sign-ins."
     />
 

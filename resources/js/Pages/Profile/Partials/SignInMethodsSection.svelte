@@ -116,6 +116,7 @@
     <SectionHeading
       eyebrow="Account"
       title="Sign-in methods"
+      titleTag="h3"
       description="Manage how you sign in to your account. Keep at least one sign-in method enabled."
     />
 

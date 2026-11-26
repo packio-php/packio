@@ -81,8 +81,17 @@
 
   async function closeForm(): Promise<void> {
     resetForm();
+    await focusCreateButton();
+  }
+
+  async function focusCreateButton(): Promise<void> {
     await tick();
     document.getElementById("api-token-create")?.focus();
+  }
+
+  async function dismissIssued(token: string): Promise<void> {
+    dismissedToken = token;
+    await focusCreateButton();
   }
 
   function resetForm(): void {
@@ -332,22 +341,24 @@
           {/if}
         </fieldset>
         <FieldErrors {errors} field="scopes" />
-        <div role="alert">
-          <FieldErrors {errors} field="api_token" />
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-          <Button
-            className="w-fit rounded-full px-5"
-            type="submit"
-            variant="primary"
-            disabled={submitting}
-          >
-            Issue API token
-          </Button>
-          <Button type="button" variant="secondary" onclick={closeForm}>
-            Cancel
-          </Button>
+        <!-- One grid item with the actions: the always-present live region adds no gap while empty. -->
+        <div>
+          <div role="alert" class="not-empty:mb-4">
+            <FieldErrors {errors} field="api_token" />
+          </div>
+          <div class="flex flex-wrap gap-3">
+            <Button
+              className="w-fit rounded-full px-5"
+              type="submit"
+              variant="primary"
+              disabled={submitting}
+            >
+              Issue API token
+            </Button>
+            <Button type="button" variant="secondary" onclick={closeForm}>
+              Cancel
+            </Button>
+          </div>
         </div>
       </form>
     {/if}
@@ -356,7 +367,7 @@
       <IssuedApiToken
         name={issued.name}
         token={issued.token}
-        ondone={() => (dismissedToken = issued.token)}
+        ondone={() => dismissIssued(issued.token)}
       />
     {/if}
 

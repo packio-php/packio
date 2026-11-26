@@ -225,6 +225,14 @@ describe("ApiTokensSection", () => {
     }
   });
 
+  it("keeps the empty form-level live region in the tree", async () => {
+    render(ApiTokensSection, { props: { profile } });
+    await openForm();
+
+    const alert = screen.getByRole("alert");
+    expect(alert.matches(":empty")).toBe(true);
+  });
+
   it("shows the issued token, copies it and hides it on Done", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.assign(navigator, { clipboard: { writeText } });
@@ -245,6 +253,9 @@ describe("ApiTokensSection", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Done" }));
     await tick();
     expect(screen.queryByText("packio_secret_value")).not.toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Create API token" }),
+    ).toHaveFocus();
   });
 
   it("reports a clipboard failure", async () => {

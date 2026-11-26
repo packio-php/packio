@@ -87,9 +87,11 @@
   let hasOrganizations = $derived(organizations.length > 0);
   let hasCurrentOrganization = $derived(!!organization?.slug);
   let organizationButtonLabel = $derived(
-    !hasOrganizations
-      ? "Create organization"
-      : organization?.name || "Choose organization",
+    matchesPath("/profile")
+      ? "Personal account"
+      : !hasOrganizations
+        ? "Create organization"
+        : organization?.name || "Choose organization",
   );
   let pageTitle = $derived(title || branding.name || "Application");
   let storageKey = $derived(branding.themeStorageKey || "packio-theme");
@@ -143,9 +145,7 @@
   }
 
   function profilePath(): string {
-    return organization?.slug
-      ? `/profile?organization=${encodeURIComponent(organization.slug)}`
-      : "/profile";
+    return "/profile";
   }
 
   function appHomePath(): string {

@@ -244,4 +244,45 @@ describe("AppShell", () => {
     expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
   });
+
+  it("links to the profile without an organization parameter", async () => {
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    await fireEvent.click(screen.getByRole("button", { name: /Test User/ }));
+    expect(
+      within(screen.getByRole("menu")).getByRole("link", { name: "Profile" }),
+    ).toHaveAttribute("href", "/profile");
+  });
+
+  it("labels the organization switcher Personal account on the profile", async () => {
+    window.history.pushState({}, "", "/profile");
+    setPageUrl("/profile?organization=acme");
+    render(AppShell, { props: { title: "Profile", auth } });
+
+    expect(
+      screen.getByRole("button", { name: /Personal account/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Org Acme/ })).toBeNull();
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: /Personal account/ }),
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "Beta" }));
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/beta",
+      {},
+      { preserveState: false, preserveScroll: true },
+    );
+  });
+
+  it("labels the switcher with the organization name outside the profile", () => {
+    setPageUrl("/organization/acme/packages");
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    expect(
+      screen.getByRole("button", { name: /Org Acme/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Personal account")).toBeNull();
+  });
 });

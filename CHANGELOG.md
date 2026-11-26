@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 
 - Twig is updated to 3.31.1, which fixes several sandbox bypass advisories. Packio does not use the Twig sandbox.
+- Symfony Mailer is updated to 8.1.12, which fixes two STARTTLS man-in-the-middle advisories (CVE-2026-133751, CVE-2026-133755) affecting SMTP delivery.
 
 ### Fixed
 

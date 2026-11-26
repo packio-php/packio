@@ -141,7 +141,7 @@
             </div>
           </div>
 
-          <div class="flex items-center gap-3">
+          <div class="flex flex-wrap items-center gap-3">
             <Badge tone={hasPassword ? "accent" : "muted"}>
               {hasPassword ? "Set" : "Not set"}
             </Badge>
@@ -263,7 +263,7 @@
               </div>
             </div>
 
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
               <Badge tone="accent">Connected</Badge>
               <Button
                 className="rounded-full px-4 py-2 text-sm"

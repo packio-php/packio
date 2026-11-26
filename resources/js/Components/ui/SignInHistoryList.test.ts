@@ -50,4 +50,33 @@ describe("SignInHistoryList", () => {
 
     expect(screen.getByText("No sign-ins recorded yet.")).toBeInTheDocument();
   });
+
+  it("labels the time zone once and keeps full IPv6 and field labels", () => {
+    const ipv6 = "2001:0db8:85a3:0000:0000:8a2e:0370:7334";
+    const { container } = render(SignInHistoryList, {
+      props: {
+        entries: [1, 2].map((n) => ({
+          id: String(n),
+          method: "password",
+          method_label: "Password",
+          occurred_at: "2026-11-22T10:00:00Z",
+          ip: ipv6,
+          user_agent: null,
+        })),
+      },
+    });
+
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(screen.getAllByText(`Local time (${zone})`)).toHaveLength(1);
+    expect(screen.getAllByText(ipv6)).toHaveLength(2);
+    // jsdom ignores CSS: the narrow layout is the same cells with data-label
+    const labels = [...container.querySelectorAll("tbody tr:first-child td")];
+    expect(labels.map((td) => td.getAttribute("data-label"))).toEqual([
+      "Time",
+      "Method",
+      "IP address",
+      "Browser",
+    ]);
+    expect(container.querySelector(".break-all")).not.toBeNull();
+  });
 });

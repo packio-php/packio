@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { router, setPageProps, setPageUrl, page } from "@/test/inertia";
+import { tick } from "svelte";
 import AppShell from "./AppShell.svelte";
 
 const auth = {
@@ -218,6 +219,45 @@ describe("AppShell", () => {
       expect(flash?.parentElement?.style.top).toBe("");
     } finally {
       delete (page as unknown as { flash?: unknown }).flash;
+    }
+  });
+
+  it("offsets anchored sections by the header and the sticky flash bar", async () => {
+    // Report fixed sizes: 60px header, 50px flash bar.
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        if (this.tagName === "HEADER") return 60;
+        return this.classList.contains("sticky") ? 50 : 0;
+      },
+    );
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(target: Element): void {
+          this.callback(
+            [{ target } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+    Object.assign(page, { flash: { success: "Saved" } });
+
+    try {
+      const { container } = render(AppShell, {
+        props: { title: "Packages", auth },
+      });
+      await tick();
+
+      const root = container.querySelector("header")?.parentElement;
+      expect(root?.style.getPropertyValue("--admin-header-h")).toBe("110px");
+    } finally {
+      delete (page as unknown as { flash?: unknown }).flash;
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
     }
   });
 

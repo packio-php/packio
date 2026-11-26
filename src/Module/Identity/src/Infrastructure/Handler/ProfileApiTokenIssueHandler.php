@@ -70,11 +70,11 @@ final readonly class ProfileApiTokenIssueHandler implements RequestHandlerInterf
                 $expiresAt,
             );
         } catch (InvalidArgumentException $exception) {
-            $key = $exception instanceof PublicValidationException && str_contains($exception->getMessage(), 'Expiration')
-                ? 'expires_at'
-                : 'api_token';
+            $isPublic = $exception instanceof PublicValidationException;
+            $key      = $isPublic && str_contains($exception->getMessage(), 'Expiration') ? 'expires_at' : 'api_token';
+            $message  = $isPublic ? $exception->getMessage() : 'Unable to create API token.';
             $this->validationRedirectState->errors($request, [
-                $key => [$exception->getMessage()],
+                $key => [$message],
             ]);
 
             return new RedirectResponse('/profile');

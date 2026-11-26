@@ -128,6 +128,31 @@ final class ProfileApiTokensFeatureTest extends FeatureTestCase
     }
 
     #[Test]
+    public function itReportsAnInvalidExpirationInErrorsWithoutToast(): void
+    {
+        $userDto = $this->createPasswordUser();
+        $this->logIn($userDto);
+
+        $this->withCsrf();
+        $this->post('/profile/api-tokens', [
+            'name'       => 'Bad date',
+            'scopes'     => ['read'],
+            'expires_at' => 'not-a-date',
+        ])
+            ->assertRedirect('/profile')
+        ;
+
+        $page = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json();
+
+        self::assertSame(['Expiration date is invalid.'], $page['props']['errors']['expires_at'] ?? null);
+        self::assertEmpty($page['flash']['toasts'] ?? []);
+        self::assertNull($this->apiTokenOrNull($userDto->id, 'Bad date'));
+    }
+
+    #[Test]
     public function itReportsAnEmptyNameInErrorsWithoutToast(): void
     {
         $userDto = $this->createPasswordUser();

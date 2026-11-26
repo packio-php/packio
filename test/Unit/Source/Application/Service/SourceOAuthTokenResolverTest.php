@@ -615,6 +615,51 @@ final class SourceOAuthTokenResolverTest extends TestCase
     }
 
     #[Test]
+    public function resolveFailsForgejoSelfHostedRefreshWhenResponseOmitsRotatedRefreshToken(): void
+    {
+        $providerAuthorization = $this->createAuthorization(
+            id: 'auth-1',
+            sourceOAuthAccountId: 'soa-1',
+            provider: 'forgejo_self_hosted',
+        );
+        $sourceOAuthAccount = $this->createAccount(
+            provider: 'forgejo_self_hosted',
+            accessToken: 'enc_at',
+            refreshToken: 'enc_rt',
+            tokenExpiresAt: Chronos::parse('-1 hour'),
+        );
+
+        $this->authRepo->expects(self::once())->method('findById')->willReturn($providerAuthorization);
+        $this->oauthAccountRepo->expects(self::once())->method('findById')->willReturn($sourceOAuthAccount);
+        $this->secretEncryptor->expects(self::exactly(2))
+            ->method('isEncrypted')
+            ->willReturnMap([
+                ['enc_at', true],
+                ['enc_rt', true],
+            ])
+        ;
+        $this->secretEncryptor->expects(self::exactly(2))
+            ->method('decrypt')
+            ->willReturnMap([
+                ['enc_at', 'old-at'],
+                ['enc_rt', 'old-rt'],
+            ])
+        ;
+        $this->oauthProvider->expects(self::once())
+            ->method('refreshAccessToken')
+            ->with('forgejo_self_hosted', 'old-rt')
+            ->willReturn(new OAuthTokenData('new-at', null, 7200))
+        ;
+        $this->secretEncryptor->expects(self::never())->method('encrypt');
+        $this->oauthAccountRepo->expects(self::never())->method('save');
+
+        $this->expectException(SourceTokenRefreshFailedException::class);
+        $this->expectExceptionMessage('Forgejo token refresh response did not include a new refresh token.');
+
+        $this->createResolver()->resolveForAuthorization('auth-1');
+    }
+
+    #[Test]
     public function resolveUsesLockedFreshTokenWhenAnotherWorkerAlreadyRefreshedIt(): void
     {
         $sourceOAuthAccount = $this->createAccount(

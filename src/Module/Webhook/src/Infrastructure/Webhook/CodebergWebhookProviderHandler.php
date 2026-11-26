@@ -11,9 +11,11 @@ use function hash_equals;
 use function hash_hmac;
 use function is_array;
 use function json_decode;
+use function preg_match;
 use function rtrim;
 use function sha1;
 use function sprintf;
+use function str_ends_with;
 use function trim;
 
 final readonly class CodebergWebhookProviderHandler implements WebhookProviderHandlerInterface
@@ -33,7 +35,7 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
         }
 
         return new WebhookEnvelope(
-            'codeberg',
+            $this->webhookProviderHandlerConfig->provider,
             $delivery,
             $headers['x-forgejo-event'] ?? $headers['x-gitea-event'] ?? $headers['x-github-event'] ?? '',
             $headers,
@@ -51,7 +53,7 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
         $signature = $webhookEnvelope->headers['x-forgejo-signature'] ?? '';
 
         return '' === $signature || ! hash_equals($expected, $signature)
-            ? 'Invalid Codeberg signature.'
+            ? 'Invalid ' . $this->label() . ' signature.'
             : null;
     }
 
@@ -63,10 +65,10 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
         }
 
         if (! $this->webhookProviderHandlerConfig->supportsEvent($webhookEnvelope->event)) {
-            return WebhookInspectionResult::ignored('Codeberg event ignored.');
+            return WebhookInspectionResult::ignored($this->label() . ' event ignored.');
         }
 
-        $repositoryUrl = $this->resolveRepositoryUrl($decoded);
+        $repositoryUrl = $this->resolveRepositoryUrl($decoded, $sourceData->url);
         if ('' === $repositoryUrl) {
             return WebhookInspectionResult::rejected('Repository URL is missing from webhook payload.');
         }
@@ -78,8 +80,13 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
         return WebhookInspectionResult::processed(sprintf('Sync scheduled for %s.', $repositoryUrl));
     }
 
+    private function label(): string
+    {
+        return 'codeberg' === $this->webhookProviderHandlerConfig->provider ? 'Codeberg' : 'Forgejo';
+    }
+
     /** @param array<string, mixed> $payload */
-    private function resolveRepositoryUrl(array $payload): string
+    private function resolveRepositoryUrl(array $payload, string $sourceUrl): string
     {
         $repository = $payload['repository'] ?? null;
         if (! is_array($repository)) {
@@ -93,9 +100,19 @@ final readonly class CodebergWebhookProviderHandler implements WebhookProviderHa
 
         $fullName = $repository['full_name'] ?? '';
         if ('' !== $fullName) {
-            return sprintf('https://codeberg.org/%s', (string) $fullName);
+            return 'codeberg' === $this->webhookProviderHandlerConfig->provider
+                ? sprintf('https://codeberg.org/%s', (string) $fullName)
+                : $this->instanceRepositoryUrl($sourceUrl, (string) $fullName);
         }
 
         return '';
+    }
+
+    /** Self-hosted fallback: only an exact `owner/repo` that ends the source URL is trusted. */
+    private function instanceRepositoryUrl(string $sourceUrl, string $fullName): string
+    {
+        $sourceUrl = rtrim($sourceUrl, '/');
+
+        return 1 === preg_match('#^[^/]+/[^/]+$#', $fullName) && str_ends_with($sourceUrl, '/' . $fullName) ? $sourceUrl : '';
     }
 }

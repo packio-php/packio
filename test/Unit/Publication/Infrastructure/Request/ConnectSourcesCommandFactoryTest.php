@@ -79,4 +79,16 @@ final class ConnectSourcesCommandFactoryTest extends TestCase
             'provider_instance_id' => 'instance',
         ], $command->authorizationPayload);
     }
+
+    public function testMapsForgejoSelfHostedInstancePayload(): void
+    {
+        $command = new ConnectSourcesCommandFactory()->create(new SourceConnectRequest(provider: 'forgejo_self_hosted', authorizationToken: 'secret', resourceUrl: 'a/b', instanceUrl: ' https://forgejo.example ', providerInstanceId: ' instance '), new ActorContext('org', 'user', 'owner'));
+
+        self::assertSame([
+            'token'                => 'secret',
+            'base_url'             => 'https://forgejo.example',
+            'provider_instance_id' => 'instance',
+        ], $command->authorizationPayload);
+        self::assertSame('instance', $command->providerInstanceId);
+    }
 }

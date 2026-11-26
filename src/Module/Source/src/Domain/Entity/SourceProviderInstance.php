@@ -18,7 +18,7 @@ class SourceProviderInstance implements EntityInterface
     use HasChronosUpdateTrait;
 
     public const PROVIDER_GITLAB_SELF_HOSTED = 'gitlab_self_hosted';
-    public const PROVIDER_FORGEJO            = 'forgejo';
+    public const PROVIDER_FORGEJO            = 'forgejo_self_hosted';
     public const PROVIDER_GITEA              = 'gitea';
 
     public const AUTH_MODE_OAUTH2           = 'oauth2';

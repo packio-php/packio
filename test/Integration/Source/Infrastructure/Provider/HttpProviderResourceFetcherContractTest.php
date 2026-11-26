@@ -353,6 +353,29 @@ final class HttpProviderResourceFetcherContractTest extends TestCase
     }
 
     #[Test]
+    public function codebergFetcherUsesInstanceBaseUrlAndType(): void
+    {
+        $history                             = [];
+        $httpCodebergProviderResourceFetcher = new HttpCodebergProviderResourceFetcher(
+            $this->brandingConfig(),
+            $this->providerApiRequestor([
+                [
+                    'status' => 200,
+                    'body'   => [[
+                        'full_name' => 'owner/repo-one',
+                    ]],
+                ],
+            ], $history),
+        );
+
+        $resources = $httpCodebergProviderResourceFetcher->fetchResources('token', 'https://example.com/git/', 'forgejo_self_hosted');
+
+        self::assertSame('forgejo_self_hosted', $resources[0]->type);
+        self::assertSame('https://example.com/git/owner/repo-one', $resources[0]->url);
+        self::assertSame('https://example.com/git/api/v1/user/repos?page=1&limit=50', (string) $this->request($history[0])->getUri());
+    }
+
+    #[Test]
     public function codebergFetcherRetriesManualTokenAuthorizationOnAuthFailure(): void
     {
         $history                             = [];

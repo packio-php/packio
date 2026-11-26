@@ -23,7 +23,7 @@ final readonly class SourceConnectRequest
      */
     public function __construct(
         #[Required]
-        #[Regex('#^(github|gitlab|gitlab_self_hosted|generic_git|bitbucket|codeberg)$#')]
+        #[Regex('#^(github|gitlab|gitlab_self_hosted|generic_git|bitbucket|codeberg|forgejo_self_hosted)$#')]
         public string $provider = '',
         #[Regex('#^(public|private)$#')]
         public string $visibility = 'public',

@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Application\Command;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Shared\Domain\Organization\ActorContext;
+use Packio\Source\Api\Exception\SourceInputException;
 use Packio\Source\Application\Command\AuthorizeProviderCommand;
+use Packio\Source\Application\Command\RegisterSourceCommand;
 use Packio\Source\Application\Command\SourceCommandService;
 use Packio\Source\Application\Command\SourceMaintenanceService;
 use Packio\Source\Application\Dto\SourceOAuthAuthorizationData;
@@ -32,6 +35,7 @@ use Packio\Source\Domain\Service\SourceAuthorizationStrategyResolver;
 use PackioTest\Support\Fake\InertSourceCollaborators;
 use PHPUnit\Framework\Attributes\AllowMockObjectsWithoutExpectations;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
@@ -290,6 +294,118 @@ final class SourceCommandServiceOAuthAuthorizationTest extends TestCase
     }
 
     #[Test]
+    public function authorizesForgejoSelfHostedTokenWithProviderInstance(): void
+    {
+        $providerInstanceId     = '00000000-0000-0000-0000-000000000902';
+        $sourceProviderInstance = $this->providerInstance(SourceProviderInstance::PROVIDER_FORGEJO, 'https://forgejo.company.test/git', $providerInstanceId);
+
+        $sourceProviderInstanceRepository = $this->createMock(SourceProviderInstanceRepositoryInterface::class);
+        $sourceProviderInstanceRepository->expects(self::once())
+            ->method('findActiveByIdInOrganization')
+            ->with($providerInstanceId, 'org-1')
+            ->willReturn($sourceProviderInstance)
+        ;
+
+        $this->providerAuthorizationRepository->expects(self::once())
+            ->method('save')
+            ->with(self::callback(static function(ProviderAuthorization $providerAuthorization) use ($providerInstanceId): bool {
+                self::assertSame('forgejo_self_hosted', $providerAuthorization->provider());
+                self::assertSame('forgejo_self_hosted_token', $providerAuthorization->authStrategy());
+                self::assertSame('forgejo.company.test', $providerAuthorization->accountName());
+                self::assertSame($providerInstanceId, $providerAuthorization->providerInstanceId());
+                self::assertSame('https://forgejo.company.test/git', $providerAuthorization->configuration()['base_url'] ?? null);
+                self::assertSame($providerInstanceId, $providerAuthorization->configuration()['provider_instance_id'] ?? null);
+
+                return true;
+            }))
+            ->willReturnCallback(static fn (ProviderAuthorization $providerAuthorization): ProviderAuthorization => $providerAuthorization)
+        ;
+
+        $this->commandService(sourceProviderInstanceRepository: $sourceProviderInstanceRepository)->authorizeProviderInContext(
+            new ActorContext('org-1', 'user-1', 'owner'),
+            new AuthorizeProviderCommand(
+                organizationId: 'org-1',
+                provider: 'forgejo_self_hosted',
+                authorizationStrategy: 'token',
+                payload: [
+                    'token'                => 'manual-token',
+                    'base_url'             => 'https://wrong.example.test',
+                    'provider_instance_id' => $providerInstanceId,
+                ],
+            ),
+        );
+    }
+
+    #[Test]
+    #[DataProvider('unavailableForgejoInstances')]
+    public function rejectsForgejoSelfHostedTokenWithUnavailableProviderInstance(?string $instanceType): void
+    {
+        $providerInstanceId               = '00000000-0000-0000-0000-000000000902';
+        $sourceProviderInstanceRepository = $this->createStub(SourceProviderInstanceRepositoryInterface::class);
+        $sourceProviderInstanceRepository->method('findActiveByIdInOrganization')
+            ->willReturn(null === $instanceType ? null : $this->providerInstance($instanceType, 'https://forgejo.company.test', $providerInstanceId))
+        ;
+        $this->providerAuthorizationRepository->expects(self::never())->method('save');
+
+        $this->expectException(SourceInputException::class);
+        $this->expectExceptionMessage('Source provider instance is not available.');
+
+        $this->commandService(sourceProviderInstanceRepository: $sourceProviderInstanceRepository)->authorizeProviderInContext(
+            new ActorContext('org-1', 'user-1', 'owner'),
+            new AuthorizeProviderCommand(
+                organizationId: 'org-1',
+                provider: 'forgejo_self_hosted',
+                authorizationStrategy: 'token',
+                payload: [
+                    'token'                => 'manual-token',
+                    'provider_instance_id' => $providerInstanceId,
+                ],
+            ),
+        );
+    }
+
+    /**
+     * @return iterable<string, array{?string}>
+     */
+    public static function unavailableForgejoInstances(): iterable
+    {
+        yield 'instance of another type' => [SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED];
+
+        // The repository returns only active instances of the current organization.
+        yield 'inactive or from another organization' => [null];
+    }
+
+    #[Test]
+    public function registerSourceRequiresForgejoInstanceWhenOrganizationHasActiveOne(): void
+    {
+        $providerAuthorization = ProviderAuthorization::authorize(
+            organizationId: 'org-1',
+            provider: 'forgejo_self_hosted',
+            authStrategy: 'forgejo_self_hosted_token',
+            configuration: [],
+        );
+        $this->providerAuthorizationRepository->method('findByIdInOrganization')->willReturn($providerAuthorization);
+
+        $sourceProviderInstanceRepository = $this->createMock(SourceProviderInstanceRepositoryInterface::class);
+        $sourceProviderInstanceRepository->expects(self::once())
+            ->method('findByOrganization')
+            ->with('org-1', 'forgejo_self_hosted')
+            ->willReturn([$this->providerInstance(SourceProviderInstance::PROVIDER_FORGEJO, 'https://forgejo.company.test', '00000000-0000-0000-0000-000000000902')])
+        ;
+
+        $this->expectException(SourceInputException::class);
+        $this->expectExceptionMessage('An active provider instance must be selected for this authorization.');
+
+        $this->commandService(sourceProviderInstanceRepository: $sourceProviderInstanceRepository)->registerSource(new RegisterSourceCommand(
+            organizationId: 'org-1',
+            provider: 'forgejo_self_hosted',
+            resourceId: 'https://forgejo.company.test/team/package',
+            name: 'team/package',
+            providerAuthorizationId: 'auth-1',
+        ));
+    }
+
+    #[Test]
     public function deletingOAuthProviderAuthorizationLeavesCanonicalSourceOAuthAccount(): void
     {
         $providerAuthorization = ProviderAuthorization::authorizeFromOAuth(
@@ -452,6 +568,24 @@ final class SourceCommandServiceOAuthAuthorizationTest extends TestCase
             $this->inertSourceAuthorizationInvalidationService(),
             $webhookAutoRegistrationService ?? $this->inertWebhookAutoRegistrationService(),
             new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            new SourceProviderMetadataCatalog(),
         );
+    }
+
+    private function providerInstance(string $providerType, string $baseUrl, string $providerInstanceId): SourceProviderInstance
+    {
+        $sourceProviderInstance = SourceProviderInstance::create(
+            organizationId: 'org-1',
+            providerType: $providerType,
+            label: 'Company instance',
+            baseUrl: $baseUrl,
+            clientId: 'client-id',
+            clientSecret: null,
+            authMode: SourceProviderInstance::AUTH_MODE_OAUTH2_AND_TOKEN,
+            createdByUserId: 'user-1',
+        );
+        $sourceProviderInstance->setIdentifier(Uuid::fromString($providerInstanceId));
+
+        return $sourceProviderInstance;
     }
 }

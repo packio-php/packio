@@ -174,6 +174,7 @@ origins and CSRF contract tests; do not enable it by adding this header here.
 | `SOURCE_PROVIDER_GENERIC_GIT_ENABLED` | `true` | Enable Generic Git as a source provider |
 | `SOURCE_PROVIDER_BITBUCKET_ENABLED` | `true` | Enable Bitbucket as a source provider |
 | `SOURCE_PROVIDER_CODEBERG_ENABLED` | `true` | Enable Codeberg as a source provider |
+| `SOURCE_PROVIDER_FORGEJO_SELF_HOSTED_ENABLED` | `false` | Enable self-hosted Forgejo as a source provider; `.env.example` sets it to `true` |
 
 ### Private package archive storage
 
@@ -307,6 +308,24 @@ permission controls, so Packio does not request default Codeberg scopes.
 | `OAUTH_CODEBERG_TOKEN_URL` | `""` | Override token endpoint; empty values fall back to `{base_url}/login/oauth/access_token` |
 | `OAUTH_CODEBERG_USER_URL` | `""` | Override user API endpoint; empty values fall back to `{base_url}/api/v1/user` |
 | `OAUTH_CODEBERG_BASE_URL` | `https://codeberg.org` | Base URL for the hosted Codeberg instance |
+
+#### Self-hosted Forgejo
+
+Self-hosted Forgejo is a source provider only, not a login provider. Organization
+administrators add an instance in organization settings with the type
+"Forgejo Self-Hosted". The instance base URL may contain a path, for example
+`https://example.com/git`. The instance authenticates with OAuth2, a personal
+access token, or both. The OAuth2 application is registered on the Forgejo
+instance with the redirect URI `{APP_URL}/auth/oauth/forgejo_self_hosted/source-callback`.
+Packio uses PKCE (S256) and requests no scopes, because Forgejo OAuth2 scopes
+are not fine-grained permission controls. Webhook events come from
+`SOURCE_WEBHOOKS_CODEBERG_EVENTS`. Release dates are taken from the sync time,
+because Packio does not run Composer against the instance. Tested with
+Forgejo 15.0.11.
+
+| Variable | Default | Description |
+|---|---|---|
+| `OAUTH_FORGEJO_SELF_HOSTED_SOURCE_ENABLED` | `false` | Enable self-hosted Forgejo source OAuth |
 
 ## Outbound provider connections
 

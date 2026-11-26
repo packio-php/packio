@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-26
+
+### Added
+
+- Self-hosted Forgejo as a source provider: organizations add their own Forgejo instances and connect them with OAuth (PKCE) or an access token, with webhooks for automatic sync.
+
+### Security
+
+- Twig is updated to 3.31.1, which fixes several sandbox bypass advisories. Packio does not use the Twig sandbox.
+- Symfony Mailer is updated to 8.1.12, which fixes two STARTTLS man-in-the-middle advisories (CVE-2026-133751, CVE-2026-133755) affecting SMTP delivery.
+
+### Fixed
+
+- Switching providers in the Add source dialog no longer changes visibility from Private to Public, and a warning appears when a private repository is about to be connected as Public.
+- Clicking Edit on a self-hosted instance and the password link on the profile page no longer scroll the target under the sticky header.
+- The app and admin headers are more compact: about 67px tall on desktop instead of 95px.
+
 ## [0.6.0] - 2026-11-23
 
 ### Added

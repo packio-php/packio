@@ -137,8 +137,9 @@ final readonly class OAuthClientFactory
     public function getProviderInstanceClient(string $provider, array $providerInstanceConfig): OAuthClientInterface
     {
         return match ($provider) {
-            'gitlab_self_hosted' => new GitLabOAuthClient($this->brandingConfig, $providerInstanceConfig, $this->oAuthHttpClient, $this->oAuthScopeResolver, $this->oAuthTokenResponseMapper),
-            default              => throw new RuntimeException('OAuth provider instance is not supported.'),
+            'gitlab_self_hosted'  => new GitLabOAuthClient($this->brandingConfig, $providerInstanceConfig, $this->oAuthHttpClient, $this->oAuthScopeResolver, $this->oAuthTokenResponseMapper),
+            'forgejo_self_hosted' => new CodebergOAuthClient($this->brandingConfig, $providerInstanceConfig, $this->oAuthHttpClient, $this->oAuthScopeResolver, $this->oAuthTokenResponseMapper),
+            default               => throw new RuntimeException('OAuth provider instance is not supported.'),
         };
     }
 }

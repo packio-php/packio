@@ -9,6 +9,7 @@ use RuntimeException;
 
 use function is_string;
 use function rawurlencode;
+use function rtrim;
 use function sprintf;
 use function trim;
 
@@ -19,10 +20,16 @@ final readonly class CodebergDistArchiveFetcher
         private HttpDistArchiveDownloader $httpDistArchiveDownloader,
     ) {}
 
-    public function fetchArchive(string $owner, string $repository, string $reference, ?string $token = null): DistArchiveStream
-    {
+    public function fetchArchive(
+        string $owner,
+        string $repository,
+        string $reference,
+        ?string $token = null,
+        string $baseUrl = 'https://codeberg.org'
+    ): DistArchiveStream {
         $url = sprintf(
-            'https://codeberg.org/api/v1/repos/%s/%s/archive/%s.zip',
+            '%s/api/v1/repos/%s/%s/archive/%s.zip',
+            rtrim($baseUrl, '/'),
             rawurlencode($owner),
             rawurlencode($repository),
             rawurlencode($reference),

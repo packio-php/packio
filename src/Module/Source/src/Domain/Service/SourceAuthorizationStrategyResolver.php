@@ -21,17 +21,18 @@ final readonly class SourceAuthorizationStrategyResolver
         }
 
         return match ($provider) {
-            'github'             => 'token' === $normalized ? 'github_token' : $normalized,
-            'gitlab'             => 'token' === $normalized ? 'gitlab_token' : $normalized,
-            'gitlab_self_hosted' => 'token' === $normalized ? 'gitlab_self_hosted_token' : $normalized,
-            'generic_git'        => match ($normalized) {
+            'github'              => 'token' === $normalized ? 'github_token' : $normalized,
+            'gitlab'              => 'token' === $normalized ? 'gitlab_token' : $normalized,
+            'gitlab_self_hosted'  => 'token' === $normalized ? 'gitlab_self_hosted_token' : $normalized,
+            'generic_git'         => match ($normalized) {
                 'token' => 'generic_git_token',
                 'none'  => 'generic_git_none',
                 default => $normalized,
             },
-            'bitbucket'          => 'token' === $normalized ? 'bitbucket_token' : $normalized,
-            'codeberg'           => 'token' === $normalized ? 'codeberg_token' : $normalized,
-            default              => $normalized,
+            'bitbucket'           => 'token' === $normalized ? 'bitbucket_token' : $normalized,
+            'forgejo_self_hosted' => 'token' === $normalized ? 'forgejo_self_hosted_token' : $normalized,
+            'codeberg'            => 'token' === $normalized ? 'codeberg_token' : $normalized,
+            default               => $normalized,
         };
     }
 }

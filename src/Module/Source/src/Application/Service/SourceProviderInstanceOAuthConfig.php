@@ -44,6 +44,7 @@ final readonly class SourceProviderInstanceOAuthConfig
     {
         return match ($sourceProviderInstance->providerType()) {
             SourceProviderInstance::PROVIDER_GITLAB_SELF_HOSTED => ['read_user', 'api', 'read_repository'],
+            SourceProviderInstance::PROVIDER_FORGEJO            => [],
             default                                             => [],
         };
     }

@@ -36,6 +36,30 @@ final class SourceProviderInstanceOAuthConfigTest extends TestCase
     }
 
     #[Test]
+    public function buildsConfigForForgejoSelfHostedInstanceWithoutScopes(): void
+    {
+        $secretEncryptor = $this->createStub(SecretEncryptorInterface::class);
+        $secretEncryptor->method('decrypt')->willReturnMap([['encrypted-client-secret', 'client-secret']]);
+
+        $config   = $this->createConfig($secretEncryptor);
+        $instance = SourceProviderInstance::create(
+            organizationId: 'org-1',
+            providerType: SourceProviderInstance::PROVIDER_FORGEJO,
+            label: 'Company Forgejo',
+            baseUrl: 'https://forgejo.company.test',
+            clientId: 'client-id',
+            clientSecret: 'encrypted-client-secret',
+            authMode: SourceProviderInstance::AUTH_MODE_OAUTH2,
+        );
+
+        self::assertSame([], $config->scopes($instance));
+        self::assertSame(
+            'https://packio.test/auth/oauth/forgejo_self_hosted/source-callback',
+            $config->forInstance($instance)['redirect_url'] ?? null,
+        );
+    }
+
+    #[Test]
     public function returnsNullWithoutClientSecret(): void
     {
         $sourceProviderInstanceOAuthConfig = $this->createConfig($this->createStub(SecretEncryptorInterface::class));

@@ -36,6 +36,7 @@ explicitly opts into an enabled default.
 | `source.providers.generic_git.enabled` | Source Providers | `sources.providers.generic_git.enabled` / `SOURCE_PROVIDER_GENERIC_GIT_ENABLED` |
 | `source.providers.bitbucket.enabled` | Source Providers | `sources.providers.bitbucket.enabled` / `SOURCE_PROVIDER_BITBUCKET_ENABLED` |
 | `source.providers.codeberg.enabled` | Source Providers | `sources.providers.codeberg.enabled` / `SOURCE_PROVIDER_CODEBERG_ENABLED` |
+| `source.providers.forgejo_self_hosted.enabled` | Source Providers | `sources.providers.forgejo_self_hosted.enabled` / `SOURCE_PROVIDER_FORGEJO_SELF_HOSTED_ENABLED` |
 | `oauth.github.enabled` | OAuth Login | `oauth.github.enabled` / `OAUTH_GITHUB_ENABLED` |
 | `oauth.gitlab.enabled` | OAuth Login | `oauth.gitlab.enabled` / `OAUTH_GITLAB_ENABLED` |
 | `oauth.bitbucket.enabled` | OAuth Login | `oauth.bitbucket.enabled` / `OAUTH_BITBUCKET_ENABLED` |
@@ -45,6 +46,7 @@ explicitly opts into an enabled default.
 | `oauth.bitbucket.source.enabled` | Source OAuth | `oauth.bitbucket.source.enabled` / `OAUTH_BITBUCKET_SOURCE_ENABLED` |
 | `oauth.codeberg.source.enabled` | Source OAuth | `oauth.codeberg.source.enabled` / `OAUTH_CODEBERG_SOURCE_ENABLED` |
 | `oauth.gitlab_self_hosted.source.enabled` | Source OAuth | `oauth.gitlab.self_hosted.source.enabled` / `OAUTH_GITLAB_SELF_HOSTED_SOURCE_ENABLED` |
+| `oauth.forgejo_self_hosted.source.enabled` | Source OAuth | `oauth.forgejo.self_hosted.source.enabled` / `OAUTH_FORGEJO_SELF_HOSTED_SOURCE_ENABLED` |
 
 ## OAuth availability rules
 
@@ -66,10 +68,10 @@ For source OAuth, a provider is available only when:
 Source OAuth availability is independent from login OAuth availability. Disabling
 `oauth.github.enabled` does not disable `oauth.github.source.enabled`.
 
-GitLab self-hosted source OAuth additionally requires:
+Self-hosted source OAuth (GitLab and Forgejo) additionally requires:
 
-- `oauth.gitlab_self_hosted.source.enabled` evaluates to enabled;
-- inherited values fall back to `OAUTH_GITLAB_SELF_HOSTED_SOURCE_ENABLED`;
+- `oauth.gitlab_self_hosted.source.enabled` or `oauth.forgejo_self_hosted.source.enabled` evaluates to enabled for that provider;
+- inherited values fall back to `OAUTH_GITLAB_SELF_HOSTED_SOURCE_ENABLED` or `OAUTH_FORGEJO_SELF_HOSTED_SOURCE_ENABLED`;
 - an active organization `SourceProviderInstance`;
 - an OAuth-capable auth mode;
 - configured instance client credentials.

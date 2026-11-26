@@ -275,6 +275,48 @@ final class OAuthClientConfigurationTest extends TestCase
     }
 
     #[Test]
+    public function forgejoProviderInstanceClientBuildsEndpointsFromBaseUrlWithPath(): void
+    {
+        $history = [];
+        $factory = $this->factory([], $this->httpClientQueue([
+            [
+                'access_token' => 'instance-access-token',
+            ],
+            [
+                'id'    => 42,
+                'login' => 'forgejo-user',
+            ],
+            [],
+        ], $history));
+        $instanceConfig = [
+            'client_id'     => 'instance-client',
+            'client_secret' => 'instance-secret',
+            'redirect_url'  => 'https://app.test/auth/oauth/forgejo_self_hosted/source-callback',
+            'base_url'      => 'https://git.example.test/forgejo/',
+        ];
+
+        $oAuthClient = $factory->getProviderInstanceClient('forgejo_self_hosted', $instanceConfig);
+        self::assertInstanceOf(CodebergOAuthClient::class, $oAuthClient);
+
+        $authorizationUrl = $oAuthClient->getAuthorizationUrlForScopesWithPkce('state', [], 'code-challenge');
+        parse_str((string) parse_url($authorizationUrl, PHP_URL_QUERY), $query);
+
+        self::assertStringStartsWith('https://git.example.test/forgejo/login/oauth/authorize?', $authorizationUrl);
+        self::assertSame('instance-client', $query['client_id'] ?? null);
+        self::assertSame('https://app.test/auth/oauth/forgejo_self_hosted/source-callback', $query['redirect_uri'] ?? null);
+        self::assertSame('S256', $query['code_challenge_method'] ?? null);
+        self::assertArrayNotHasKey('scope', $query);
+
+        $oAuthClient->exchangeCodeForToken('code', 'code-verifier');
+        parse_str((string) $this->request($history, 0)->getBody(), $payload);
+        self::assertSame('https://git.example.test/forgejo/login/oauth/access_token', (string) $this->request($history, 0)->getUri());
+        self::assertSame('code-verifier', $payload['code_verifier'] ?? null);
+
+        self::assertSame('42', $oAuthClient->fetchUser('instance-access-token')->providerUserId);
+        self::assertSame('https://git.example.test/forgejo/api/v1/user', (string) $this->request($history, 1)->getUri());
+    }
+
+    #[Test]
     public function factoryExchangesSourceCodeWithSourceClientAndRedirectUri(): void
     {
         $history = [];

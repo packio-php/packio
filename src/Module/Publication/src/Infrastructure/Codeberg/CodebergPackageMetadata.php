@@ -23,6 +23,7 @@ final readonly class CodebergPackageMetadata
         public string $defaultBranch,
         ?string $commitReference = null,
         ?string $refType = null,
+        public string $baseUrl = 'https://codeberg.org',
     ) {
         $this->refName         = $this->reference;
         $this->commitReference = $commitReference ?? $this->reference;

@@ -17,6 +17,7 @@ use function http_build_query;
 use function is_array;
 use function is_bool;
 use function is_string;
+use function rtrim;
 use function sprintf;
 use function trim;
 
@@ -32,17 +33,18 @@ final readonly class HttpCodebergProviderResourceFetcher implements CodebergProv
     /**
      * @return list<ProviderResourceData>
      */
-    public function fetchResources(?string $accessToken = null): array
+    public function fetchResources(?string $accessToken = null, string $baseUrl = 'https://codeberg.org', string $type = 'codeberg'): array
     {
         if (null === $accessToken || '' === trim($accessToken)) {
             return [];
         }
 
+        $baseUrl   = rtrim($baseUrl, '/');
         $resources = [];
         $page      = 1;
 
         do {
-            $url = 'https://codeberg.org/api/v1/user/repos?' . http_build_query([
+            $url = $baseUrl . '/api/v1/user/repos?' . http_build_query([
                 'page'  => $page,
                 'limit' => self::PAGE_LIMIT,
             ]);
@@ -56,7 +58,7 @@ final readonly class HttpCodebergProviderResourceFetcher implements CodebergProv
                     continue;
                 }
 
-                $resource = $this->mapRepository($repository);
+                $resource = $this->mapRepository($repository, $baseUrl, $type);
                 if ($resource instanceof ProviderResourceData) {
                     $resources[] = $resource;
                 }
@@ -71,7 +73,7 @@ final readonly class HttpCodebergProviderResourceFetcher implements CodebergProv
     /**
      * @param array<string, mixed> $repository
      */
-    private function mapRepository(array $repository): ?ProviderResourceData
+    private function mapRepository(array $repository, string $baseUrl, string $type): ?ProviderResourceData
     {
         $fullName = $repository['full_name'] ?? null;
         if (! is_string($fullName) || '' === trim($fullName)) {
@@ -83,10 +85,10 @@ final readonly class HttpCodebergProviderResourceFetcher implements CodebergProv
         return new ProviderResourceData(
             id: trim($fullName),
             name: trim($fullName),
-            type: 'codeberg',
+            type: $type,
             url: is_string($htmlUrl) && '' !== trim($htmlUrl)
                 ? trim($htmlUrl)
-                : sprintf('https://codeberg.org/%s', trim($fullName)),
+                : sprintf('%s/%s', $baseUrl, trim($fullName)),
             defaultBranch: is_string($repository['default_branch'] ?? null) && '' !== trim($repository['default_branch'])
                 ? trim($repository['default_branch'])
                 : 'main',

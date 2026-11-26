@@ -114,6 +114,13 @@ final class ComposerReleaseDateProviderTest extends TestCase
             ],
         ]];
 
+        yield 'forgejo self hosted' => [[
+            'provider'       => 'forgejo_self_hosted',
+            'providerConfig' => [
+                'base_url' => 'https://forgejo.example.test',
+            ],
+        ]];
+
         yield 'generic git root composer.json' => [[
             'provider'       => 'generic_git',
             'providerConfig' => [

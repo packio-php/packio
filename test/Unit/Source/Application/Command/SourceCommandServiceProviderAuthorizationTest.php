@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Application\Command;
 
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\SodiumSecretEncryptor;
 use Packio\Source\Application\Command\SourceCommandService;
@@ -30,6 +31,16 @@ final class SourceCommandServiceProviderAuthorizationTest extends TestCase
     use InertSourceCollaborators;
 
     #[Test]
+    public function forgejoSelfHostedTokenStrategyIsNormalizedByConvention(): void
+    {
+        $resolver = new SourceAuthorizationStrategyResolver();
+
+        self::assertSame('forgejo_self_hosted_token', $resolver->defaultFor('forgejo_self_hosted'));
+        self::assertSame('forgejo_self_hosted_token', $resolver->normalize('forgejo_self_hosted', ' token '));
+        self::assertSame('oauth2', $resolver->normalize('forgejo_self_hosted', 'oauth2'));
+    }
+
+    #[Test]
     public function reassigningAuthorizationToItselfIsRejected(): void
     {
         $sourceRepository         = $this->createMock(SourceRepositoryInterface::class);
@@ -53,6 +64,7 @@ final class SourceCommandServiceProviderAuthorizationTest extends TestCase
             $this->inertSourceAuthorizationInvalidationService(),
             $this->inertWebhookAutoRegistrationService(),
             new SourceWebhookSecrets(new SodiumSecretEncryptor('test-webhook-key')),
+            new SourceProviderMetadataCatalog(),
         );
 
         self::assertSame(

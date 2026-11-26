@@ -5,6 +5,7 @@ declare(strict_types=1);
 use Common\Branding\BrandingConfig;
 use Common\Infrastructure\HttpClient\OutboundUrlPolicy;
 use Common\Infrastructure\HttpClient\UpstreamHttpClient;
+use Common\Provider\SourceProviderMetadataCatalog;
 use Common\Security\SecretEncryptorInterface;
 use Common\Security\StoredSecretResolver;
 use Cycle\ORM\ORMInterface;
@@ -133,6 +134,7 @@ use Packio\Source\Infrastructure\Provider\Bitbucket\HttpBitbucketProviderResourc
 use Packio\Source\Infrastructure\Provider\Codeberg\CodebergProviderResourceFetcherInterface;
 use Packio\Source\Infrastructure\Provider\Codeberg\CodebergSourceProvider;
 use Packio\Source\Infrastructure\Provider\Codeberg\HttpCodebergProviderResourceFetcher;
+use Packio\Source\Infrastructure\Provider\ForgejoSelfHosted\ForgejoSelfHostedSourceProvider;
 use Packio\Source\Infrastructure\Provider\GenericGit\GenericGitSourceProvider;
 use Packio\Source\Infrastructure\Provider\Github\GithubProviderResourceFetcherInterface;
 use Packio\Source\Infrastructure\Provider\Github\GithubSourceProvider;
@@ -283,6 +285,7 @@ return [
                 $container->get(GithubSourceProvider::class),
                 $container->get(GitlabSourceProvider::class),
                 $container->get(GitlabSelfHostedSourceProvider::class),
+                $container->get(ForgejoSelfHostedSourceProvider::class),
                 $container->get(GenericGitSourceProvider::class),
                 $container->get(BitbucketSourceProvider::class),
                 $container->get(CodebergSourceProvider::class),
@@ -295,6 +298,7 @@ return [
             GithubSourceProvider::class                                     => ConfigAbstractFactory::class,
             GitlabSourceProvider::class                                     => ConfigAbstractFactory::class,
             GitlabSelfHostedSourceProvider::class                           => ConfigAbstractFactory::class,
+            ForgejoSelfHostedSourceProvider::class                          => ConfigAbstractFactory::class,
             GenericGitSourceProvider::class                                 => ConfigAbstractFactory::class,
             BitbucketSourceProvider::class                                  => ConfigAbstractFactory::class,
             CodebergSourceProvider::class                                   => ConfigAbstractFactory::class,
@@ -326,6 +330,11 @@ return [
                     $factory->create($container->get(GitlabSelfHostedWebhookProviderAdapter::class)),
                     $factory->create($container->get(BitbucketWebhookProviderAdapter::class)),
                     $factory->create($container->get(CodebergWebhookProviderAdapter::class)),
+                    $factory->create(new CodebergWebhookProviderAdapter(
+                        $container->get(BrandingConfig::class),
+                        'forgejo_self_hosted',
+                        'Forgejo',
+                    )),
                 ]);
             },
 
@@ -389,6 +398,7 @@ return [
             SourceAuthorizationInvalidationService::class,
             WebhookAutoRegistrationService::class,
             SourceWebhookSecrets::class,
+            SourceProviderMetadataCatalog::class,
         ],
         SourceQueryService::class                                        => [
             SourceRepositoryInterface::class,
@@ -603,6 +613,7 @@ return [
             BrandingConfig::class,
             SourceProviderLabelResolver::class,
             OAuthApiFacadeInterface::class,
+            SourceProviderMetadataCatalog::class,
         ],
         SourceDetailsPageDataBuilder::class                              => [
             PackageApiFacadeInterface::class,
@@ -637,6 +648,7 @@ return [
             SourceApiFacadeInterface::class,
             SourceAuthorizationStrategyResolver::class,
             InertiaNotificationMessenger::class,
+            SourceProviderMetadataCatalog::class,
             LoggerInterface::class,
         ],
         SourceAuthorizationOAuthStoreHandler::class                      => [
@@ -734,6 +746,13 @@ return [
         GitlabSelfHostedSourceProvider::class                            => [
             GitlabSelfHostedRepositoryUrlParser::class,
             GitlabSelfHostedProviderResourceFetcherInterface::class,
+            ProviderResourceFallbackFactory::class,
+            SourceRegistrationFactory::class,
+            WebhookSecretGenerator::class,
+        ],
+        ForgejoSelfHostedSourceProvider::class                           => [
+            CodebergRepositoryUrlParser::class,
+            CodebergProviderResourceFetcherInterface::class,
             ProviderResourceFallbackFactory::class,
             SourceRegistrationFactory::class,
             WebhookSecretGenerator::class,

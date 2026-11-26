@@ -33,6 +33,7 @@ final class WebhookProviderHandlerRegistryFactoryTest extends TestCase
         self::assertInstanceOf(GithubWebhookProviderHandler::class, $registry->handler('github'));
         self::assertInstanceOf(BitbucketWebhookProviderHandler::class, $registry->handler('bitbucket'));
         self::assertInstanceOf(CodebergWebhookProviderHandler::class, $registry->handler('codeberg'));
+        self::assertInstanceOf(CodebergWebhookProviderHandler::class, $registry->handler('forgejo_self_hosted'));
         self::assertInstanceOf(GitlabWebhookProviderHandler::class, $registry->handler('gitlab'));
         self::assertInstanceOf(GitlabWebhookProviderHandler::class, $registry->handler('gitlab_self_hosted'));
     }

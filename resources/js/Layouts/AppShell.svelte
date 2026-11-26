@@ -593,14 +593,14 @@
     style="background-color: var(--header-bg);"
   >
     <div
-      class="flex w-full flex-col gap-4 px-6 py-5 lg:flex-row lg:items-center lg:justify-between xl:px-8"
+      class="flex w-full flex-col gap-4 px-6 py-3 lg:flex-row lg:items-center lg:justify-between xl:px-8"
     >
       <div class="flex items-center justify-between gap-3">
         <Link
           class="flex min-w-0 items-center gap-3 no-underline lg:flex-none"
           href={appHomePath()}
         >
-          <BrandMark />
+          <BrandMark className="size-9 rounded-xl" svgClassName="size-9" />
           <div>
             <p
               class="text-xs uppercase tracking-[0.32em]"
@@ -608,7 +608,7 @@
             >
               {branding.domain}
             </p>
-            <h1 class="mt-1 text-lg font-semibold">{pageTitle}</h1>
+            <h1 class="text-base font-semibold">{pageTitle}</h1>
           </div>
         </Link>
 
@@ -710,7 +710,7 @@
         {#if auth?.check}
           <div class="relative" data-user-menu>
             <button
-              class="flex min-w-0 max-w-full cursor-pointer items-center gap-3 rounded-full border px-2 py-2 pr-3 transition lg:max-w-60"
+              class="flex min-w-0 max-w-full cursor-pointer items-center gap-3 rounded-full border px-2 py-1 pr-3 transition lg:max-w-60"
               style={userMenuOpen || matchesPath("/profile")
                 ? "border-color: var(--accent); background-color: var(--accent-soft); color: var(--accent-ink); box-shadow: 0 10px 24px color-mix(in srgb, var(--accent) 16%, transparent);"
                 : "border-color: var(--panel-border); background-color: var(--surface-muted); color: var(--page-ink);"}
@@ -720,7 +720,7 @@
               aria-haspopup="menu"
             >
               <span
-                class="grid h-9 w-9 place-items-center rounded-full text-xs font-semibold text-white"
+                class="grid h-8 w-8 place-items-center rounded-full text-xs font-semibold text-white"
                 style="background-color: var(--accent);"
               >
                 {profileInitials()}

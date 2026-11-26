@@ -731,6 +731,69 @@ final class SourcesPageDataBuilderTest extends TestCase
         );
     }
 
+    public function testSelfHostedOAuthAvailabilityIsResolvedPerProvider(): void
+    {
+        $projectSettings = $this->createStub(ProjectSettingsApiFacadeInterface::class);
+        $projectSettings
+            ->method('booleanValue')
+            ->willReturnCallback(static fn (string $key, bool $fallback): bool => 'oauth.forgejo_self_hosted.source.enabled' === $key ? true : $fallback)
+        ;
+        $this->oAuthProviderAvailabilityResolver = new OAuthProviderAvailabilityResolver([], new SourceProviderMetadataCatalog(), $projectSettings);
+
+        $this->sourceApiFacade->method('sourcesForOrganization')->willReturn([]);
+        $this->sourceApiFacade->method('providerAuthorizations')->willReturn([]);
+        $this->sourceApiFacade
+            ->method('sourceProviderInstances')
+            ->willReturn([
+                new SourceProviderInstanceDto(
+                    id: 'forgejo-instance',
+                    organizationId: self::ORG_ID,
+                    providerType: 'forgejo_self_hosted',
+                    label: 'Company Forgejo',
+                    baseUrl: 'https://git.company.test',
+                    clientId: 'client-id',
+                    hasClientSecret: true,
+                    authMode: 'oauth2',
+                    status: 'active',
+                ),
+                new SourceProviderInstanceDto(
+                    id: 'gitlab-instance',
+                    organizationId: self::ORG_ID,
+                    providerType: 'gitlab_self_hosted',
+                    label: 'Company GitLab',
+                    baseUrl: 'https://gitlab.company.test',
+                    clientId: 'client-id',
+                    hasClientSecret: true,
+                    authMode: 'oauth2',
+                    status: 'active',
+                ),
+            ])
+        ;
+        $this->sourceApiFacade
+            ->method('availableProviders')
+            ->willReturn([
+                new SourceProviderDto(key: 'forgejo_self_hosted', name: 'Forgejo Self-Hosted', description: ''),
+                new SourceProviderDto(key: 'gitlab_self_hosted', name: 'GitLab Self-Hosted', description: ''),
+                new SourceProviderDto(key: 'codeberg', name: 'Codeberg', description: '', oauthProvider: 'codeberg'),
+            ])
+        ;
+        $this->webhookApiFacade->method('recentEventsForSources')->willReturn([]);
+
+        $providers = $this->createBuilder()->build($this->createOrganization(), $this->createOwnerMembership())['providers'];
+
+        self::assertSame('forgejo_self_hosted', $providers[0]['oauth_provider']);
+        self::assertTrue($providers[0]['oauth_available']);
+        self::assertTrue($providers[0]['oauth_enabled']);
+        self::assertTrue($providers[0]['supports_self_hosted_instances']);
+
+        self::assertNull($providers[1]['oauth_provider']);
+        self::assertFalse($providers[1]['oauth_available']);
+        self::assertTrue($providers[1]['supports_self_hosted_instances']);
+
+        self::assertSame('codeberg', $providers[2]['oauth_provider']);
+        self::assertFalse($providers[2]['supports_self_hosted_instances']);
+    }
+
     /**
      * @return list<SourceDto>
      */
@@ -821,7 +884,7 @@ final class SourcesPageDataBuilderTest extends TestCase
 
         $oauthApiFacade = $this->createStub(OAuthApiFacadeInterface::class);
         $oauthApiFacade->method('providerAvailabilities')->willReturnCallback($this->oAuthProviderAvailabilityResolver->all(...));
-        $oauthApiFacade->method('gitLabSelfHostedSourceConnectEnabled')->willReturnCallback($this->oAuthProviderAvailabilityResolver->gitLabSelfHostedSourceConnectEnabled(...));
+        $oauthApiFacade->method('selfHostedSourceConnectEnabled')->willReturnCallback($this->oAuthProviderAvailabilityResolver->selfHostedSourceConnectEnabled(...));
 
         return new SourcesPageDataBuilder(
             $this->sourceApiFacade,

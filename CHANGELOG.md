@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-26
+
 ### Added
 
 - Self-hosted Forgejo as a source provider: organizations add their own Forgejo instances and connect them with OAuth (PKCE) or an access token, with webhooks for automatic sync.

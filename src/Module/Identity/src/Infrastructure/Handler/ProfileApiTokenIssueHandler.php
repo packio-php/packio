@@ -4,9 +4,10 @@ declare(strict_types=1);
 
 namespace Packio\Identity\Infrastructure\Handler;
 
+use Common\Exception\PublicValidationException;
 use InvalidArgumentException;
 use Laminas\Diactoros\Response\RedirectResponse;
-use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
@@ -17,6 +18,8 @@ use Packio\Shared\Api\Dto\UserDto;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
+use Sirix\InertiaPsr15\Service\InertiaInterface;
 use Sirix\Mezzio\Authentication\Attribute\Authenticated;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 use Sirix\Mezzio\Valinor\Attribute\MapRequest;
@@ -28,7 +31,7 @@ use function array_map;
 use function array_values;
 use function is_array;
 use function is_string;
-use function sprintf;
+use function str_contains;
 use function trim;
 
 #[Post('/profile/api-tokens', name: 'profile.api-tokens.issue')]
@@ -38,13 +41,13 @@ use function trim;
 #[ValidationFailed(
     redirectTo: '/profile',
     message: 'Invalid API token request.',
-    notify: ValidationNotify::Toast,
+    notify: ValidationNotify::None,
 )]
 final readonly class ProfileApiTokenIssueHandler implements RequestHandlerInterface
 {
     public function __construct(
         private IdentityApiFacadeInterface $identityApiFacade,
-        private InertiaNotificationMessenger $inertiaNotificationMessenger,
+        private ValidationRedirectState $validationRedirectState,
     ) {}
 
     public function handle(ServerRequestInterface $request): ResponseInterface
@@ -66,25 +69,30 @@ final readonly class ProfileApiTokenIssueHandler implements RequestHandlerInterf
                 $this->scopes($request),
                 $expiresAt,
             );
-        } catch (InvalidArgumentException) {
-            $this->inertiaNotificationMessenger->toast($request, 'error', 'Unable to create API token.');
+        } catch (InvalidArgumentException $exception) {
+            $key = $exception instanceof PublicValidationException && str_contains($exception->getMessage(), 'Expiration')
+                ? 'expires_at'
+                : 'api_token';
+            $this->validationRedirectState->errors($request, [
+                $key => [$exception->getMessage()],
+            ]);
 
             return new RedirectResponse('/profile');
         } catch (Throwable) {
-            $this->inertiaNotificationMessenger->toast($request, 'error', 'API token expiration date is invalid.');
+            $this->validationRedirectState->errors($request, [
+                'api_token' => ['Unable to create API token.'],
+            ]);
 
             return new RedirectResponse('/profile');
         }
 
-        $this->inertiaNotificationMessenger->flash(
-            $request,
-            'success',
-            sprintf(
-                'New API token for "%s": %s',
-                $issuedApiAccessTokenDto->token->name,
-                $issuedApiAccessTokenDto->plainTextToken,
-            ),
-        );
+        $inertia = $request->getAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE);
+        if ($inertia instanceof InertiaInterface) {
+            $inertia->flash('issued_api_token', [
+                'name'  => $issuedApiAccessTokenDto->token->name,
+                'token' => $issuedApiAccessTokenDto->plainTextToken,
+            ]);
+        }
 
         return new RedirectResponse('/profile');
     }

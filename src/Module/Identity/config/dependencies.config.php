@@ -609,7 +609,7 @@ return [
         ],
         ProfileApiTokenIssueHandler::class                      => [
             IdentityApiFacadeInterface::class,
-            InertiaNotificationMessenger::class,
+            ValidationRedirectState::class,
         ],
         ProfileApiTokenRevokeHandler::class                     => [
             IdentityApiFacadeInterface::class,

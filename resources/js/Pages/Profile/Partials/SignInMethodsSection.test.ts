@@ -1,9 +1,10 @@
 import { fireEvent, render, screen } from "@testing-library/svelte";
 import { tick } from "svelte";
 import { describe, expect, it } from "vitest";
+import { Endpoints } from "@/lib/api";
 import { router, setPageProps } from "@/test/inertia";
 import SignInMethodsSection from "./SignInMethodsSection.svelte";
-import type { ProfilePayload } from "@/types/pages";
+import type { ProfileOAuthAccountPayload, ProfilePayload } from "@/types/pages";
 
 function profileWith(hasPassword: boolean): ProfilePayload {
   return {
@@ -143,5 +144,83 @@ describe("SignInMethodsSection password row", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Passwords do not match.")).toBeInTheDocument();
     expect(screen.getByLabelText("New password")).toBeInTheDocument();
+  });
+});
+
+function oauth(id: string, provider: string, label: string) {
+  return {
+    id,
+    provider,
+    provider_label: label,
+    account_label: `${provider}-user`,
+  } as ProfileOAuthAccountPayload;
+}
+
+describe("SignInMethodsSection OAuth rows", () => {
+  const github = oauth("acc-1", "github", "GitHub");
+
+  it("shows Connected and Disconnect in the row", () => {
+    render(SignInMethodsSection, {
+      props: { profile: profileWith(true), oauth_accounts: [github] },
+    });
+
+    expect(screen.getByText("Connected")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Disconnect" })).toBeEnabled();
+  });
+
+  it("asks for confirmation with the provider name and sends nothing on cancel", async () => {
+    render(SignInMethodsSection, {
+      props: { profile: profileWith(true), oauth_accounts: [github] },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    await tick();
+
+    expect(screen.getByText("Disconnect GitHub?")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    await tick();
+
+    expect(router.post).not.toHaveBeenCalled();
+    expect(screen.queryByText("Disconnect GitHub?")).not.toBeInTheDocument();
+  });
+
+  it("posts to the disconnect endpoint after confirmation", async () => {
+    render(SignInMethodsSection, {
+      props: { profile: profileWith(true), oauth_accounts: [github] },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Disconnect" }));
+    await tick();
+    const buttons = screen.getAllByRole("button", { name: "Disconnect" });
+    await fireEvent.click(buttons.at(-1)!);
+
+    expect(router.post).toHaveBeenCalledTimes(1);
+    expect(router.post.mock.calls[0][0]).toBe(
+      Endpoints.profile.disconnectOAuth("acc-1"),
+    );
+  });
+
+  it("disables the last sign-in method with an explanation", () => {
+    render(SignInMethodsSection, {
+      props: { profile: profileWith(false), oauth_accounts: [github] },
+    });
+
+    expect(screen.getByRole("button", { name: "Disconnect" })).toBeDisabled();
+    expect(
+      screen.getByText(
+        "Add another sign-in method before disconnecting this one.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("allows disconnecting one of two providers without a password", () => {
+    render(SignInMethodsSection, {
+      props: {
+        profile: profileWith(false),
+        oauth_accounts: [github, oauth("acc-2", "gitlab", "GitLab")],
+      },
+    });
+
+    for (const b of screen.getAllByRole("button", { name: "Disconnect" })) {
+      expect(b).toBeEnabled();
+    }
   });
 });

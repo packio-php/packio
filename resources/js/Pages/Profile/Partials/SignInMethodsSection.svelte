@@ -7,6 +7,7 @@
   import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import Input from "@/Components/ui/Input.svelte";
   import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
@@ -87,12 +88,22 @@
     });
   }
 
-  function disconnectOAuthAccount(accountId: string): void {
+  let pendingDisconnect = $state<ProfileOAuthAccountPayload | null>(null);
+  let disconnecting = $state(false);
+
+  function confirmDisconnect(): void {
+    if (!pendingDisconnect || disconnecting) return;
+
     router.post(
-      Endpoints.profile.disconnectOAuth(accountId),
+      Endpoints.profile.disconnectOAuth(pendingDisconnect.id),
       {},
       {
         preserveScroll: true,
+        onStart: () => (disconnecting = true),
+        onFinish: () => {
+          disconnecting = false;
+          pendingDisconnect = null;
+        },
       },
     );
   }
@@ -244,28 +255,25 @@
                 <span class="text-xs ui-muted">
                   {account.account_label}
                 </span>
+                {#if !canDisconnectAnyOAuth}
+                  <span class="text-xs ui-muted">
+                    Add another sign-in method before disconnecting this one.
+                  </span>
+                {/if}
               </div>
             </div>
 
-            <div class="flex flex-col items-start gap-2 md:items-end">
+            <div class="flex items-center gap-3">
               <Badge tone="accent">Connected</Badge>
-
               <Button
                 className="rounded-full px-4 py-2 text-sm"
                 type="button"
                 variant="soft"
                 disabled={!canDisconnectAnyOAuth}
-                onclick={() => disconnectOAuthAccount(account.id)}
+                onclick={() => (pendingDisconnect = account)}
               >
                 Disconnect
               </Button>
-
-              {#if !canDisconnectAnyOAuth}
-                <p class="text-xs ui-muted">
-                  Set a password or connect another provider before
-                  disconnecting your only sign-in method.
-                </p>
-              {/if}
             </div>
           </div>
         {/each}
@@ -277,3 +285,15 @@
     </div>
   </Card>
 </div>
+
+<ConfirmationModal
+  open={pendingDisconnect !== null}
+  eyebrow="Sign-in method"
+  title={`Disconnect ${pendingDisconnect?.provider_label ?? ""}?`}
+  description="You will no longer be able to sign in with this provider."
+  confirmLabel="Disconnect"
+  cancelLabel="Cancel"
+  confirming={disconnecting}
+  onCancel={() => (pendingDisconnect = null)}
+  onConfirm={confirmDisconnect}
+/>

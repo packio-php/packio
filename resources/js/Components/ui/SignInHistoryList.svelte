@@ -16,16 +16,15 @@
 {#if entries.length === 0}
   <p class="text-sm ui-muted">No sign-ins recorded yet.</p>
 {:else}
+  <!-- Single caption visible at every width: the thead is hidden below md. -->
+  <p class="mb-2 text-xs ui-muted">{zoneLabel}</p>
   <TableFrame
     ariaLabel="Sign-in history"
     tableClassName="max-md:block [&_tbody]:max-md:block [&_tr]:max-md:block"
   >
     <thead class="max-md:hidden">
       <tr>
-        <th class="px-4 py-3">
-          Time
-          <span class="block font-normal">{zoneLabel}</span>
-        </th>
+        <th class="px-4 py-3">Time</th>
         <th class="px-4 py-3">Method</th>
         <th class="px-4 py-3">IP address</th>
         <th class="px-4 py-3">Browser</th>

@@ -37,9 +37,9 @@
 
 <AppShell title="Profile" {auth}>
   <section class="grid gap-6">
-    <h1 class="text-3xl font-semibold" style="color: var(--page-ink);">
+    <h2 class="text-3xl font-semibold" style="color: var(--page-ink);">
       Profile
-    </h1>
+    </h2>
 
     <Card className="rounded-[1.75rem] p-5">
       <div class="min-w-0">

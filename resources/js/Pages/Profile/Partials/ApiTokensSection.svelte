@@ -332,7 +332,9 @@
           {/if}
         </fieldset>
         <FieldErrors {errors} field="scopes" />
-        <FieldErrors {errors} field="api_token" />
+        <div role="alert">
+          <FieldErrors {errors} field="api_token" />
+        </div>
 
         <div class="flex flex-wrap gap-3">
           <Button

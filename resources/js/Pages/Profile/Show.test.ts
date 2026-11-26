@@ -87,7 +87,7 @@ describe("Profile show page", () => {
     render(ProfileShow, { props: { profile } });
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Profile" }),
+      screen.getByRole("heading", { level: 2, name: "Profile" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Test User")).toBeInTheDocument();
     expect(screen.getByText("user@example.test")).toBeInTheDocument();

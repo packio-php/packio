@@ -234,6 +234,9 @@ describe("ApiTokensSection", () => {
     render(ApiTokensSection, { props: { profile } });
 
     expect(screen.getByText("packio_secret_value")).toBeInTheDocument();
+    expect(
+      screen.getByRole("group", { name: /Token "CI" created/ }),
+    ).toHaveFocus();
     await fireEvent.click(screen.getByRole("button", { name: "Copy token" }));
     await tick();
     expect(writeText).toHaveBeenCalledWith("packio_secret_value");

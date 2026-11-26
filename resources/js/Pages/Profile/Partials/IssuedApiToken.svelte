@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
 
   interface Props {
@@ -10,6 +11,10 @@
   let { name, token, ondone }: Props = $props();
 
   let status = $state("");
+  let container: HTMLDivElement;
+
+  // The submit button is gone after issuing, so move focus to the result.
+  onMount(() => container.focus());
 
   async function copyToken(): Promise<void> {
     try {
@@ -21,8 +26,14 @@
   }
 </script>
 
-<div class="mt-6 grid gap-3 rounded-2xl border px-4 py-4 theme-border">
-  <p class="text-sm font-medium ui-title">
+<div
+  bind:this={container}
+  tabindex="-1"
+  role="group"
+  aria-labelledby="issued-api-token-title"
+  class="mt-6 grid gap-3 rounded-2xl border px-4 py-4 theme-border"
+>
+  <p id="issued-api-token-title" class="text-sm font-medium ui-title">
     Token "{name}" created. It is shown only once.
   </p>
   <code class="break-all rounded-xl px-3 py-2 font-mono text-xs select-all">

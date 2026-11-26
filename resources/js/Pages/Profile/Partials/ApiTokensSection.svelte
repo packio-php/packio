@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ExternalLink } from "@lucide/svelte";
   import { router, usePage } from "@inertiajs/svelte";
   import { tick } from "svelte";
   import { Endpoints } from "@/lib/api";
@@ -7,9 +8,9 @@
   import Card from "@/Components/ui/Card.svelte";
   import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import FieldErrors from "@/Components/forms/FieldErrors.svelte";
+  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import Input from "@/Components/ui/Input.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import { addCalendarMonths, browserTimeZone, formatDate } from "@/lib/date";
   import { hasFieldErrors } from "@/lib/validationErrors";
   import type { AppPageProps } from "@/types/app";
@@ -203,32 +204,118 @@
   }
 </script>
 
-<div id="api-tokens" class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]">
+<div
+  id="api-tokens"
+  class="min-w-0 scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]"
+>
   <Card className="rounded-[1.75rem] p-6">
-    <div class="flex flex-wrap items-start justify-between gap-4">
-      <SectionHeading
-        eyebrow="API"
-        title="API tokens"
-        description="Create personal tokens for REST API automation."
-      />
-      <div class="flex flex-wrap items-center gap-3">
-        <a
-          class="text-sm font-medium underline-offset-4 hover:underline ui-muted"
-          href="/api/doc"
-          rel="external noopener noreferrer"
-          target="_blank"
-        >
-          API documentation
-        </a>
-        <Button
-          id="api-token-create"
-          type="button"
-          variant="primary"
-          onclick={openForm}
-        >
-          Create API token
-        </Button>
-      </div>
+    <SectionHeading
+      eyebrow="API"
+      title="API tokens"
+      description="Create personal tokens for REST API automation."
+    />
+
+    <div class="mt-6 grid gap-3">
+      {#if api_tokens.length === 0}
+        <div class="rounded-xl border border-dashed px-4 py-6">
+          <p class="text-sm ui-muted">No API tokens yet</p>
+        </div>
+      {:else}
+        {#each api_tokens as token (token.id)}
+          <InsetCard as="article" className="p-4">
+            <div
+              class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
+            >
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <p class="font-semibold ui-title">{token.name}</p>
+                  <Badge tone={token.revoked ? "danger" : "accent"}>
+                    {token.revoked ? "Revoked" : "Active"}
+                  </Badge>
+                </div>
+
+                <div
+                  class="mt-3 flex min-w-0 items-center rounded-xl border px-3 py-2 theme-border"
+                  style="background-color: var(--surface-muted);"
+                >
+                  <code class="min-w-0 truncate font-mono text-xs ui-muted">
+                    {token.token_prefix}...
+                  </code>
+                </div>
+              </div>
+
+              {#if token.revoked}
+                <Button
+                  className="w-fit"
+                  variant="chipDanger"
+                  type="button"
+                  onclick={() => (apiTokenPendingDelete = token)}
+                >
+                  Delete
+                </Button>
+              {:else}
+                <Button
+                  className="w-fit"
+                  variant="chipDanger"
+                  type="button"
+                  onclick={() => (apiTokenPendingRevoke = token)}
+                >
+                  Revoke
+                </Button>
+              {/if}
+            </div>
+
+            <div class="mt-4 flex flex-wrap items-start justify-between gap-3">
+              <div class="grid gap-1 text-xs ui-muted">
+                <p>Created {formatDate(token.created_at)}</p>
+                <p>
+                  {token.last_used_at
+                    ? `Last used ${formatDate(token.last_used_at)}`
+                    : "Never used"}
+                </p>
+                <p>
+                  {token.expires_at
+                    ? `Expires ${formatDate(token.expires_at)}`
+                    : "Never expires"}
+                </p>
+                {#if token.revoked_at}
+                  <p>Revoked {formatDate(token.revoked_at)}</p>
+                {/if}
+              </div>
+
+              <div class="flex flex-wrap gap-1.5">
+                {#each token.scopes as scope (scope)}
+                  <span
+                    class="ui-code rounded-full px-2.5 py-1 text-xs font-medium"
+                  >
+                    {scopeLabel(scope)}
+                  </span>
+                {/each}
+              </div>
+            </div>
+          </InsetCard>
+        {/each}
+      {/if}
+    </div>
+
+    <div class="mt-6 flex flex-wrap items-center gap-3">
+      <Button
+        id="api-token-create"
+        type="button"
+        variant="primary"
+        onclick={openForm}
+      >
+        Create API token
+      </Button>
+      <a
+        class="inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline ui-muted"
+        href="/api/doc"
+        rel="external noopener noreferrer"
+        target="_blank"
+      >
+        API documentation
+        <ExternalLink class="size-3.5" aria-hidden="true" />
+      </a>
     </div>
 
     {#if formOpen}
@@ -370,89 +457,6 @@
         ondone={() => dismissIssued(issued.token)}
       />
     {/if}
-
-    <div class="mt-6 grid gap-3">
-      {#if api_tokens.length === 0}
-        <div class="rounded-xl border border-dashed px-4 py-6">
-          <p class="text-sm ui-muted">No API tokens yet</p>
-        </div>
-      {:else}
-        {#each api_tokens as token (token.id)}
-          <InsetCard as="article" className="p-4">
-            <div
-              class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
-            >
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <p class="font-semibold ui-title">{token.name}</p>
-                  <Badge tone={token.revoked ? "danger" : "accent"}>
-                    {token.revoked ? "Revoked" : "Active"}
-                  </Badge>
-                </div>
-
-                <div
-                  class="mt-3 flex min-w-0 items-center rounded-xl border px-3 py-2 theme-border"
-                  style="background-color: var(--surface-muted);"
-                >
-                  <code class="min-w-0 truncate font-mono text-xs ui-muted">
-                    {token.token_prefix}...
-                  </code>
-                </div>
-              </div>
-
-              {#if token.revoked}
-                <Button
-                  className="w-fit"
-                  variant="chipDanger"
-                  type="button"
-                  onclick={() => (apiTokenPendingDelete = token)}
-                >
-                  Delete
-                </Button>
-              {:else}
-                <Button
-                  className="w-fit"
-                  variant="chipDanger"
-                  type="button"
-                  onclick={() => (apiTokenPendingRevoke = token)}
-                >
-                  Revoke
-                </Button>
-              {/if}
-            </div>
-
-            <div class="mt-4 flex flex-wrap items-start justify-between gap-3">
-              <div class="grid gap-1 text-xs ui-muted">
-                <p>Created {formatDate(token.created_at)}</p>
-                <p>
-                  {token.last_used_at
-                    ? `Last used ${formatDate(token.last_used_at)}`
-                    : "Never used"}
-                </p>
-                <p>
-                  {token.expires_at
-                    ? `Expires ${formatDate(token.expires_at)}`
-                    : "Never expires"}
-                </p>
-                {#if token.revoked_at}
-                  <p>Revoked {formatDate(token.revoked_at)}</p>
-                {/if}
-              </div>
-
-              <div class="flex flex-wrap gap-1.5">
-                {#each token.scopes as scope (scope)}
-                  <span
-                    class="ui-code rounded-full px-2.5 py-1 text-xs font-medium"
-                  >
-                    {scopeLabel(scope)}
-                  </span>
-                {/each}
-              </div>
-            </div>
-          </InsetCard>
-        {/each}
-      {/if}
-    </div>
   </Card>
 </div>
 <ConfirmationModal

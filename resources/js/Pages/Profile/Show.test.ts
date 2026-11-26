@@ -96,27 +96,31 @@ describe("Profile show page", () => {
     expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
   });
 
-  it("links to the sections in page order and keeps forms collapsed", () => {
+  it("places account and sign-in methods left, API tokens right, history below", () => {
     const { container } = render(ProfileShow, { props: { profile } });
 
-    const hrefs = screen
-      .getAllByRole("link", {
-        name: /^(API tokens|Sign-in methods|Sign-in history)$/,
-      })
-      .map((link) => link.getAttribute("href"));
-    expect(hrefs).toEqual([
-      "#api-tokens",
-      "#sign-in-methods",
-      "#sign-in-history",
-    ]);
+    const account = container.querySelector('[aria-label="Account"]')!;
+    const methods = container.querySelector("#sign-in-methods")!;
+    const tokens = container.querySelector("#api-tokens")!;
+    const history = container.querySelector("#sign-in-history")!;
+    const grid = tokens.parentElement!;
 
-    const ids = hrefs.map((href) =>
-      Array.from(container.querySelectorAll("[id]")).findIndex(
-        (el) => `#${el.id}` === href,
-      ),
-    );
-    expect(ids.every((i) => i >= 0)).toBe(true);
-    expect([...ids].sort((a, b) => a - b)).toEqual(ids);
+    expect(account.parentElement).toBe(methods.parentElement);
+    expect(grid.contains(account)).toBe(true);
+    expect(grid.contains(history)).toBe(false);
+    expect(
+      account.compareDocumentPosition(methods) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      methods.compareDocumentPosition(tokens) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(
+      tokens.compareDocumentPosition(history) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
 
     expect(screen.queryByLabelText("Token name")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("New password")).not.toBeInTheDocument();

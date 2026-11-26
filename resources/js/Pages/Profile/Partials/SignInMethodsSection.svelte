@@ -6,7 +6,6 @@
   import FieldErrors from "@/Components/forms/FieldErrors.svelte";
   import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
-  import Card from "@/Components/ui/Card.svelte";
   import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import Input from "@/Components/ui/Input.svelte";
   import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
@@ -113,7 +112,7 @@
   id="sign-in-methods"
   class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]"
 >
-  <Card className="rounded-[1.75rem] p-6">
+  <section aria-label="Sign-in methods">
     <SectionHeading
       eyebrow="Account"
       title="Sign-in methods"
@@ -283,7 +282,7 @@
         </div>
       {/if}
     </div>
-  </Card>
+  </section>
 </div>
 
 <ConfirmationModal

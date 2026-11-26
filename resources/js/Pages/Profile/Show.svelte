@@ -41,44 +41,35 @@
       Profile
     </h2>
 
-    <Card className="rounded-[1.75rem] p-5">
-      <div class="min-w-0">
-        <div class="break-words text-xl font-semibold ui-title">
-          {profile?.display_name ?? ""}
-        </div>
-        <div class="break-words text-[15px] ui-muted">
-          {profile?.email ?? ""}
-        </div>
-      </div>
-      <div class="mt-3 flex flex-wrap gap-2">
-        {#each profile?.roles ?? [] as role (role)}
-          <Badge tone={role === "admin" ? "danger" : "accent"}>
-            {role}
-          </Badge>
-        {/each}
-      </div>
-      <p class="mt-3 text-sm ui-muted">
-        Created {formatDate(profile?.created_at)}
-      </p>
-    </Card>
+    <div class="grid items-start gap-6 md:grid-cols-2">
+      <Card className="rounded-[1.75rem] p-6">
+        <section aria-label="Account">
+          <div class="min-w-0">
+            <div class="break-words text-xl font-semibold ui-title">
+              {profile?.display_name ?? ""}
+            </div>
+            <div class="break-words text-[15px] ui-muted">
+              {profile?.email ?? ""}
+            </div>
+          </div>
+          <div class="mt-3 flex flex-wrap gap-2">
+            {#each profile?.roles ?? [] as role (role)}
+              <Badge tone={role === "admin" ? "danger" : "accent"}>
+                {role}
+              </Badge>
+            {/each}
+          </div>
+          <p class="mt-3 text-sm ui-muted">
+            Created {formatDate(profile?.created_at)}
+          </p>
+        </section>
+        <hr class="my-6 theme-border" />
+        <SignInMethodsSection {profile} {oauth_accounts} />
+      </Card>
 
-    <nav
-      aria-label="Profile sections"
-      class="flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium"
-    >
-      <a href="#api-tokens" class="underline-offset-4 hover:underline">
-        API tokens
-      </a>
-      <a href="#sign-in-methods" class="underline-offset-4 hover:underline">
-        Sign-in methods
-      </a>
-      <a href="#sign-in-history" class="underline-offset-4 hover:underline">
-        Sign-in history
-      </a>
-    </nav>
+      <ApiTokensSection {profile} {api_tokens} />
+    </div>
 
-    <ApiTokensSection {profile} {api_tokens} />
-    <SignInMethodsSection {profile} {oauth_accounts} />
     <SignInHistorySection {sign_in_history} />
   </section>
 </AppShell>

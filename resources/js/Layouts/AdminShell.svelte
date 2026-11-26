@@ -136,13 +136,13 @@
     style="background-color: var(--header-bg);"
   >
     <div
-      class="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6 sm:py-4 xl:px-8 xl:py-5"
+      class="flex w-full items-center justify-between gap-3 px-4 py-3 sm:px-6 xl:px-8"
     >
       <Link class="flex min-w-0 items-center gap-3 no-underline" href="/admin">
         <BrandMark
           idPrefix="admin"
-          className="size-9 shrink-0 rounded-xl sm:size-10"
-          svgClassName="size-9 sm:size-10"
+          className="size-9 shrink-0 rounded-xl"
+          svgClassName="size-9"
         />
         <div class="min-w-0">
           <p
@@ -151,7 +151,7 @@
           >
             {branding.domain}
           </p>
-          <h1 class="truncate text-base font-semibold sm:mt-1 sm:text-lg">
+          <h1 class="truncate text-base font-semibold">
             {pageTitle}
           </h1>
         </div>
@@ -166,20 +166,23 @@
           Site
         </Link>
         <div
-          class="hidden items-center gap-3 rounded-full border px-3 py-2 sm:flex"
+          class="hidden items-center gap-3 rounded-full border px-3 py-1 sm:flex"
           style="border-color: var(--panel-border); background-color: var(--surface-muted);"
         >
           <span
-            class="grid h-9 w-9 place-items-center rounded-full text-xs font-semibold text-white"
+            class="grid h-8 w-8 place-items-center rounded-full text-xs font-semibold text-white"
             style="background-color: var(--accent);"
           >
             {profileInitials()}
           </span>
           <div class="min-w-0">
-            <p class="truncate text-sm font-semibold">
+            <p class="truncate text-sm leading-tight font-semibold">
               {auth?.user?.display_name ?? auth?.user?.email ?? "Admin"}
             </p>
-            <p class="truncate text-xs" style="color: var(--page-muted);">
+            <p
+              class="truncate text-xs leading-tight"
+              style="color: var(--page-muted);"
+            >
               {auth?.user?.email ?? ""}
             </p>
           </div>

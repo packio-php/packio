@@ -31,7 +31,6 @@ use function array_map;
 use function array_values;
 use function is_array;
 use function is_string;
-use function str_contains;
 use function trim;
 
 #[Post('/profile/api-tokens', name: 'profile.api-tokens.issue')]
@@ -71,10 +70,9 @@ final readonly class ProfileApiTokenIssueHandler implements RequestHandlerInterf
             );
         } catch (InvalidArgumentException $exception) {
             $isPublic = $exception instanceof PublicValidationException;
-            $key      = $isPublic && str_contains($exception->getMessage(), 'Expiration') ? 'expires_at' : 'api_token';
             $message  = $isPublic ? $exception->getMessage() : 'Unable to create API token.';
             $this->validationRedirectState->errors($request, [
-                $key => [$message],
+                'api_token' => [$message],
             ]);
 
             return new RedirectResponse('/profile');

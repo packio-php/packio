@@ -110,7 +110,8 @@
       return date.toISOString();
     }
 
-    return addCalendarMonths(new Date(), presetMonths ?? 1).toISOString();
+    // Send exactly the date shown to the user, not a fresh recomputation.
+    return presetDate?.toISOString() ?? "";
   }
 
   function submitApiToken(): void {

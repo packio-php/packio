@@ -144,6 +144,22 @@ describe("ApiTokensSection", () => {
     );
   });
 
+  it("sends the shown preset date even if time passes before submit", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 0, 15, 10, 30, 45));
+    render(ApiTokensSection, { props: { profile } });
+    await openForm();
+    await fireEvent.input(screen.getByLabelText("Token name"), {
+      target: { value: "CI" },
+    });
+    vi.advanceTimersByTime(2 * 60 * 1000);
+    await submit();
+
+    expect(lastPost().data.expires_at).toBe(
+      new Date(2026, 1, 15, 10, 30).toISOString(),
+    );
+  });
+
   it("sends an empty expires_at for no expiration", async () => {
     render(ApiTokensSection, { props: { profile } });
     await openForm();

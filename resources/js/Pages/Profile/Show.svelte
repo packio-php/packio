@@ -70,7 +70,7 @@
     </Card>
 
     <ApiTokensSection {profile} {api_tokens} />
-    <SignInMethodsSection {profile} {branding} {oauth_accounts} />
+    <SignInMethodsSection {profile} {oauth_accounts} />
     <SignInHistorySection {sign_in_history} />
   </section>
 </AppShell>

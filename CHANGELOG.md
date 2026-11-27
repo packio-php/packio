@@ -17,10 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The password form opens inline in the Password row of Sign-in methods.
 - Disconnecting a connected OAuth account asks for confirmation, and the last sign-in method cannot be disconnected.
 - Sign-in history shows the five latest sign-ins with a Show all button, with the browser time zone labelled.
+- The Sources list is compact, with an always-visible search, a Filters panel, applied-filter chips and separate source state and sync result; the source page shows a summary with Re-sync, settings and webhook side by side, and confirmed source actions.
 
 ### Fixed
 
 - An API token expiration chosen on the profile page is now saved in the browser's time zone, instead of possibly shifting by the server's offset.
+- Re-sync is not offered again while a sync of the source is queued or running, and the source page refreshes its status until the sync finishes.
 
 ## [0.7.0] - 2026-11-26
 

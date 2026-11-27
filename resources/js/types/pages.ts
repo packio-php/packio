@@ -732,6 +732,7 @@ export interface SourceDetailsPayload {
   last_successful_sync_at?: string | null;
   last_sync_error?: string | null;
   last_sync_status: string;
+  sync_job_status?: "pending" | "running" | null;
   name: string;
   packages_active: boolean;
   provider?: string;

@@ -218,7 +218,7 @@ test.describe("signed in", () => {
     expect(response.status()).toBe(302);
     await expect(
       page.getByText(
-        "Re-sync scheduled. Refresh this page to see the latest sync status.",
+        "Re-sync scheduled.",
       ),
     ).toBeVisible();
     expect(new URL(page.url()).pathname).toBe(path);

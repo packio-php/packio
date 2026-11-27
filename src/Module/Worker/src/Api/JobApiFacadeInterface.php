@@ -120,6 +120,11 @@ interface JobApiFacadeInterface
     public function enqueueSourceCreation(string $organizationId, string $idempotencyKey, array $payload): bool;
 
     /**
+     * @return null|'pending'|'running' status of an unfinished source.sync job for the source
+     */
+    public function activeSourceSyncStatus(string $organizationId, string $sourceId): ?string;
+
+    /**
      * Coalesce source.sync jobs by reusing a pending one for the same source.
      *
      * @param array<string, mixed> $payload

@@ -234,6 +234,14 @@ final readonly class SourceJobScheduler
         );
     }
 
+    /**
+     * @return null|'pending'|'running'
+     */
+    public function activeSourceSyncStatus(string $sourceId, string $organizationId): ?string
+    {
+        return $this->jobSchedulerPort->activeSourceSyncStatus($organizationId, $sourceId);
+    }
+
     public function scheduleSourceSyncOnce(string $sourceId, string $organizationId, string $idempotencyKey, int $priority = 0): string
     {
         return $this->jobSchedulerPort->enqueueSourceSyncOnce(

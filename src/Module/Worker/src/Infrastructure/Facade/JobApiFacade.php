@@ -236,6 +236,23 @@ final readonly class JobApiFacade implements JobApiFacadeInterface
         return $this->jobQueueService->enqueueSourceCreation($organizationId, $idempotencyKey, $payload)->created;
     }
 
+    public function activeSourceSyncStatus(string $organizationId, string $sourceId): ?string
+    {
+        foreach ([Job::STATUS_RUNNING, Job::STATUS_PENDING] as $status) {
+            $jobs = $this->jobRepository->findByOrganization($organizationId, [
+                'status'    => $status,
+                'type'      => 'source.sync',
+                'source_id' => $sourceId,
+                'limit'     => 1,
+            ]);
+            if ([] !== $jobs) {
+                return $status;
+            }
+        }
+
+        return null;
+    }
+
     public function enqueueSourceSyncOnce(
         string $organizationId,
         string $sourceId,

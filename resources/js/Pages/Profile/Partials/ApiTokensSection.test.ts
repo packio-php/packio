@@ -66,6 +66,16 @@ describe("ApiTokensSection", () => {
     ).toHaveAttribute("href", "/api/doc");
   });
 
+  it("puts the create action above the token list", () => {
+    render(ApiTokensSection, { props: { profile, api_tokens: [token] } });
+
+    const create = screen.getByRole("button", { name: "Create API token" });
+    expect(
+      create.compareDocumentPosition(screen.getByText("Forever")) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("moves focus into the form and back on cancel", async () => {
     render(ApiTokensSection, { props: { profile } });
     const create = screen.getByRole("button", { name: "Create API token" });

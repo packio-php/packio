@@ -1,6 +1,6 @@
 <script lang="ts">
   import { router } from "@inertiajs/svelte";
-  import { FilterX, ListFilter, Search } from "@lucide/svelte";
+  import { ListFilter, Search } from "@lucide/svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
   import ListViewToggle from "@/Components/ui/ListViewToggle.svelte";
@@ -52,7 +52,7 @@
     return values.includes(value);
   }
 
-  function activeFilterCount(): number {
+  function filterCount(): number {
     let count = 0;
 
     if (resolvedFilters.search !== "") count += 1;
@@ -83,202 +83,152 @@
       { preserveScroll: true },
     );
   }
-
-  function clearFilters(): void {
-    router.get(
-      withOrganization("/sources"),
-      cleanQuery({
-        per_page: resolvedFilters.per_page,
-      }),
-      { preserveScroll: true },
-    );
-  }
 </script>
 
 <Card className="rounded-[1.25rem] p-4">
-  <div class="grid gap-4">
-    <div
-      class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between"
-    >
-      <div class="flex items-center gap-2">
-        <div class="relative">
-          <Button
-            aria-controls="source-index-filters"
-            aria-expanded={filtersOpen}
-            aria-label={filtersOpen ? "Hide filters" : "Show filters"}
-            className="rounded-full"
-            title={filtersOpen ? "Hide filters" : "Show filters"}
-            type="button"
-            variant="icon"
-            onclick={() => {
-              filtersOpen = !filtersOpen;
-            }}
+  <form
+    class="grid gap-4"
+    onsubmit={(event) => {
+      event.preventDefault();
+      applyFilters(
+        event as SubmitEvent & {
+          currentTarget: EventTarget & HTMLFormElement;
+        },
+      );
+    }}
+  >
+    <div class="flex flex-wrap items-center gap-2">
+      <div class="relative min-w-0 flex-1 basis-full sm:basis-0">
+        <input
+          aria-label="Search sources"
+          class="ui-button-secondary w-full rounded-xl px-3 py-2 pr-10 text-sm"
+          name="search"
+          placeholder="Search sources"
+          type="search"
+          value={resolvedFilters.search}
+        />
+        <button
+          type="submit"
+          aria-label="Search"
+          title="Search"
+          class="absolute inset-y-0 right-0 grid w-10 cursor-pointer place-items-center rounded-r-xl ui-muted hover:text-(--page-ink)"
+        >
+          <Search aria-hidden="true" size={16} />
+        </button>
+      </div>
+      <Button
+        aria-controls="source-index-filters"
+        aria-expanded={filtersOpen}
+        className="gap-2 rounded-full px-4"
+        type="button"
+        variant="secondary"
+        onclick={() => {
+          filtersOpen = !filtersOpen;
+        }}
+      >
+        <ListFilter aria-hidden="true" size={16} />
+        Filters
+        {#if filterCount() > 0}
+          <span
+            aria-hidden="true"
+            class="grid h-5 min-w-5 place-items-center rounded-full px-1 text-[0.65rem] font-bold"
+            style="background-color: var(--accent); color: var(--button-primary-text);"
           >
-            <ListFilter aria-hidden="true" size={18} />
-          </Button>
-          {#if activeFilterCount() > 0}
-            <span
-              class="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full px-1 text-[0.65rem] font-bold"
-              style="background-color: var(--accent); color: var(--button-primary-text);"
-            >
-              {activeFilterCount()}
-            </span>
-          {/if}
-        </div>
+            {filterCount()}
+          </span>
+        {/if}
+      </Button>
+      <ListViewToggle {mode} onChange={onModeChange} />
+    </div>
 
-        {#if activeFilterCount() > 0}
-          <Button
-            aria-label="Clear filters"
-            className="rounded-full"
-            title="Clear filters"
-            type="button"
-            variant="icon"
-            onclick={clearFilters}
-          >
-            <FilterX aria-hidden="true" size={18} />
-          </Button>
+    <div id="source-index-filters" class="grid gap-4" hidden={!filtersOpen}>
+      <div class="grid gap-4 lg:grid-cols-4">
+        {#if resolvedFilterOptions.providers.length > 0}
+          <fieldset class="grid gap-2 text-sm">
+            <legend class="font-medium ui-title">Provider</legend>
+            <div class="flex flex-wrap gap-3">
+              {#each resolvedFilterOptions.providers as provider (provider.value)}
+                <label class="flex items-center gap-2 ui-title">
+                  <input
+                    checked={checked(resolvedFilters.provider, provider.value)}
+                    class="h-4 w-4 rounded border-(--panel-border)"
+                    name="provider"
+                    type="checkbox"
+                    value={provider.value}
+                  />
+                  {provider.label}
+                </label>
+              {/each}
+            </div>
+          </fieldset>
+        {/if}
+        <fieldset class="grid gap-2 text-sm">
+          <legend class="font-medium ui-title">Visibility</legend>
+          <div class="flex flex-wrap gap-3">
+            {#each visibilityOptions as visibility (visibility)}
+              <label class="flex items-center gap-2 ui-title">
+                <input
+                  checked={checked(resolvedFilters.visibility, visibility)}
+                  class="h-4 w-4 rounded border-(--panel-border)"
+                  name="visibility"
+                  type="checkbox"
+                  value={visibility}
+                />
+                {visibility}
+              </label>
+            {/each}
+          </div>
+        </fieldset>
+
+        <fieldset class="grid gap-2 text-sm">
+          <legend class="font-medium ui-title">Status</legend>
+          <div class="flex flex-wrap gap-3">
+            {#each statusOptions as status (status)}
+              <label class="flex items-center gap-2 ui-title">
+                <input
+                  checked={checked(resolvedFilters.status, status)}
+                  class="h-4 w-4 rounded border-(--panel-border)"
+                  name="status"
+                  type="checkbox"
+                  value={status}
+                />
+                {status}
+              </label>
+            {/each}
+          </div>
+        </fieldset>
+
+        {#if resolvedFilterOptions.sync_statuses.length > 0}
+          <fieldset class="grid gap-2 text-sm">
+            <legend class="font-medium ui-title">Sync</legend>
+            <div class="flex flex-wrap gap-3">
+              {#each resolvedFilterOptions.sync_statuses as status (status.value)}
+                <label class="flex items-center gap-2 ui-title">
+                  <input
+                    checked={checked(resolvedFilters.sync_status, status.value)}
+                    class="h-4 w-4 rounded border-(--panel-border)"
+                    name="sync_status"
+                    type="checkbox"
+                    value={status.value}
+                  />
+                  {status.label}
+                </label>
+              {/each}
+            </div>
+          </fieldset>
         {/if}
       </div>
 
-      <div class="flex shrink-0 justify-end">
-        <ListViewToggle {mode} onChange={onModeChange} />
+      <div class="flex flex-wrap gap-3">
+        <Button
+          className="gap-2 rounded-full px-5"
+          type="submit"
+          variant="primary"
+        >
+          <Search aria-hidden="true" size={16} />
+          Apply filters
+        </Button>
       </div>
     </div>
-
-    {#if filtersOpen}
-      <form
-        id="source-index-filters"
-        class="grid min-w-0 flex-1 gap-4"
-        onsubmit={(event) => {
-          event.preventDefault();
-          applyFilters(
-            event as SubmitEvent & {
-              currentTarget: EventTarget & HTMLFormElement;
-            },
-          );
-        }}
-      >
-        <div
-          class="grid gap-4 lg:grid-cols-[minmax(14rem,1.2fr)_minmax(10rem,0.8fr)]"
-        >
-          <label class="grid gap-2 text-sm">
-            <span class="font-medium ui-title">Search</span>
-            <input
-              class="ui-button-secondary rounded-xl px-3 py-2 text-sm"
-              name="search"
-              type="search"
-              value={resolvedFilters.search}
-            />
-          </label>
-
-          {#if resolvedFilterOptions.providers.length > 0}
-            <fieldset class="grid gap-2 text-sm">
-              <legend class="font-medium ui-title">Provider</legend>
-              <div class="flex flex-wrap gap-3">
-                {#each resolvedFilterOptions.providers as provider (provider.value)}
-                  <label class="flex items-center gap-2 ui-title">
-                    <input
-                      checked={checked(
-                        resolvedFilters.provider,
-                        provider.value,
-                      )}
-                      class="h-4 w-4 rounded border-(--panel-border)"
-                      name="provider"
-                      type="checkbox"
-                      value={provider.value}
-                    />
-                    {provider.label}
-                  </label>
-                {/each}
-              </div>
-            </fieldset>
-          {/if}
-        </div>
-
-        <div class="grid gap-4 lg:grid-cols-3">
-          <fieldset class="grid gap-2 text-sm">
-            <legend class="font-medium ui-title">Visibility</legend>
-            <div class="flex flex-wrap gap-3">
-              {#each visibilityOptions as visibility (visibility)}
-                <label class="flex items-center gap-2 ui-title">
-                  <input
-                    checked={checked(resolvedFilters.visibility, visibility)}
-                    class="h-4 w-4 rounded border-(--panel-border)"
-                    name="visibility"
-                    type="checkbox"
-                    value={visibility}
-                  />
-                  {visibility}
-                </label>
-              {/each}
-            </div>
-          </fieldset>
-
-          <fieldset class="grid gap-2 text-sm">
-            <legend class="font-medium ui-title">Status</legend>
-            <div class="flex flex-wrap gap-3">
-              {#each statusOptions as status (status)}
-                <label class="flex items-center gap-2 ui-title">
-                  <input
-                    checked={checked(resolvedFilters.status, status)}
-                    class="h-4 w-4 rounded border-(--panel-border)"
-                    name="status"
-                    type="checkbox"
-                    value={status}
-                  />
-                  {status}
-                </label>
-              {/each}
-            </div>
-          </fieldset>
-
-          {#if resolvedFilterOptions.sync_statuses.length > 0}
-            <fieldset class="grid gap-2 text-sm">
-              <legend class="font-medium ui-title">Sync</legend>
-              <div class="flex flex-wrap gap-3">
-                {#each resolvedFilterOptions.sync_statuses as status (status.value)}
-                  <label class="flex items-center gap-2 ui-title">
-                    <input
-                      checked={checked(
-                        resolvedFilters.sync_status,
-                        status.value,
-                      )}
-                      class="h-4 w-4 rounded border-(--panel-border)"
-                      name="sync_status"
-                      type="checkbox"
-                      value={status.value}
-                    />
-                    {status.label}
-                  </label>
-                {/each}
-              </div>
-            </fieldset>
-          {/if}
-        </div>
-
-        <div class="flex flex-wrap gap-3">
-          <Button
-            className="gap-2 rounded-full px-5"
-            type="submit"
-            variant="primary"
-          >
-            <Search aria-hidden="true" size={16} />
-            Apply filters
-          </Button>
-          {#if activeFilterCount() > 0}
-            <Button
-              className="gap-2 rounded-full px-5"
-              title="Clear filters"
-              type="button"
-              variant="secondary"
-              onclick={clearFilters}
-            >
-              <FilterX aria-hidden="true" size={16} />
-              Clear
-            </Button>
-          {/if}
-        </div>
-      </form>
-    {/if}
-  </div>
+  </form>
 </Card>

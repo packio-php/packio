@@ -171,7 +171,9 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Add source" }));
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Add source" })[0],
+    );
     await fireEvent.input(screen.getByLabelText("Repository URL"), {
       target: { value: "https://example.com/vendor/package.git" },
     });
@@ -224,10 +226,9 @@ describe("Sources index page", () => {
       screen.queryByRole("button", { name: "Add source" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Owner membership is required to connect and synchronize organization sources.",
-      ),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Manage provider access" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Owner membership/)).not.toBeInTheDocument();
   });
 
   it("renders source cards in the default grid view", () => {
@@ -297,8 +298,86 @@ describe("Sources index page", () => {
     });
 
     expect(
-      screen.getByText("No sources match current filters."),
+      screen.getByText("No sources match your search"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a hint and Add source for an empty catalog", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        source_stats: { active: 0, archived: 0, total: 0 },
+        can_manage_sources: true,
+      },
+    });
+
+    expect(screen.getByText("No sources yet")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add source" })).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText(/ready$/)).not.toBeInTheDocument();
+  });
+
+  it("shows a source counter and no pagination on a single page", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        sources: [activeSource],
+        pagination: { ...pagination, last_page: 1, total: 1 },
+        source_stats: { active: 1, archived: 0, total: 1 },
+      },
+    });
+
+    expect(screen.getByText("1 source")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Next page" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders top and bottom pagination and filter chips", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        filters: activeFilters,
+        pagination,
+        providers: [genericProvider],
+        source_filter_options: filterOptions,
+        sources: [activeSource],
+        source_stats: { active: 20, archived: 0, total: 20 },
+      },
+    });
+
+    expect(screen.getAllByRole("button", { name: "Next page" })).toHaveLength(
+      2,
+    );
+    expect(screen.getByText("Provider: Generic Git")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search sources")).toHaveValue("acme");
+  });
+
+  it("opens the access modal for manage_access and strips the param", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/organization/acme/sources?manage_access=1&page=2",
+    );
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        source_stats: { active: 0, archived: 0, total: 0 },
+        can_manage_sources: true,
+      },
+    });
+
+    expect(
+      await screen.findByRole("dialog", { name: "Manage provider access" }),
+    ).toBeInTheDocument();
+    expect(window.location.search).toBe("?page=2");
   });
 
   it("submits source search with page reset", async () => {
@@ -312,14 +391,10 @@ describe("Sources index page", () => {
       },
     });
 
-    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
-    await fireEvent.input(screen.getByLabelText("Search"), {
+    await fireEvent.input(screen.getByLabelText("Search sources"), {
       target: { value: "acme" },
     });
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Apply filters" }),
-    );
+    await fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
     expect(router.get).toHaveBeenCalledWith(
       "/organization/acme/sources",
@@ -339,7 +414,7 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.click(screen.getByLabelText("Generic Git"));
     await fireEvent.click(screen.getByLabelText("private"));
     await fireEvent.click(screen.getByLabelText("active"));
@@ -398,7 +473,9 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getAllByText("→")[0]);
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Next page" })[0],
+    );
 
     expect(router.get).toHaveBeenCalledWith(
       "/organization/acme/sources",

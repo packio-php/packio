@@ -122,7 +122,7 @@ describe("Packages index page", () => {
     expect(screen.queryByText("→")).toBeNull();
   });
 
-  it("does not show a separate result counter above the list", () => {
+  it("shows a range counter when the results span several pages", () => {
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
@@ -132,7 +132,20 @@ describe("Packages index page", () => {
       },
     });
 
-    expect(screen.queryByText(/of 40 packages/)).toBeNull();
+    expect(screen.getByText("19–36 of 40 packages")).toBeInTheDocument();
+  });
+
+  it("shows a plain count when all results fit on one page", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: { ...packageStats, total: 1 },
+        pagination: { ...pagination, from: 1, to: 1, total: 1 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("1 package")).toBeInTheDocument();
   });
 
   it("explains where to start in an empty catalog", () => {

@@ -191,8 +191,18 @@
       />
     {/if}
 
-    {#if chips.length > 0 || (activeFilterCount > 0 && sections.length > 0)}
+    {#if pagination.total > 0 || chips.length > 0 || (activeFilterCount > 0 && sections.length > 0)}
       <div class="flex flex-wrap items-center gap-2">
+        {#if pagination.total > 0}
+          <p class="text-sm ui-muted">
+            {#if pagination.last_page > 1}
+              {pagination.from}–{pagination.to} of {pagination.total} packages
+            {:else}
+              {pagination.total}
+              {pagination.total === 1 ? "package" : "packages"}
+            {/if}
+          </p>
+        {/if}
         {#each chips as chip (chip)}
           <Badge tone="neutral">{chip}</Badge>
         {/each}

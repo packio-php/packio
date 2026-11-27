@@ -2,6 +2,7 @@
   import Badge from "@/Components/ui/Badge.svelte";
   import Link from "@/Components/core/Link.svelte";
   import TableFrame from "@/Components/ui/TableFrame.svelte";
+  import { sourceIssue } from "../packageSource";
   import type { PackagesIndexSection } from "@/types/pages";
 
   interface Props {
@@ -29,30 +30,22 @@
       ? "danger"
       : "accent";
   }
-
-  function syncTone(status: string): string {
-    if (status === "failed") {
-      return "danger";
-    }
-
-    return status === "success" ? "accent" : "gold";
-  }
 </script>
 
-<TableFrame ariaLabel="Packages" tableClassName="min-w-[900px]">
+<TableFrame ariaLabel="Packages" tableClassName="min-w-[720px]">
   <thead>
     <tr>
       <th class="px-4 py-3">Package</th>
+      <th class="px-4 py-3">Latest</th>
       <th class="px-4 py-3">Access</th>
       <th class="px-4 py-3">Listed</th>
-      <th class="px-4 py-3">Latest</th>
       <th class="px-4 py-3 text-right">Downloads</th>
       <th class="px-4 py-3">Source</th>
-      <th class="px-4 py-3 text-right">Action</th>
     </tr>
   </thead>
   <tbody>
     {#each sections as section (section.name)}
+      {@const issue = section.source ? sourceIssue(section.source) : null}
       <tr class="align-top">
         <td class="px-4 py-3">
           <Link
@@ -61,9 +54,12 @@
           >
             {section.name}
           </Link>
-          <p class="mt-1 line-clamp-2 max-w-[22rem] text-sm ui-muted">
+          <p class="mt-1 line-clamp-1 max-w-[22rem] text-sm ui-muted">
             {section.description ?? "No description provided."}
           </p>
+        </td>
+        <td class="px-4 py-3 ui-muted">
+          {section.latest_version ?? "No available version"}
         </td>
         <td class="px-4 py-3">
           <Badge className="whitespace-nowrap" tone={accessTone(section)}>
@@ -78,53 +74,27 @@
             {section.active ? "Listed" : "Hidden"}
           </Badge>
         </td>
-        <td class="px-4 py-3 ui-muted">
-          {section.latest_version ?? "not published yet"}
-        </td>
         <td class="px-4 py-3 text-right tabular-nums">
           {section.download_count}
         </td>
         <td class="px-4 py-3">
           {#if section.source}
-            <div class="grid gap-2">
+            <div class="flex flex-wrap items-center gap-2">
               <Link
-                class="ui-link-accent font-medium"
+                class="ui-link-accent font-medium break-all"
                 href={withOrganization(`/sources/${section.source.id}`)}
               >
                 {section.source.name}
               </Link>
-              <p
-                class="max-w-[18rem] truncate text-xs ui-muted"
-                title={section.source.url}
-              >
-                {section.source.url}
-              </p>
-              <div class="flex flex-wrap gap-2">
-                <Badge
-                  className="whitespace-nowrap"
-                  tone={syncTone(section.source.last_sync_status)}
-                >
-                  {section.source.last_sync_status}
+              {#if issue}
+                <Badge className="whitespace-nowrap" tone="danger">
+                  {issue}
                 </Badge>
-                <Badge
-                  className="whitespace-nowrap"
-                  tone={section.source.active ? "accent" : "muted"}
-                >
-                  {section.source.active ? "Source active" : "Source inactive"}
-                </Badge>
-              </div>
+              {/if}
             </div>
           {:else}
-            <span class="text-sm ui-muted">manual</span>
+            <span class="text-sm ui-muted">Manual</span>
           {/if}
-        </td>
-        <td class="px-4 py-3 text-right">
-          <Link
-            class="ui-button-secondary inline-flex whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium"
-            href={packageDetailsUrl(section)}
-          >
-            Open details
-          </Link>
         </td>
       </tr>
     {/each}

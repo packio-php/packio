@@ -7,10 +7,13 @@
   import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
+  import { ChevronRight } from "@lucide/svelte";
+  import CopyButton from "@/Components/ui/CopyButton.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import { formatDate } from "@/lib/date";
+  import { sourceIssue } from "./packageSource";
   import type { AppPageProps } from "@/types/app";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
@@ -43,9 +46,16 @@
   );
   let hiddenReleaseCount = $derived(releases.length - listedReleaseCount);
 
-  let anonymousAccessEnabled = $derived(Boolean(pkg?.anonymous_access));
-  let publicInstallRequiresToken = $derived(
-    pkg?.visibility === "public" && !anonymousAccessEnabled,
+  let latestRelease = $derived(releases.find((r) => r.active) ?? null);
+  let installable = $derived(pkg.active && latestRelease !== null);
+  let tokenRequired = $derived(
+    pkg.visibility === "private" || !pkg.anonymous_access,
+  );
+  let sourceProblem = $derived(
+    pkg.source_summary ? sourceIssue(pkg.source_summary) : null,
+  );
+  let hasOrganizationAccess = $derived(
+    Boolean(usePage<AppPageProps>().props.current_membership),
   );
   let releaseLastPage = $derived(
     Math.max(1, Math.ceil(releases.length / releasesPerPage)),
@@ -103,14 +113,29 @@
 
   let backUrl = $derived(safeBackUrl(usePage<AppPageProps>().url ?? ""));
 
-  function submit(
-    event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
-  ): void {
-    const form = event.currentTarget;
+  let pendingRelease = $state<PackageReleasePayload | null>(null);
+  let confirming = $state(false);
 
-    router.post(form.action, Object.fromEntries(new FormData(form)), {
-      preserveScroll: true,
-    });
+  function confirmRelease(): void {
+    const release = pendingRelease;
+    if (!release) {
+      return;
+    }
+
+    confirming = true;
+    // preserveUrl keeps ?return_to so "Back to packages" still works after the redirect.
+    router.post(
+      withOrganization(`/packages/${pkg.name}/releases/activity`),
+      { version: release.version, active: release.active ? "0" : "1" },
+      {
+        preserveScroll: true,
+        preserveUrl: true,
+        onFinish: () => {
+          confirming = false;
+          pendingRelease = null;
+        },
+      },
+    );
   }
 
   function handleReleasePageChange(page: number): void {
@@ -127,328 +152,291 @@
     <BackButton label="Back to packages" href={backUrl} />
 
     <Card as="article" className="rounded-[1.75rem] p-6">
-      <div class="flex items-center justify-between gap-4">
-        <div>
-          <SectionHeading
-            eyebrow={pkg.visibility}
-            title={pkg.name}
-            description=""
-          />
-          <div class="mt-3 flex flex-wrap gap-2">
-            <Badge
-              tone={pkg.visibility === "private" || publicInstallRequiresToken
-                ? "danger"
-                : "accent"}
-            >
-              {pkg.visibility === "private" || publicInstallRequiresToken
-                ? "Token required"
-                : "Public"}
-            </Badge>
-            <Badge tone={pkg.active ? "accent" : "muted"}>
-              {pkg.active ? "Listed in registry" : "Hidden from registry"}
-            </Badge>
-            <Badge tone="muted">
-              {pkg.download_count} downloads
-            </Badge>
-          </div>
-        </div>
-      </div>
-
-      <p class="ui-muted mt-4 text-sm leading-6">
+      <h2 class="ui-title min-w-0 break-all text-2xl font-semibold">
+        {pkg.name}
+      </h2>
+      <p class="ui-muted mt-3 text-sm leading-6">
         {pkg.description || "No description"}
       </p>
-
-      <div class="ui-muted mt-6 grid gap-3 text-sm">
-        <p>
-          <span class="font-medium ui-title">Type:</span>
-          {pkg.type}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Source type:</span>
-          {pkg.source_type}
-        </p>
-        <p class="break-all">
-          <span class="font-medium ui-title">Source URL:</span>
-          {pkg.source_url}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Registry access:</span>
-          {pkg.access_hint}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Created at:</span>
-          {formatDate(pkg.created_at)}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Updated at:</span>
-          {formatDate(pkg.updated_at)}
-        </p>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <Badge tone={latestRelease ? "accent" : "muted"} className="break-all">
+          {latestRelease ? latestRelease.version : "No available version"}
+        </Badge>
+        <Badge tone={tokenRequired ? "danger" : "accent"}>
+          {tokenRequired ? "Token required" : "Public"}
+        </Badge>
+        <Badge tone={pkg.active ? "accent" : "muted"}>
+          {pkg.active ? "Listed in registry" : "Hidden from registry"}
+        </Badge>
+        <span class="ui-muted text-sm">{pkg.download_count} downloads</span>
       </div>
 
-      {#if pkg.source_summary}
-        <InsetCard className="mt-6 p-5">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="ui-eyebrow">Managed by source</p>
-              <p class="ui-title mt-2 text-lg font-semibold">
-                {pkg.source_summary.name}
-              </p>
-              <p class="ui-muted mt-2 break-all text-sm">
-                {pkg.source_summary.url}
-              </p>
-            </div>
-            <Badge
-              tone={pkg.source_summary.last_sync_status === "failed"
-                ? "danger"
-                : pkg.source_summary.last_sync_status === "success"
-                  ? "accent"
-                  : "gold"}
+      {#if installable}
+        <InsetCard className="mt-6 p-4">
+          <div class="flex items-center gap-3">
+            <code
+              class="min-w-0 flex-1 overflow-x-auto whitespace-nowrap text-sm"
             >
-              {pkg.source_summary.last_sync_status}
-            </Badge>
+              composer require {pkg.name}
+            </code>
+            <CopyButton value={`composer require ${pkg.name}`} label="Copy" />
           </div>
-
-          <div class="mt-4 flex flex-wrap gap-2">
-            <Badge tone={pkg.source_summary.active ? "accent" : "muted"}>
-              {pkg.source_summary.active ? "Source active" : "Source inactive"}
-            </Badge>
-            <Badge
-              tone={pkg.source_summary.visibility === "private"
-                ? "danger"
-                : "accent"}
-            >
-              {pkg.source_summary.visibility}
-            </Badge>
-            {#if pkg.source_summary.archived}
-              <Badge tone="muted">Archived</Badge>
-            {/if}
-          </div>
-
-          <div class="ui-muted mt-4 grid gap-2 text-sm">
-            <p>
-              <span class="font-medium ui-title">Default ref:</span>
-              {pkg.source_summary.default_ref}
+          {#if tokenRequired}
+            <p class="ui-muted mt-3 text-sm">
+              Installing requires a registry token.
+              {#if hasOrganizationAccess}
+                <Link
+                  class="font-medium underline"
+                  href={withOrganization("/registry/setup")}
+                >
+                  Setup
+                </Link>
+              {/if}
             </p>
-            {#if pkg.source_summary.last_successful_sync_at}
-              <p>
-                <span class="font-medium ui-title">Last success:</span>
-                {formatDate(pkg.source_summary.last_successful_sync_at)}
-              </p>
-            {/if}
-            {#if pkg.source_summary.last_failed_sync_at}
-              <p>
-                <span class="font-medium ui-title">Last failure:</span>
-                {formatDate(pkg.source_summary.last_failed_sync_at)}
-              </p>
-            {/if}
-            {#if pkg.source_summary.last_sync_error}
-              <p style="color: var(--flash-error-text);">
-                <span class="font-medium ui-title">Last error:</span>
-                {pkg.source_summary.last_sync_error}
-              </p>
-            {/if}
-          </div>
-
-          <div class="mt-4 flex flex-wrap gap-3">
-            <Link
-              class="ui-button-secondary rounded-full px-4 py-2 text-sm font-medium"
-              href={withOrganization(`/sources/${pkg.source_summary.id}`)}
-            >
-              Open source details
-            </Link>
-            <Link
-              class="ui-button-secondary rounded-full px-4 py-2 text-sm font-medium"
-              href={withOrganization("/sources")}
-            >
-              Open sources
-            </Link>
-          </div>
+          {/if}
         </InsetCard>
       {/if}
+
+      {#if pkg.source_summary}
+        <div class="mt-6 flex flex-wrap items-center gap-2 text-sm">
+          <span class="ui-muted">Source</span>
+          <Link
+            class="ui-link-accent min-w-0 break-all font-medium"
+            href={withOrganization(`/sources/${pkg.source_summary.id}`)}
+          >
+            {pkg.source_summary.name}
+          </Link>
+          {#if sourceProblem}
+            <Badge tone="danger">{sourceProblem}</Badge>
+          {/if}
+        </div>
+        {#if pkg.source_summary.last_sync_error}
+          <p
+            class="mt-2 break-all text-sm"
+            style="color: var(--flash-error-text);"
+          >
+            {pkg.source_summary.last_sync_error}
+          </p>
+        {/if}
+      {/if}
     </Card>
+
+    <Card as="details" className="group rounded-[1.25rem] px-5 py-3">
+      <summary
+        class="flex cursor-pointer list-none items-center gap-2 text-sm font-medium ui-muted hover:text-(--page-ink) [&::-webkit-details-marker]:hidden"
+      >
+        <ChevronRight
+          aria-hidden="true"
+          class="size-4 shrink-0 transition-transform group-open:rotate-90"
+        />
+        {pkg.source_summary ? "Source details" : "Package details"}
+      </summary>
+      <dl class="ui-muted mt-3 grid gap-4 text-sm">
+        {#if pkg.source_summary}
+          <div>
+            <dt class="ui-title font-medium">Provider</dt>
+            <dd>{pkg.source_summary.type}</dd>
+          </div>
+          <div>
+            <dt class="ui-title font-medium">URL</dt>
+            <dd class="break-all">{pkg.source_summary.url}</dd>
+          </div>
+          <div>
+            <dt class="ui-title font-medium">Default branch</dt>
+            <dd class="break-all">{pkg.source_summary.default_ref}</dd>
+          </div>
+          {#if pkg.source_summary.last_successful_sync_at}
+            <div>
+              <dt class="ui-title font-medium">Last successful sync</dt>
+              <dd>{formatDate(pkg.source_summary.last_successful_sync_at)}</dd>
+            </div>
+          {/if}
+        {/if}
+        <div>
+          <dt class="ui-title font-medium">Package type</dt>
+          <dd>{pkg.type}</dd>
+        </div>
+        {#if !pkg.source_summary && pkg.source_url}
+          <div>
+            <dt class="ui-title font-medium">Source URL</dt>
+            <dd class="break-all">{pkg.source_url}</dd>
+          </div>
+        {/if}
+        <div>
+          <dt class="ui-title font-medium">Created</dt>
+          <dd>{formatDate(pkg.created_at)}</dd>
+        </div>
+        {#if pkg.updated_at}
+          <div>
+            <dt class="ui-title font-medium">Updated</dt>
+            <dd>{formatDate(pkg.updated_at)}</dd>
+          </div>
+        {/if}
+      </dl>
+    </Card>
+
+    <nav aria-label="Package sections" class="flex flex-wrap gap-3 text-sm">
+      <a class="ui-button-secondary rounded-full px-4 py-2" href="#readme">
+        README
+      </a>
+    </nav>
   </section>
 
-  {#if pkg.readme_html}
+  <div id="versions" class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]">
     <Card as="section" className="rounded-[1.75rem] p-6">
-      <SectionHeading
-        eyebrow="Documentation"
-        title="README"
-        description="Synced from the package source and shown here for quick reference."
-      />
-      <div class="relative mt-4">
-        <div
-          class="ui-markdown ui-muted overflow-x-auto"
-          class:max-h-72={!readmeExpanded}
-          class:overflow-hidden={!readmeExpanded}
-        >
-          <!-- HTML is sanitized during markdown conversion on the backend. -->
-          <!-- eslint-disable-next-line svelte/no-at-html-tags -->
-          {@html pkg.readme_html}
+      <h2 class="ui-title text-xl font-semibold">Versions</h2>
+      <p class="ui-muted mt-2 text-sm">
+        Hide or restore specific versions in the registry without deleting
+        release data.
+      </p>
+      <p class="ui-muted mt-2 text-sm">
+        {listedReleaseCount} available · {hiddenReleaseCount} hidden
+      </p>
+      {#if showReleasePagination}
+        <div class="mt-4">
+          <Pagination
+            currentPage={releasePage}
+            lastPage={releaseLastPage}
+            hasMorePages={releasePage < releaseLastPage}
+            hasPreviousPages={releasePage > 1}
+            from={releaseFrom}
+            to={releaseTo}
+            total={releases.length}
+            perPage={releasesPerPage}
+            onPageChange={handleReleasePageChange}
+            showPerPageSelector={false}
+          />
         </div>
-        {#if !readmeExpanded}
-          <div
-            class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-[var(--surface)]"
-          ></div>
-        {/if}
-      </div>
-      <Button
-        type="button"
-        variant="soft"
-        className="mt-4 rounded-full px-4 py-2 text-sm"
-        onclick={() => (readmeExpanded = !readmeExpanded)}
-      >
-        {readmeExpanded ? "Collapse README" : "Show full README"}
-      </Button>
-    </Card>
-  {/if}
-
-  <Card as="section" className="rounded-[1.75rem] p-6">
-    <SectionHeading
-      eyebrow="Releases"
-      title="Version history"
-      description="Hide or restore specific versions in the registry without deleting release data."
-    />
-    <div class="mt-4 flex flex-wrap gap-2" aria-label="Release counts">
-      <Badge tone="accent">{listedReleaseCount} listed in registry</Badge>
-      <Badge tone="muted">{hiddenReleaseCount} hidden from registry</Badge>
-      <Badge tone="neutral">{releases.length} total releases</Badge>
-    </div>
-    {#if showReleasePagination}
-      <div class="mt-4">
-        <Pagination
-          currentPage={releasePage}
-          lastPage={releaseLastPage}
-          hasMorePages={releasePage < releaseLastPage}
-          hasPreviousPages={releasePage > 1}
-          from={releaseFrom}
-          to={releaseTo}
-          total={releases.length}
-          perPage={releasesPerPage}
-          onPageChange={handleReleasePageChange}
-          showPerPageSelector={false}
-        />
-      </div>
-    {/if}
-    <div class="mt-4 grid gap-3">
-      {#if releases.length === 0}
-        <p class="text-sm ui-muted">No releases indexed yet.</p>
-      {:else}
-        {#each paginatedReleases as release (release.version)}
-          <InsetCard as="article" className="p-5">
-            <div
-              class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-            >
-              <div class="min-w-0">
-                <p class="ui-title text-lg font-semibold">
-                  {release.version}
-                </p>
-                <div class="mt-2 grid min-w-0 gap-2">
-                  <p
-                    class="ui-muted min-w-0 max-w-full text-[11px] leading-4 sm:text-xs"
+      {/if}
+      <div class="mt-4 grid gap-3">
+        {#if releases.length === 0}
+          <p class="text-sm ui-muted">No versions indexed yet.</p>
+        {:else}
+          {#each paginatedReleases as release (release.version)}
+            <InsetCard as="article" className="p-4">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
+                <details class="group min-w-0 flex-1">
+                  <summary
+                    class="flex cursor-pointer list-none flex-wrap [&::-webkit-details-marker]:hidden items-center gap-x-3 gap-y-2"
                   >
-                    <span class="font-medium ui-title">ref</span>
-                    <span class="font-mono break-all [overflow-wrap:anywhere]">
-                      {release.reference}
+                    <ChevronRight
+                      aria-hidden="true"
+                      class="size-4 shrink-0 transition-transform group-open:rotate-90"
+                    />
+                    <span class="ui-title break-all font-semibold">
+                      {release.version}
                     </span>
-                  </p>
-                  <div>
-                    <Badge
-                      tone="muted"
-                      className="whitespace-nowrap px-2.5 py-0.5"
-                    >
-                      {release.download_count} downloads
-                    </Badge>
-                  </div>
-                </div>
-                <div class="mt-3 flex flex-wrap gap-2">
-                  <Badge tone={release.active ? "accent" : "muted"}>
-                    {release.active
-                      ? "Listed in registry"
-                      : "Hidden from registry"}
-                  </Badge>
-                </div>
-              </div>
-              <div class="w-full sm:min-w-36 sm:w-auto sm:text-right">
-                <div class="grid grid-cols-2 gap-3 sm:block">
-                  <div>
-                    <p class="text-xs ui-muted">Released</p>
-                    <p class="text-sm ui-title">
+                    <span class="ui-muted text-sm">
                       {formatDate(release.released_at)}
+                    </span>
+                    <Badge tone={release.active ? "accent" : "muted"}>
+                      {release.active
+                        ? "Listed in registry"
+                        : "Hidden from registry"}
+                    </Badge>
+                    <span class="ui-muted text-sm">
+                      {release.download_count} downloads
+                    </span>
+                  </summary>
+                  <div class="ui-muted mt-3 grid min-w-0 gap-2 text-sm">
+                    <p class="break-all">
+                      <span class="font-medium ui-title">ref</span>
+                      <span class="font-mono">{release.reference}</span>
                     </p>
-                  </div>
-                  <div>
-                    <p class="text-xs ui-muted sm:mt-2">Imported</p>
-                    <p class="text-sm ui-muted">
+                    <p class="break-all">
+                      <span class="font-medium ui-title">Dist:</span>
+                      {release.dist_url}
+                    </p>
+                    <p class="break-all">
+                      <span class="font-medium ui-title">Source:</span>
+                      {release.source_url}
+                    </p>
+                    <p>
+                      <span class="font-medium ui-title">Imported:</span>
                       {formatDate(release.created_at)}
                     </p>
                   </div>
-                </div>
+                </details>
                 {#if can_manage_packages}
-                  <form
-                    class="mt-3 sm:flex sm:justify-end"
-                    method="POST"
-                    action={withOrganization(
-                      `/packages/${pkg.name}/releases/activity`,
-                    )}
-                    onsubmit={(event) => {
-                      event.preventDefault();
-                      submit(
-                        event as SubmitEvent & {
-                          currentTarget: EventTarget & HTMLFormElement;
-                        },
-                      );
-                    }}
+                  <Button
+                    type="button"
+                    variant={release.active ? "soft" : "primary"}
+                    className="h-9 shrink-0 self-start rounded-full px-4 text-xs"
+                    onclick={() => (pendingRelease = release)}
                   >
-                    <input
-                      type="hidden"
-                      name="version"
-                      value={release.version}
-                    />
-                    <input
-                      type="hidden"
-                      name="active"
-                      value={release.active ? "0" : "1"}
-                    />
-                    <Button
-                      type="submit"
-                      variant={release.active ? "soft" : "primary"}
-                      className="h-9 w-full rounded-full px-4 text-xs sm:w-auto"
-                    >
-                      {release.active ? "Hide release" : "Show release"}
-                    </Button>
-                  </form>
+                    {release.active ? "Hide release" : "Restore release"}
+                  </Button>
                 {/if}
               </div>
-            </div>
-            <div class="ui-muted mt-4 grid gap-2 text-sm">
-              <p class="break-all">
-                <span class="font-medium ui-title">Dist:</span>
-                {release.dist_url}
-              </p>
-              <p class="break-all">
-                <span class="font-medium ui-title">Source:</span>
-                {release.source_url}
-              </p>
-            </div>
-          </InsetCard>
-        {/each}
-      {/if}
-    </div>
-    {#if showReleasePagination}
-      <div class="mt-4">
-        <Pagination
-          currentPage={releasePage}
-          lastPage={releaseLastPage}
-          hasMorePages={releasePage < releaseLastPage}
-          hasPreviousPages={releasePage > 1}
-          from={releaseFrom}
-          to={releaseTo}
-          total={releases.length}
-          perPage={releasesPerPage}
-          onPageChange={handleReleasePageChange}
-          showPerPageSelector={false}
-        />
+            </InsetCard>
+          {/each}
+        {/if}
       </div>
-    {/if}
-  </Card>
+      {#if showReleasePagination}
+        <div class="mt-4">
+          <Pagination
+            currentPage={releasePage}
+            lastPage={releaseLastPage}
+            hasMorePages={releasePage < releaseLastPage}
+            hasPreviousPages={releasePage > 1}
+            from={releaseFrom}
+            to={releaseTo}
+            total={releases.length}
+            perPage={releasesPerPage}
+            onPageChange={handleReleasePageChange}
+            showPerPageSelector={false}
+          />
+        </div>
+      {/if}
+    </Card>
+  </div>
+  <div id="readme" class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]">
+    <Card as="section" className="rounded-[1.75rem] p-6">
+      <h2 class="ui-title text-xl font-semibold">README</h2>
+      {#if pkg.readme_html}
+        <div class="relative mt-4">
+          <div
+            class="ui-markdown ui-muted overflow-x-auto"
+            class:max-h-72={!readmeExpanded}
+            class:overflow-hidden={!readmeExpanded}
+          >
+            <!-- HTML is sanitized during markdown conversion on the backend. -->
+            <!-- eslint-disable-next-line svelte/no-at-html-tags -->
+            {@html pkg.readme_html}
+          </div>
+          {#if !readmeExpanded}
+            <div
+              class="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-b from-transparent to-[var(--surface)]"
+            ></div>
+          {/if}
+        </div>
+        <Button
+          type="button"
+          variant="soft"
+          className="mt-4 rounded-full px-4 py-2 text-sm"
+          onclick={() => (readmeExpanded = !readmeExpanded)}
+        >
+          {readmeExpanded ? "Collapse README" : "Show full README"}
+        </Button>
+      {:else}
+        <p class="ui-muted mt-4 text-sm">This package has no README.</p>
+      {/if}
+    </Card>
+  </div>
+
+  <ConfirmationModal
+    open={pendingRelease !== null}
+    eyebrow="Release"
+    title={pendingRelease?.active
+      ? `Hide release ${pendingRelease.version}?`
+      : `Restore release ${pendingRelease?.version}?`}
+    description={pendingRelease?.active
+      ? `Composer will stop resolving ${pendingRelease.version} from this registry. Release data is kept.`
+      : `${pendingRelease?.version} returns to the registry metadata.`}
+    confirmLabel={pendingRelease?.active ? "Hide release" : "Restore release"}
+    variant={pendingRelease?.active ? "danger" : "primary"}
+    {confirming}
+    onConfirm={confirmRelease}
+    onCancel={() => (pendingRelease = null)}
+  />
 </AppShell>

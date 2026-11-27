@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
-import { router } from "@/test/inertia";
+import { router, setPageProps } from "@/test/inertia";
 import PackagesIndex from "./Index.svelte";
 import type {
   PackageFilterOptions,
@@ -92,7 +92,7 @@ const activeFilters: PackageIndexFilters = {
 };
 
 describe("Packages index page", () => {
-  it("renders package cards in the default grid view", () => {
+  it("renders a compact header without intro cards", () => {
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
@@ -103,69 +103,177 @@ describe("Packages index page", () => {
     });
 
     expect(
-      screen.getByRole("button", { name: "Show as grid" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("acme/app")).toBeInTheDocument();
-    expect(screen.getByText("Managed by source")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open details" }).getAttribute("href"),
-    ).toContain("/organization/acme/packages/acme/app");
-    expect(
-      screen.getByRole("link", { name: "acme/app-source" }),
-    ).toHaveAttribute("href", "/organization/acme/sources/source-1");
-    expect(
-      screen.queryByRole("table", { name: "Packages" }),
-    ).not.toBeInTheDocument();
-  });
-
-  it("stores table mode and renders package table rows", async () => {
-    render(PackagesIndex, {
-      props: {
-        organization_summary: organization,
-        package_stats: packageStats,
-        pagination,
-        sections: [packageWithSource, hiddenManualPackage],
-      },
-    });
-
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Show as table" }),
-    );
-
-    const table = screen.getByRole("table", { name: "Packages" });
-
-    expect(localStorage.getItem("packio-list-view-mode")).toBe("table");
-    expect(
-      within(table).getByRole("columnheader", { name: "Latest" }),
+      screen.getByRole("heading", { level: 2, name: "Packages" }),
     ).toBeInTheDocument();
-    expect(within(table).getByText("acme/app")).toBeInTheDocument();
-    expect(within(table).getByText("1.2.3")).toBeInTheDocument();
-    expect(within(table).getByText("manual")).toBeInTheDocument();
+    expect(screen.queryByText("What this page is for")).toBeNull();
+    expect(screen.queryByText("Visibility split")).toBeNull();
   });
 
-  it("keeps package and source badge states in table view", async () => {
+  it("shows a plain package count instead of pagination on a single page", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 1, to: 2, total: 2, last_page: 1 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("2 packages")).toBeInTheDocument();
+    expect(screen.queryByText(/Showing/)).toBeNull();
+    expect(screen.queryByText("→")).toBeNull();
+  });
+
+  it("shows pagination above and below the list on multiple pages", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination: multiPagePagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getAllByText(/Showing/)).toHaveLength(2);
+  });
+
+  it("uses the singular package count for one package", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 1, to: 1, total: 1, last_page: 1 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("1 package")).toBeInTheDocument();
+  });
+
+  it("does not show a separate result counter above the list", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: { ...packageStats, total: 40 },
+        pagination: { ...multiPagePagination, from: 19, to: 36, total: 40 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.queryByText(/of 40 packages/)).toBeNull();
+  });
+
+  it("explains where to start in an empty catalog", () => {
+    setPageProps({ current_membership: { role: "owner" } });
+    const empty = {
+      auth: { check: true },
+      organization_summary: organization,
+      package_stats: { ...packageStats, total: 0 },
+      pagination: { ...pagination, from: 0, to: 0, total: 0 },
+      sections: [],
+    };
+    const { unmount } = render(PackagesIndex, { props: empty });
+
+    expect(screen.getByText("No packages yet")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Connect a repository in Sources/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open sources" })).toHaveAttribute(
+      "href",
+      "/organization/acme/sources",
+    );
+    unmount();
+
+    setPageProps({});
+    render(PackagesIndex, { props: empty });
+    expect(screen.queryByRole("link", { name: "Open sources" })).toBeNull();
+  });
+
+  it("offers a reset when the search finds nothing", async () => {
+    render(PackagesIndex, {
+      props: {
+        filters: { ...activeFilters, search: "zzz" },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 0, to: 0, total: 0 },
+        sections: [],
+      },
+    });
+
+    expect(
+      screen.getByText("No packages match your search"),
+    ).toBeInTheDocument();
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Clear filters" }),
+    );
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      { per_page: 18 },
+      { preserveScroll: true },
+    );
+  });
+
+  const privatePackage: PackagesIndexSection = {
+    ...packageWithSource,
+    visibility: "private",
+  };
+  const failedPackage: PackagesIndexSection = {
+    ...packageWithSource,
+    name: "acme/broken",
+    source: {
+      ...packageWithSource.source!,
+      last_sync_status: "failed",
+    },
+  };
+
+  function renderCatalog(mode: "grid" | "table") {
+    localStorage.setItem("packio-list-view-mode", mode);
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
         package_stats: packageStats,
         pagination,
-        sections: [packageWithSource, hiddenManualPackage],
+        sections: [privatePackage, failedPackage, hiddenManualPackage],
       },
     });
+  }
 
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Show as table" }),
-    );
+  it.each(["grid", "table"] as const)(
+    "shows the same package data in %s mode",
+    (mode) => {
+      renderCatalog(mode);
 
-    const table = screen.getByRole("table", { name: "Packages" });
-
-    expect(within(table).getByText("Public")).toBeInTheDocument();
-    expect(within(table).getByText("Token required")).toBeInTheDocument();
-    expect(within(table).getAllByText("Listed")).toHaveLength(2);
-    expect(within(table).getByText("Hidden")).toBeInTheDocument();
-    expect(within(table).getByText("success")).toBeInTheDocument();
-    expect(within(table).getByText("Source active")).toBeInTheDocument();
-  });
+      expect(screen.queryByRole("table", { name: "Packages" }) !== null).toBe(
+        mode === "table",
+      );
+      expect(
+        screen.getByRole("link", { name: "acme/app" }).getAttribute("href"),
+      ).toContain("/organization/acme/packages/acme/app");
+      expect(screen.getAllByText("1.2.3")).toHaveLength(2);
+      // The filter toolbar also renders Listed/Hidden/Manual, so scope to the catalog.
+      const catalog = within(
+        mode === "table"
+          ? screen.getByRole("table", { name: "Packages" })
+          : screen.getAllByRole("article")[0].parentElement!,
+      );
+      expect(catalog.getAllByText("Token required")).toHaveLength(2);
+      expect(catalog.getAllByText("Listed")).toHaveLength(
+        2 + (mode === "table" ? 1 : 0),
+      );
+      expect(screen.getAllByText("42")).toHaveLength(2);
+      expect(
+        screen.getAllByRole("link", { name: "acme/app-source" })[0],
+      ).toHaveAttribute("href", "/organization/acme/sources/source-1");
+      expect(screen.queryByText("https://example.com/acme/app.git")).toBeNull();
+      expect(screen.queryByRole("link", { name: "Open details" })).toBeNull();
+      expect(screen.getByText("Sync failed")).toBeInTheDocument();
+      expect(catalog.getAllByText("Manual")).toHaveLength(1);
+      expect(catalog.getAllByText("Hidden")).toHaveLength(1);
+      expect(screen.getByText("No available version")).toBeInTheDocument();
+    },
+  );
 
   it("submits package search with page reset", async () => {
     render(PackagesIndex, {
@@ -178,13 +286,13 @@ describe("Packages index page", () => {
       },
     });
 
-    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
-    await fireEvent.input(screen.getByLabelText("Search"), {
+    await fireEvent.input(screen.getByLabelText("Search packages"), {
       target: { value: "acme" },
     });
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Apply filters" }),
+    await fireEvent.submit(
+      screen
+        .getByRole("searchbox", { name: "Search packages" })
+        .closest("form")!,
     );
 
     expect(router.get).toHaveBeenCalledWith(
@@ -192,6 +300,136 @@ describe("Packages index page", () => {
       { search: "acme", per_page: 18, page: 1 },
       { preserveScroll: true },
     );
+  });
+
+  it("submits package search from the search button", async () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    await fireEvent.input(screen.getByLabelText("Search packages"), {
+      target: { value: "frankenphp" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      expect.objectContaining({ search: "frankenphp", page: 1 }),
+      { preserveScroll: true },
+    );
+  });
+
+  it("shows the search field without opening filters", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(
+      screen.getByRole("searchbox", { name: "Search packages" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps applied filters when search is submitted with the panel closed", async () => {
+    render(PackagesIndex, {
+      props: {
+        filters: {
+          ...activeFilters,
+          listed: "hidden",
+          page: 3,
+          search: "",
+          source: "",
+          source_sync_status: [],
+          visibility: [],
+        },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: multiPagePagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    const search = screen.getByRole("searchbox", { name: "Search packages" });
+    await fireEvent.input(search, { target: { value: "frankenphp" } });
+    await fireEvent.submit(search.closest("form")!);
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      { search: "frankenphp", listed: "hidden", per_page: 18, page: 1 },
+      { preserveScroll: true },
+    );
+  });
+
+  it("toggles the filters panel", async () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    const button = screen.getByRole("button", { name: "Filters" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    await fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    await fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows applied filters next to results", () => {
+    render(PackagesIndex, {
+      props: {
+        filters: {
+          ...activeFilters,
+          listed: "hidden",
+          search: "",
+          source: "manual",
+          source_sync_status: [],
+          visibility: [],
+        },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("Listed: Hidden")).toBeInTheDocument();
+    expect(screen.getByText("Source: Manual")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a single Clear filters control in the filtered empty state", () => {
+    render(PackagesIndex, {
+      props: {
+        filters: { ...activeFilters, search: "zzz" },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 0, to: 0, total: 0 },
+        sections: [],
+      },
+    });
+
+    expect(
+      screen.getAllByRole("button", { name: "Clear filters" }),
+    ).toHaveLength(1);
   });
 
   it("submits package filters with page reset", async () => {
@@ -205,7 +443,7 @@ describe("Packages index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.click(screen.getByLabelText("private"));
     await fireEvent.change(screen.getByLabelText("Listed"), {
       target: { value: "hidden" },

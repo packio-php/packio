@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The package catalog is compact, with an always-visible search, a Filters panel and applied-filter chips.
+- The package page shows a summary with the `composer require` command, expandable version rows with confirmed hide/restore, and a collapsible Source details block.
 - The profile page is redesigned: the account card with sign-in methods and the API tokens block sit side by side on wide screens, sign-in history spans the full width below, and the header shows "Personal account".
 - API token expiration offers 1 month, 3 months, 6 months and 1 year presets, a custom date, or an explicit "No expiration".
 - A new API token is shown once, with a Copy token button.

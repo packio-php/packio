@@ -13,6 +13,7 @@
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
   import { formatDate } from "@/lib/date";
+  import { sourceIssue } from "./packageSource";
   import type { AppPageProps } from "@/types/app";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
@@ -49,6 +50,9 @@
   let installable = $derived(pkg.active && latestRelease !== null);
   let tokenRequired = $derived(
     pkg.visibility === "private" || !pkg.anonymous_access,
+  );
+  let sourceProblem = $derived(
+    pkg.source_summary ? sourceIssue(pkg.source_summary) : null,
   );
   let hasOrganizationAccess = $derived(
     Boolean(usePage<AppPageProps>().props.current_membership),
@@ -194,85 +198,75 @@
       {/if}
 
       {#if pkg.source_summary}
-        <InsetCard className="mt-6 p-5">
-          <div class="flex items-start justify-between gap-4">
-            <div>
-              <p class="ui-eyebrow">Managed by source</p>
-              <p class="ui-title mt-2 text-lg font-semibold">
-                {pkg.source_summary.name}
-              </p>
-              <p class="ui-muted mt-2 break-all text-sm">
-                {pkg.source_summary.url}
-              </p>
-            </div>
-            <Badge
-              tone={pkg.source_summary.last_sync_status === "failed"
-                ? "danger"
-                : pkg.source_summary.last_sync_status === "success"
-                  ? "accent"
-                  : "gold"}
-            >
-              {pkg.source_summary.last_sync_status}
-            </Badge>
-          </div>
-
-          <div class="mt-4 flex flex-wrap gap-2">
-            <Badge tone={pkg.source_summary.active ? "accent" : "muted"}>
-              {pkg.source_summary.active ? "Source active" : "Source inactive"}
-            </Badge>
-            <Badge
-              tone={pkg.source_summary.visibility === "private"
-                ? "danger"
-                : "accent"}
-            >
-              {pkg.source_summary.visibility}
-            </Badge>
-            {#if pkg.source_summary.archived}
-              <Badge tone="muted">Archived</Badge>
-            {/if}
-          </div>
-
-          <div class="ui-muted mt-4 grid gap-2 text-sm">
-            <p>
-              <span class="font-medium ui-title">Default ref:</span>
-              {pkg.source_summary.default_ref}
-            </p>
-            {#if pkg.source_summary.last_successful_sync_at}
-              <p>
-                <span class="font-medium ui-title">Last success:</span>
-                {formatDate(pkg.source_summary.last_successful_sync_at)}
-              </p>
-            {/if}
-            {#if pkg.source_summary.last_failed_sync_at}
-              <p>
-                <span class="font-medium ui-title">Last failure:</span>
-                {formatDate(pkg.source_summary.last_failed_sync_at)}
-              </p>
-            {/if}
-            {#if pkg.source_summary.last_sync_error}
-              <p style="color: var(--flash-error-text);">
-                <span class="font-medium ui-title">Last error:</span>
-                {pkg.source_summary.last_sync_error}
-              </p>
-            {/if}
-          </div>
-
-          <div class="mt-4 flex flex-wrap gap-3">
-            <Link
-              class="ui-button-secondary rounded-full px-4 py-2 text-sm font-medium"
-              href={withOrganization(`/sources/${pkg.source_summary.id}`)}
-            >
-              Open source details
-            </Link>
-            <Link
-              class="ui-button-secondary rounded-full px-4 py-2 text-sm font-medium"
-              href={withOrganization("/sources")}
-            >
-              Open sources
-            </Link>
-          </div>
-        </InsetCard>
+        <div class="mt-6 flex flex-wrap items-center gap-2 text-sm">
+          <span class="ui-muted">Source</span>
+          <Link
+            class="ui-link-accent min-w-0 break-all font-medium"
+            href={withOrganization(`/sources/${pkg.source_summary.id}`)}
+          >
+            {pkg.source_summary.name}
+          </Link>
+          {#if sourceProblem}
+            <Badge tone="danger">{sourceProblem}</Badge>
+          {/if}
+        </div>
+        {#if pkg.source_summary.last_sync_error}
+          <p
+            class="mt-2 break-all text-sm"
+            style="color: var(--flash-error-text);"
+          >
+            {pkg.source_summary.last_sync_error}
+          </p>
+        {/if}
       {/if}
+    </Card>
+
+    <Card as="details" className="rounded-[1.75rem] p-6">
+      <summary class="ui-title cursor-pointer text-xl font-semibold">
+        {pkg.source_summary ? "Source details" : "Package details"}
+      </summary>
+      <dl class="ui-muted mt-4 grid gap-4 text-sm">
+        {#if pkg.source_summary}
+          <div>
+            <dt class="ui-title font-medium">Provider</dt>
+            <dd>{pkg.source_summary.type}</dd>
+          </div>
+          <div>
+            <dt class="ui-title font-medium">URL</dt>
+            <dd class="break-all">{pkg.source_summary.url}</dd>
+          </div>
+          <div>
+            <dt class="ui-title font-medium">Default branch</dt>
+            <dd class="break-all">{pkg.source_summary.default_ref}</dd>
+          </div>
+          {#if pkg.source_summary.last_successful_sync_at}
+            <div>
+              <dt class="ui-title font-medium">Last successful sync</dt>
+              <dd>{formatDate(pkg.source_summary.last_successful_sync_at)}</dd>
+            </div>
+          {/if}
+        {/if}
+        <div>
+          <dt class="ui-title font-medium">Package type</dt>
+          <dd>{pkg.type}</dd>
+        </div>
+        {#if !pkg.source_summary && pkg.source_url}
+          <div>
+            <dt class="ui-title font-medium">Source URL</dt>
+            <dd class="break-all">{pkg.source_url}</dd>
+          </div>
+        {/if}
+        <div>
+          <dt class="ui-title font-medium">Created</dt>
+          <dd>{formatDate(pkg.created_at)}</dd>
+        </div>
+        {#if pkg.updated_at}
+          <div>
+            <dt class="ui-title font-medium">Updated</dt>
+            <dd>{formatDate(pkg.updated_at)}</dd>
+          </div>
+        {/if}
+      </dl>
     </Card>
 
     <nav aria-label="Package sections" class="flex flex-wrap gap-3 text-sm">

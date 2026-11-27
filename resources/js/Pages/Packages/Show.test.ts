@@ -339,3 +339,152 @@ describe("Version rows", () => {
     );
   });
 });
+
+describe("Source details", () => {
+  const managedSource = {
+    active: true,
+    archived: false,
+    default_ref: "main",
+    id: "source-1",
+    last_failed_sync_at: null,
+    last_successful_sync_at: "2026-01-03T00:00:00+00:00",
+    last_sync_error: null,
+    last_sync_status: "success",
+    name: "acme/app-source",
+    type: "github",
+    url: "https://github.example.test/acme/app-source-repository",
+    visibility: "public" as const,
+  };
+
+  it("links a managed package to its source in the summary", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, source_summary: managedSource },
+        releases: [release("1.2.3")],
+      },
+    });
+
+    expect(
+      screen.getByRole("link", { name: "acme/app-source" }),
+    ).toHaveAttribute("href", "/organization/acme/sources/source-1");
+    expect(screen.queryByText("Managed by source")).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Open source details" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("shows a failed sync and its error in the summary without expanding details", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: {
+          ...packageData,
+          source_summary: {
+            ...managedSource,
+            last_sync_status: "failed",
+            last_sync_error: "Clone failed: repository not found",
+          },
+        },
+        releases: [],
+      },
+    });
+
+    const summary = screen.getByRole("link", { name: "acme/app-source" })
+      .parentElement as HTMLElement;
+    expect(within(summary).getByText("Sync failed")).toBeInTheDocument();
+    expect(
+      screen.getByText("Clone failed: repository not found"),
+    ).toBeVisible();
+    expect(
+      screen.getByText("Source details").closest("details"),
+    ).not.toHaveAttribute("open");
+  });
+
+  it("lists provider, URL, branch, sync and package dates in Source details", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, source_summary: managedSource },
+        releases: [],
+      },
+    });
+
+    const details = screen.getByText("Source details").closest("details")!;
+    expect(details.open).toBe(false);
+    expect(within(details).getByText("Provider")).toBeInTheDocument();
+    expect(within(details).getByText("github")).toBeInTheDocument();
+    expect(within(details).getByText("URL")).toBeInTheDocument();
+    expect(within(details).getByText(managedSource.url)).toHaveClass(
+      "break-all",
+    );
+    expect(within(details).getByText("Default branch")).toBeInTheDocument();
+    expect(within(details).getByText("main")).toBeInTheDocument();
+    expect(
+      within(details).getByText("Last successful sync"),
+    ).toBeInTheDocument();
+    expect(
+      within(details).getByText(
+        formatDate(managedSource.last_successful_sync_at),
+      ),
+    ).toBeInTheDocument();
+    expect(within(details).getByText("Package type")).toBeInTheDocument();
+    expect(within(details).getByText("library")).toBeInTheDocument();
+    expect(within(details).getByText("Created")).toBeInTheDocument();
+    expect(within(details).getByText("Updated")).toBeInTheDocument();
+  });
+
+  it("omits Last successful sync and Updated when they are not set", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: {
+          ...packageData,
+          updated_at: null,
+          source_summary: { ...managedSource, last_successful_sync_at: null },
+        },
+        releases: [],
+      },
+    });
+
+    const details = screen.getByText("Source details").closest("details")!;
+    expect(
+      within(details).queryByText("Last successful sync"),
+    ).not.toBeInTheDocument();
+    expect(within(details).queryByText("Updated")).not.toBeInTheDocument();
+  });
+
+  it("shows package details for a manual package without a source link", () => {
+    render(PackagesShow, {
+      props: { organization, packageData, releases: [] },
+    });
+
+    expect(
+      screen.queryByRole("link", { name: /acme\/app-source/ }),
+    ).not.toBeInTheDocument();
+    const details = screen.getByText("Package details").closest("details")!;
+    expect(within(details).getByText("Package type")).toBeInTheDocument();
+    expect(within(details).getByText("Source URL")).toBeInTheDocument();
+    expect(
+      within(details).getByText("https://example.test/acme/app"),
+    ).toBeInTheDocument();
+    expect(within(details).getByText("Created")).toBeInTheDocument();
+    expect(within(details).getByText("Updated")).toBeInTheDocument();
+    expect(
+      within(details).queryByText("Default branch"),
+    ).not.toBeInTheDocument();
+  });
+
+  it("omits the manual Source URL when it is empty", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, source_url: "" },
+        releases: [],
+      },
+    });
+
+    const details = screen.getByText("Package details").closest("details")!;
+    expect(within(details).queryByText("Source URL")).not.toBeInTheDocument();
+  });
+});

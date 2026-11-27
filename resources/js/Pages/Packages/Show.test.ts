@@ -197,10 +197,7 @@ describe("Package summary", () => {
       props: { organization, packageData, releases: [release("1.2.3")] },
     });
 
-    expect(screen.getByRole("link", { name: "Versions" })).toHaveAttribute(
-      "href",
-      "#versions",
-    );
+    expect(screen.queryByRole("link", { name: "Versions" })).toBeNull();
     expect(screen.getByRole("link", { name: "README" })).toHaveAttribute(
       "href",
       "#readme",

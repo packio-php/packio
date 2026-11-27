@@ -276,9 +276,6 @@
     </Card>
 
     <nav aria-label="Package sections" class="flex flex-wrap gap-3 text-sm">
-      <a class="ui-button-secondary rounded-full px-4 py-2" href="#versions">
-        Versions
-      </a>
       <a class="ui-button-secondary rounded-full px-4 py-2" href="#readme">
         README
       </a>

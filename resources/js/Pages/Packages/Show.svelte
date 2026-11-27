@@ -317,7 +317,7 @@
         {:else}
           {#each paginatedReleases as release (release.version)}
             <InsetCard as="article" className="p-4">
-              <div class="flex items-start gap-3">
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <details class="group min-w-0 flex-1">
                   <summary
                     class="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2"
@@ -364,7 +364,7 @@
                   <Button
                     type="button"
                     variant={release.active ? "soft" : "primary"}
-                    className="h-9 shrink-0 rounded-full px-4 text-xs"
+                    className="h-9 shrink-0 self-start rounded-full px-4 text-xs"
                     onclick={() => (pendingRelease = release)}
                   >
                     {release.active ? "Hide release" : "Restore release"}

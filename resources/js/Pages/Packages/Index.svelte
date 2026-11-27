@@ -178,7 +178,7 @@
 
 <AppShell title="Packages" {auth}>
   <section class="grid gap-6">
-    <h1 class="ui-title text-2xl font-semibold">Packages</h1>
+    <h2 class="ui-title text-2xl font-semibold">Packages</h2>
 
     {#if showPackageToolbar}
       <PackagesFilterToolbar

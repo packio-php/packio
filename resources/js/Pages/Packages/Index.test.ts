@@ -103,10 +103,23 @@ describe("Packages index page", () => {
     });
 
     expect(
-      screen.getByRole("heading", { level: 1, name: "Packages" }),
+      screen.getByRole("heading", { level: 2, name: "Packages" }),
     ).toBeInTheDocument();
     expect(screen.queryByText("What this page is for")).toBeNull();
     expect(screen.queryByText("Visibility split")).toBeNull();
+  });
+
+  it("hides pagination when there is a single page", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.queryByText("→")).toBeNull();
   });
 
   it("shows the result range", () => {

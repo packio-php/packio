@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { router, setPageProps, setPageUrl, page } from "@/test/inertia";
+import { tick } from "svelte";
 import AppShell from "./AppShell.svelte";
 
 const auth = {
@@ -221,6 +222,45 @@ describe("AppShell", () => {
     }
   });
 
+  it("offsets anchored sections by the header and the sticky flash bar", async () => {
+    // Report fixed sizes: 60px header, 50px flash bar.
+    vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(
+      function (this: HTMLElement) {
+        if (this.tagName === "HEADER") return 60;
+        return this.classList.contains("sticky") ? 50 : 0;
+      },
+    );
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(target: Element): void {
+          this.callback(
+            [{ target } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+        }
+        unobserve(): void {}
+        disconnect(): void {}
+      },
+    );
+    Object.assign(page, { flash: { success: "Saved" } });
+
+    try {
+      const { container } = render(AppShell, {
+        props: { title: "Packages", auth },
+      });
+      await tick();
+
+      const root = container.querySelector("header")?.parentElement;
+      expect(root?.style.getPropertyValue("--admin-header-h")).toBe("110px");
+    } finally {
+      delete (page as unknown as { flash?: unknown }).flash;
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("links the enabled legal documents in the footer", () => {
     setPageProps({
       legal: { privacy_url: "/privacy", terms_url: "/terms" },
@@ -243,5 +283,46 @@ describe("AppShell", () => {
 
     expect(screen.queryByRole("link", { name: "Privacy" })).toBeNull();
     expect(screen.queryByRole("link", { name: "Terms" })).toBeNull();
+  });
+
+  it("links to the profile without an organization parameter", async () => {
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    await fireEvent.click(screen.getByRole("button", { name: /Test User/ }));
+    expect(
+      within(screen.getByRole("menu")).getByRole("link", { name: "Profile" }),
+    ).toHaveAttribute("href", "/profile");
+  });
+
+  it("labels the organization switcher Personal account on the profile", async () => {
+    window.history.pushState({}, "", "/profile");
+    setPageUrl("/profile?organization=acme");
+    render(AppShell, { props: { title: "Profile", auth } });
+
+    expect(
+      screen.getByRole("button", { name: /Personal account/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Org Acme/ })).toBeNull();
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: /Personal account/ }),
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "Beta" }));
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/beta",
+      {},
+      { preserveState: false, preserveScroll: true },
+    );
+  });
+
+  it("labels the switcher with the organization name outside the profile", () => {
+    setPageUrl("/organization/acme/packages");
+    render(AppShell, { props: { title: "Packages", auth } });
+
+    expect(
+      screen.getByRole("button", { name: /Org Acme/ }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("Personal account")).toBeNull();
   });
 });

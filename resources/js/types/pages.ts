@@ -324,7 +324,6 @@ export interface ProfilePayload {
   has_password: boolean;
   id: string;
   roles: string[];
-  updated_at?: string | null;
 }
 
 export interface ProfileOAuthAccountPayload {

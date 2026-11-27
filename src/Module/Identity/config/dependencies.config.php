@@ -609,7 +609,7 @@ return [
         ],
         ProfileApiTokenIssueHandler::class                      => [
             IdentityApiFacadeInterface::class,
-            InertiaNotificationMessenger::class,
+            ValidationRedirectState::class,
         ],
         ProfileApiTokenRevokeHandler::class                     => [
             IdentityApiFacadeInterface::class,
@@ -619,7 +619,7 @@ return [
             IdentityApiFacadeInterface::class,
             IdentityQueryService::class,
             InertiaNotificationMessenger::class,
-            ProfileViewModelFactory::class,
+            ValidationRedirectState::class,
             AuthManagerInterface::class,
         ],
         DisconnectOAuthAccountHandler::class                    => [

@@ -50,4 +50,24 @@ describe("SignInHistoryList", () => {
 
     expect(screen.getByText("No sign-ins recorded yet.")).toBeInTheDocument();
   });
+
+  it("labels the time zone once and keeps rows on one line", () => {
+    const { container } = render(SignInHistoryList, {
+      props: {
+        entries: [1, 2].map((n) => ({
+          id: String(n),
+          method: "password",
+          method_label: "Password",
+          occurred_at: "2026-11-22T10:00:00Z",
+          ip: null,
+          user_agent: null,
+        })),
+      },
+    });
+
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    expect(screen.getAllByText(`Local time (${zone})`)).toHaveLength(1);
+    // narrow screens scroll the table sideways instead of wrapping cells
+    expect(container.querySelector("table")).toHaveClass("whitespace-nowrap");
+  });
 });

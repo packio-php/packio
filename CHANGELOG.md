@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- The profile page is redesigned: the account card with sign-in methods and the API tokens block sit side by side on wide screens, sign-in history spans the full width below, and the header shows "Personal account".
+- API token expiration offers 1 month, 3 months, 6 months and 1 year presets, a custom date, or an explicit "No expiration".
+- A new API token is shown once, with a Copy token button.
+- The password form opens inline in the Password row of Sign-in methods.
+- Disconnecting a connected OAuth account asks for confirmation, and the last sign-in method cannot be disconnected.
+- Sign-in history shows the five latest sign-ins with a Show all button, with the browser time zone labelled.
+
+### Fixed
+
+- An API token expiration chosen on the profile page is now saved in the browser's time zone, instead of possibly shifting by the server's offset.
+
 ## [0.7.0] - 2026-11-26
 
 ### Added

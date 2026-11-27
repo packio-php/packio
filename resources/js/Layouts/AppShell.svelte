@@ -70,6 +70,11 @@
   );
   let hasFlashMessage = $derived(!!pageFlash.success || !!pageFlash.error);
   let headerHeight = $state(0);
+  let flashBarHeight = $state(0);
+  // Anchored sections scroll below everything sticky: the header and the flash bar.
+  let stickyHeight = $derived(
+    headerHeight + (hasFlashMessage ? flashBarHeight : 0),
+  );
   let branding = $derived(mergeBranding(pageProps.branding ?? {}) as Branding);
   let appVersion = $derived(pageProps.app?.version ?? null);
   let organization = $derived(
@@ -87,9 +92,11 @@
   let hasOrganizations = $derived(organizations.length > 0);
   let hasCurrentOrganization = $derived(!!organization?.slug);
   let organizationButtonLabel = $derived(
-    !hasOrganizations
-      ? "Create organization"
-      : organization?.name || "Choose organization",
+    matchesPath("/profile")
+      ? "Personal account"
+      : !hasOrganizations
+        ? "Create organization"
+        : organization?.name || "Choose organization",
   );
   let pageTitle = $derived(title || branding.name || "Application");
   let storageKey = $derived(branding.themeStorageKey || "packio-theme");
@@ -143,9 +150,7 @@
   }
 
   function profilePath(): string {
-    return organization?.slug
-      ? `/profile?organization=${encodeURIComponent(organization.slug)}`
-      : "/profile";
+    return "/profile";
   }
 
   function appHomePath(): string {
@@ -585,7 +590,7 @@
 
 <div
   class="flex min-h-screen flex-col bg-(--page-bg) text-(--page-ink)"
-  style={headerHeight > 0 ? `--admin-header-h: ${headerHeight}px` : undefined}
+  style={headerHeight > 0 ? `--admin-header-h: ${stickyHeight}px` : undefined}
 >
   <header
     bind:offsetHeight={headerHeight}
@@ -773,6 +778,7 @@
   <main class={mainClassName}>
     {#if hasFlashMessage}
       <div
+        bind:offsetHeight={flashBarHeight}
         class="sticky z-30 bg-(--page-bg) py-[5px]"
         style={headerHeight > 0 ? `top: ${headerHeight}px` : undefined}
       >

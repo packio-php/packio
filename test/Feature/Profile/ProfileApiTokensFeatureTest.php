@@ -15,6 +15,7 @@ use function array_find;
 use function bin2hex;
 use function json_encode;
 use function random_bytes;
+use function strtotime;
 
 final class ProfileApiTokensFeatureTest extends FeatureTestCase
 {
@@ -52,10 +53,10 @@ final class ProfileApiTokensFeatureTest extends FeatureTestCase
             'X-Inertia' => 'true',
         ]);
 
-        self::assertStringContainsString(
-            'New API token for "Automation token": packio_api_',
-            (string) ($testResponse->json()['flash']['success'] ?? ''),
-        );
+        $flash = $testResponse->json()['flash'] ?? [];
+        self::assertSame('Automation token', $flash['issued_api_token']['name'] ?? null);
+        self::assertStringStartsWith('packio_api_', (string) ($flash['issued_api_token']['token'] ?? ''));
+        self::assertStringNotContainsString('packio_api_', (string) ($flash['success'] ?? ''));
 
         $this->withCsrf();
         $this->post('/profile/api-tokens/' . $issuedApiAccessTokenDto->id . '/revoke')
@@ -70,6 +71,107 @@ final class ProfileApiTokensFeatureTest extends FeatureTestCase
         ;
 
         self::assertNull($this->apiTokenOrNull($userDto->id, 'Automation token'));
+    }
+
+    #[Test]
+    public function itStoresTheSameExpirationMomentForUtcAndOffsetValues(): void
+    {
+        $userDto = $this->createPasswordUser();
+        $this->logIn($userDto);
+
+        foreach ([
+            'UTC token'    => '2026-12-26T09:15:00.000Z',
+            'Offset token' => '2026-12-26T11:15:00.000+02:00',
+        ] as $name => $expiresAt) {
+            $this->withCsrf();
+            $this->post('/profile/api-tokens', [
+                'name'       => $name,
+                'scopes'     => ['read'],
+                'expires_at' => $expiresAt,
+            ])
+                ->assertRedirect('/profile')
+            ;
+        }
+
+        $expected = strtotime('2026-12-26T09:15:00Z');
+        $props    = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json()['props'];
+
+        foreach (['UTC token', 'Offset token'] as $name) {
+            $stored = $this->apiToken($userDto->id, $name)->expiresAt;
+            self::assertSame($expected, strtotime($stored));
+
+            $row = array_find($props['api_tokens'], static fn (array $token): bool => $token['name'] === $name);
+            self::assertNotNull($row);
+            self::assertSame($expected, strtotime((string) $row['expires_at']));
+        }
+    }
+
+    #[Test]
+    public function itIssuesANonExpiringTokenForEmptyExpiration(): void
+    {
+        $userDto = $this->createPasswordUser();
+        $this->logIn($userDto);
+
+        $this->withCsrf();
+        $this->post('/profile/api-tokens', [
+            'name'       => 'Forever',
+            'scopes'     => ['read'],
+            'expires_at' => '',
+        ])
+            ->assertRedirect('/profile')
+        ;
+
+        self::assertSame('', $this->apiToken($userDto->id, 'Forever')->expiresAt);
+    }
+
+    #[Test]
+    public function itReportsAnInvalidExpirationInErrorsWithoutToast(): void
+    {
+        $userDto = $this->createPasswordUser();
+        $this->logIn($userDto);
+
+        $this->withCsrf();
+        $this->post('/profile/api-tokens', [
+            'name'       => 'Bad date',
+            'scopes'     => ['read'],
+            'expires_at' => 'not-a-date',
+        ])
+            ->assertRedirect('/profile')
+        ;
+
+        $page = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json();
+
+        self::assertSame(['Expiration date is invalid.'], $page['props']['errors']['expires_at'] ?? null);
+        self::assertEmpty($page['flash']['toasts'] ?? []);
+        self::assertNull($this->apiTokenOrNull($userDto->id, 'Bad date'));
+    }
+
+    #[Test]
+    public function itReportsAnEmptyNameInErrorsWithoutToast(): void
+    {
+        $userDto = $this->createPasswordUser();
+        $this->logIn($userDto);
+
+        $this->withCsrf();
+        $this->post('/profile/api-tokens', [
+            'name'   => '',
+            'scopes' => ['read'],
+        ])->assertRedirect('/profile');
+
+        $page = $this->get('/profile', [
+            'Accept'    => 'application/json',
+            'X-Inertia' => 'true',
+        ])->json();
+
+        self::assertNotEmpty($page['props']['errors']['name'] ?? null);
+        self::assertEmpty($page['flash']['toasts'] ?? []);
+        self::assertArrayNotHasKey('issued_api_token', $page['flash'] ?? []);
     }
 
     #[Test]
@@ -88,7 +190,7 @@ final class ProfileApiTokensFeatureTest extends FeatureTestCase
     }
 
     #[Test]
-    public function itUsesTheInertiaToastValidationPolicyWhenApiTokenMappingFailsWithoutRetainingSecrets(): void
+    public function itReportsFieldErrorsWithoutToastWhenApiTokenMappingFailsWithoutRetainingSecrets(): void
     {
         $userDto = $this->createPasswordUser();
         $secret  = 'profile-mapping-secret-' . bin2hex(random_bytes(6));
@@ -114,7 +216,7 @@ final class ProfileApiTokensFeatureTest extends FeatureTestCase
 
         self::assertSame(['Invalid value.'], $page['props']['errors']['name'] ?? null);
         self::assertSame([], $page['props']['old'] ?? null);
-        self::assertSame('Invalid API token request.', $page['flash']['toasts'][0]['message'] ?? null);
+        self::assertEmpty($page['flash']['toasts'] ?? []);
         self::assertStringNotContainsString($secret, json_encode($page, JSON_THROW_ON_ERROR));
         self::assertNull($this->apiTokenOrNull($userDto->id, 'not-a-string'));
     }

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/svelte";
+import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { router, setPageProps } from "@/test/inertia";
 import PackagesIndex from "./Index.svelte";
@@ -187,80 +187,57 @@ describe("Packages index page", () => {
     );
   });
 
-  it("renders package cards in the default grid view", () => {
+  const privatePackage: PackagesIndexSection = {
+    ...packageWithSource,
+    visibility: "private",
+  };
+  const failedPackage: PackagesIndexSection = {
+    ...packageWithSource,
+    name: "acme/broken",
+    source: {
+      ...packageWithSource.source!,
+      last_sync_status: "failed",
+    },
+  };
+
+  function renderCatalog(mode: "grid" | "table") {
+    localStorage.setItem("packio-list-view-mode", mode);
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
         package_stats: packageStats,
         pagination,
-        sections: [packageWithSource],
+        sections: [privatePackage, failedPackage, hiddenManualPackage],
       },
     });
+  }
 
-    expect(
-      screen.getByRole("button", { name: "Show as grid" }),
-    ).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText("acme/app")).toBeInTheDocument();
-    expect(screen.getByText("Managed by source")).toBeInTheDocument();
-    expect(
-      screen.getByRole("link", { name: "Open details" }).getAttribute("href"),
-    ).toContain("/organization/acme/packages/acme/app");
-    expect(
-      screen.getByRole("link", { name: "acme/app-source" }),
-    ).toHaveAttribute("href", "/organization/acme/sources/source-1");
-    expect(
-      screen.queryByRole("table", { name: "Packages" }),
-    ).not.toBeInTheDocument();
-  });
+  it.each(["grid", "table"] as const)(
+    "shows the same package data in %s mode",
+    (mode) => {
+      renderCatalog(mode);
 
-  it("stores table mode and renders package table rows", async () => {
-    render(PackagesIndex, {
-      props: {
-        organization_summary: organization,
-        package_stats: packageStats,
-        pagination,
-        sections: [packageWithSource, hiddenManualPackage],
-      },
-    });
-
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Show as table" }),
-    );
-
-    const table = screen.getByRole("table", { name: "Packages" });
-
-    expect(localStorage.getItem("packio-list-view-mode")).toBe("table");
-    expect(
-      within(table).getByRole("columnheader", { name: "Latest" }),
-    ).toBeInTheDocument();
-    expect(within(table).getByText("acme/app")).toBeInTheDocument();
-    expect(within(table).getByText("1.2.3")).toBeInTheDocument();
-    expect(within(table).getByText("manual")).toBeInTheDocument();
-  });
-
-  it("keeps package and source badge states in table view", async () => {
-    render(PackagesIndex, {
-      props: {
-        organization_summary: organization,
-        package_stats: packageStats,
-        pagination,
-        sections: [packageWithSource, hiddenManualPackage],
-      },
-    });
-
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Show as table" }),
-    );
-
-    const table = screen.getByRole("table", { name: "Packages" });
-
-    expect(within(table).getByText("Public")).toBeInTheDocument();
-    expect(within(table).getByText("Token required")).toBeInTheDocument();
-    expect(within(table).getAllByText("Listed")).toHaveLength(2);
-    expect(within(table).getByText("Hidden")).toBeInTheDocument();
-    expect(within(table).getByText("success")).toBeInTheDocument();
-    expect(within(table).getByText("Source active")).toBeInTheDocument();
-  });
+      expect(screen.queryByRole("table", { name: "Packages" }) !== null).toBe(
+        mode === "table",
+      );
+      expect(
+        screen.getByRole("link", { name: "acme/app" }).getAttribute("href"),
+      ).toContain("/organization/acme/packages/acme/app");
+      expect(screen.getAllByText("1.2.3")).toHaveLength(2);
+      expect(screen.getAllByText("Token required").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Listed").length).toBeGreaterThan(1);
+      expect(screen.getAllByText("42")).toHaveLength(2);
+      expect(
+        screen.getAllByRole("link", { name: "acme/app-source" })[0],
+      ).toHaveAttribute("href", "/organization/acme/sources/source-1");
+      expect(screen.queryByText("https://example.com/acme/app.git")).toBeNull();
+      expect(screen.queryByRole("link", { name: "Open details" })).toBeNull();
+      expect(screen.getByText("Sync failed")).toBeInTheDocument();
+      expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Hidden").length).toBeGreaterThan(0);
+      expect(screen.getByText("No available version")).toBeInTheDocument();
+    },
+  );
 
   it("submits package search with page reset", async () => {
     render(PackagesIndex, {

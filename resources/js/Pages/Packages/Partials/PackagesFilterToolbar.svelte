@@ -99,10 +99,10 @@
       );
     }}
   >
-    <div class="flex items-center gap-2">
+    <div class="flex flex-wrap items-center gap-2">
       <input
         aria-label="Search packages"
-        class="ui-button-secondary min-w-0 flex-1 rounded-xl px-3 py-2 text-sm"
+        class="ui-button-secondary min-w-0 flex-1 basis-full rounded-xl px-3 py-2 text-sm sm:basis-0"
         name="search"
         placeholder="Search packages"
         type="search"

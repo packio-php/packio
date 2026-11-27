@@ -191,11 +191,8 @@
       />
     {/if}
 
-    {#if pagination.total > 0}
+    {#if chips.length > 0 || (activeFilterCount > 0 && sections.length > 0)}
       <div class="flex flex-wrap items-center gap-2">
-        <p class="text-sm ui-muted">
-          {pagination.from}–{pagination.to} of {pagination.total} packages
-        </p>
         {#each chips as chip (chip)}
           <Badge tone="neutral">{chip}</Badge>
         {/each}
@@ -210,6 +207,12 @@
           </Button>
         {/if}
       </div>
+    {/if}
+
+    {#if pagination.total > 0}
+      <p class="text-sm ui-muted">
+        {pagination.from}–{pagination.to} of {pagination.total} packages
+      </p>
     {/if}
 
     {#if sections.length === 0}

@@ -100,14 +100,24 @@
     }}
   >
     <div class="flex flex-wrap items-center gap-2">
-      <input
-        aria-label="Search packages"
-        class="ui-button-secondary min-w-0 flex-1 basis-full rounded-xl px-3 py-2 text-sm sm:basis-0"
-        name="search"
-        placeholder="Search packages"
-        type="search"
-        value={resolvedFilters.search}
-      />
+      <div class="relative min-w-0 flex-1 basis-full sm:basis-0">
+        <input
+          aria-label="Search packages"
+          class="ui-button-secondary w-full rounded-xl px-3 py-2 pr-10 text-sm"
+          name="search"
+          placeholder="Search packages"
+          type="search"
+          value={resolvedFilters.search}
+        />
+        <button
+          type="submit"
+          aria-label="Search"
+          title="Search"
+          class="absolute inset-y-0 right-0 grid w-10 cursor-pointer place-items-center rounded-r-xl ui-muted hover:text-(--page-ink)"
+        >
+          <Search aria-hidden="true" size={16} />
+        </button>
+      </div>
       <Button
         aria-controls="package-index-filters"
         aria-expanded={filtersOpen}

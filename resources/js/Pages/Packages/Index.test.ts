@@ -274,6 +274,29 @@ describe("Packages index page", () => {
     );
   });
 
+  it("submits package search from the search button", async () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    await fireEvent.input(screen.getByLabelText("Search packages"), {
+      target: { value: "frankenphp" },
+    });
+    await fireEvent.click(screen.getByRole("button", { name: "Search" }));
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      expect.objectContaining({ search: "frankenphp", page: 1 }),
+      { preserveScroll: true },
+    );
+  });
+
   it("shows the search field without opening filters", () => {
     render(PackagesIndex, {
       props: {

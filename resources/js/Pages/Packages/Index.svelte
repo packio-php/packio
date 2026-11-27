@@ -209,7 +209,7 @@
       </div>
     {/if}
 
-    {#if pagination.total > 0}
+    {#if pagination.last_page > 1}
       <Pagination
         currentPage={pagination.current_page}
         lastPage={pagination.last_page}
@@ -222,6 +222,11 @@
         onPageChange={handlePageChange}
         showPerPageSelector={false}
       />
+    {:else if pagination.total > 0}
+      <p class="text-sm ui-muted">
+        {pagination.total}
+        {pagination.total === 1 ? "package" : "packages"}
+      </p>
     {/if}
 
     {#if sections.length === 0}
@@ -268,7 +273,7 @@
       />
     {/if}
 
-    {#if pagination.total > 0}
+    {#if pagination.last_page > 1}
       <Pagination
         currentPage={pagination.current_page}
         lastPage={pagination.last_page}

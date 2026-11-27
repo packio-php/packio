@@ -109,7 +109,7 @@ describe("Packages index page", () => {
     expect(screen.queryByText("Visibility split")).toBeNull();
   });
 
-  it("shows the result summary above and below a single-page list", () => {
+  it("shows a plain package count instead of pagination on a single page", () => {
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
@@ -119,7 +119,22 @@ describe("Packages index page", () => {
       },
     });
 
-    expect(screen.getAllByText(/Showing/)).toHaveLength(2);
+    expect(screen.getByText("2 packages")).toBeInTheDocument();
+    expect(screen.queryByText(/Showing/)).toBeNull();
+    expect(screen.queryByText("→")).toBeNull();
+  });
+
+  it("uses the singular package count for one package", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 1, to: 1, total: 1, last_page: 1 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("1 package")).toBeInTheDocument();
   });
 
   it("does not show a separate result counter above the list", () => {

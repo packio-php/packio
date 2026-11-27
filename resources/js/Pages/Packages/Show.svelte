@@ -221,11 +221,17 @@
       {/if}
     </Card>
 
-    <Card as="details" className="rounded-[1.75rem] p-6">
-      <summary class="ui-title cursor-pointer text-xl font-semibold">
+    <Card as="details" className="group rounded-[1.25rem] px-5 py-3">
+      <summary
+        class="flex cursor-pointer list-none items-center gap-2 text-sm font-medium ui-muted hover:text-(--page-ink) [&::-webkit-details-marker]:hidden"
+      >
+        <ChevronRight
+          aria-hidden="true"
+          class="size-4 shrink-0 transition-transform group-open:rotate-90"
+        />
         {pkg.source_summary ? "Source details" : "Package details"}
       </summary>
-      <dl class="ui-muted mt-4 grid gap-4 text-sm">
+      <dl class="ui-muted mt-3 grid gap-4 text-sm">
         {#if pkg.source_summary}
           <div>
             <dt class="ui-title font-medium">Provider</dt>

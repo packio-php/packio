@@ -109,17 +109,17 @@ describe("Packages index page", () => {
     expect(screen.queryByText("Visibility split")).toBeNull();
   });
 
-  it("hides pagination when there is a single page", () => {
+  it("shows the result summary above and below a single-page list", () => {
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
         package_stats: packageStats,
-        pagination,
+        pagination: { ...pagination, from: 1, to: 2, total: 2, last_page: 1 },
         sections: [packageWithSource],
       },
     });
 
-    expect(screen.queryByText("→")).toBeNull();
+    expect(screen.getAllByText(/Showing/)).toHaveLength(2);
   });
 
   it("does not show a separate result counter above the list", () => {

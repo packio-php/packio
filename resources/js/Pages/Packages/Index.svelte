@@ -209,6 +209,21 @@
       </div>
     {/if}
 
+    {#if pagination.total > 0}
+      <Pagination
+        currentPage={pagination.current_page}
+        lastPage={pagination.last_page}
+        hasMorePages={pagination.has_more_pages}
+        hasPreviousPages={pagination.has_previous_pages}
+        from={pagination.from}
+        to={pagination.to}
+        total={pagination.total}
+        perPage={pagination.per_page}
+        onPageChange={handlePageChange}
+        showPerPageSelector={false}
+      />
+    {/if}
+
     {#if sections.length === 0}
       <Card className="rounded-[1.75rem] p-6">
         {#if catalogEmpty}
@@ -253,7 +268,7 @@
       />
     {/if}
 
-    {#if pagination.last_page > 1}
+    {#if pagination.total > 0}
       <Pagination
         currentPage={pagination.current_page}
         lastPage={pagination.last_page}

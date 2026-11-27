@@ -177,7 +177,7 @@ describe("Packages index page", () => {
       screen.getByText("No packages match your search"),
     ).toBeInTheDocument();
     await fireEvent.click(
-      screen.getAllByRole("button", { name: "Clear filters" }).at(-1)!,
+      screen.getByRole("button", { name: "Clear filters" }),
     );
 
     expect(router.get).toHaveBeenCalledWith(
@@ -273,13 +273,13 @@ describe("Packages index page", () => {
       },
     });
 
-    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
-    await fireEvent.input(screen.getByLabelText("Search"), {
+    await fireEvent.input(screen.getByLabelText("Search packages"), {
       target: { value: "acme" },
     });
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Apply filters" }),
+    await fireEvent.submit(
+      screen
+        .getByRole("searchbox", { name: "Search packages" })
+        .closest("form")!,
     );
 
     expect(router.get).toHaveBeenCalledWith(
@@ -287,6 +287,113 @@ describe("Packages index page", () => {
       { search: "acme", per_page: 18, page: 1 },
       { preserveScroll: true },
     );
+  });
+
+  it("shows the search field without opening filters", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(
+      screen.getByRole("searchbox", { name: "Search packages" }),
+    ).toBeInTheDocument();
+  });
+
+  it("keeps applied filters when search is submitted with the panel closed", async () => {
+    render(PackagesIndex, {
+      props: {
+        filters: {
+          ...activeFilters,
+          listed: "hidden",
+          page: 3,
+          search: "",
+          source: "",
+          source_sync_status: [],
+          visibility: [],
+        },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: multiPagePagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    const search = screen.getByRole("searchbox", { name: "Search packages" });
+    await fireEvent.input(search, { target: { value: "frankenphp" } });
+    await fireEvent.submit(search.closest("form")!);
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      { search: "frankenphp", listed: "hidden", per_page: 18, page: 1 },
+      { preserveScroll: true },
+    );
+  });
+
+  it("toggles the filters panel", async () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    const button = screen.getByRole("button", { name: "Filters" });
+    expect(button).toHaveAttribute("aria-expanded", "false");
+    await fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "true");
+    await fireEvent.click(button);
+    expect(button).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("shows applied filters next to results", () => {
+    render(PackagesIndex, {
+      props: {
+        filters: {
+          ...activeFilters,
+          listed: "hidden",
+          search: "",
+          source: "manual",
+          source_sync_status: [],
+          visibility: [],
+        },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("Listed: Hidden")).toBeInTheDocument();
+    expect(screen.getByText("Source: Manual")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a single Clear filters control in the filtered empty state", () => {
+    render(PackagesIndex, {
+      props: {
+        filters: { ...activeFilters, search: "zzz" },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 0, to: 0, total: 0 },
+        sections: [],
+      },
+    });
+
+    expect(
+      screen.getAllByRole("button", { name: "Clear filters" }),
+    ).toHaveLength(1);
   });
 
   it("submits package filters with page reset", async () => {
@@ -300,7 +407,7 @@ describe("Packages index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.click(screen.getByLabelText("private"));
     await fireEvent.change(screen.getByLabelText("Listed"), {
       target: { value: "hidden" },

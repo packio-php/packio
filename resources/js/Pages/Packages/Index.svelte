@@ -3,12 +3,14 @@
   import { router, usePage } from "@inertiajs/svelte";
   import AppShell from "@/Layouts/AppShell.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Link from "@/Components/core/Link.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
   import PackagesFilterToolbar from "./Partials/PackagesFilterToolbar.svelte";
   import PackagesGrid from "./Partials/PackagesGrid.svelte";
   import PackagesTable from "./Partials/PackagesTable.svelte";
+  import { activeFilterChips, clearFiltersQuery } from "./packageFilters";
   import { cleanQuery, queryString, type QueryValue } from "@/lib/queryFilters";
   import {
     listViewStorageKey,
@@ -99,6 +101,7 @@
       (filters.source !== "" ? 1 : 0) +
       (filters.source_sync_status.length > 0 ? 1 : 0),
   );
+  let chips = $derived(activeFilterChips(filters, package_filter_options));
   let showPackageToolbar = $derived(
     package_stats.total > 0 || activeFilterCount > 0,
   );
@@ -141,10 +144,8 @@
   function clearFilters(): void {
     router.get(
       withOrganization("/packages"),
-      cleanQuery({ per_page: filters.per_page }),
-      {
-        preserveScroll: true,
-      },
+      clearFiltersQuery(filters.per_page),
+      { preserveScroll: true },
     );
   }
 
@@ -191,11 +192,23 @@
     {/if}
 
     {#if pagination.total > 0}
-      <!-- Task 2 adds filter chips beside the counter -->
       <div class="flex flex-wrap items-center gap-2">
         <p class="text-sm ui-muted">
           {pagination.from}–{pagination.to} of {pagination.total} packages
         </p>
+        {#each chips as chip (chip)}
+          <Badge tone="neutral">{chip}</Badge>
+        {/each}
+        {#if activeFilterCount > 0 && sections.length > 0}
+          <Button
+            className="rounded-full px-3 py-1 text-xs"
+            type="button"
+            variant="secondary"
+            onclick={clearFilters}
+          >
+            Clear filters
+          </Button>
+        {/if}
       </div>
     {/if}
 

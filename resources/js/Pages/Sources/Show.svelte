@@ -242,8 +242,14 @@
   }
 
   function postNow(path: string, data: Record<string, string>): void {
+    if (actionSubmitting) {
+      return;
+    }
+
+    actionSubmitting = true;
     router.post(withOrganization(`/sources/${source.id}/${path}`), data, {
       preserveScroll: true,
+      onFinish: () => (actionSubmitting = false),
     });
   }
 
@@ -811,6 +817,7 @@
               className="w-full rounded-full px-4 py-2 text-sm"
               type="button"
               variant="secondary"
+              disabled={actionSubmitting}
               onclick={() => postNow("packages/activity", { active: "1" })}
             >
               Show packages in {resolvedBranding.name}
@@ -821,6 +828,7 @@
               className="w-full rounded-full px-4 py-2 text-sm"
               type="button"
               variant="secondary"
+              disabled={actionSubmitting}
               onclick={() => postNow("archive", { archived: "0" })}
             >
               Restore source
@@ -852,7 +860,7 @@
     open={pendingAction === "hide"}
     eyebrow="Source actions"
     title={`Hide packages from ${resolvedBranding.name}?`}
-    description={`All packages of this source are hidden from the ${resolvedBranding.name} registry listing. Releases, webhooks and sync settings are not changed. Use "Show packages in ${resolvedBranding.name}" to list them again.`}
+    description={`All packages of this source are hidden from the ${resolvedBranding.name} registry, so Composer can no longer install or update them until they are shown again. Releases, webhooks and sync settings are not changed. Use "Show packages in ${resolvedBranding.name}" to list them again.`}
     confirmLabel="Hide packages"
     cancelLabel="Keep packages listed"
     confirming={actionSubmitting}
@@ -864,7 +872,7 @@
     open={pendingAction === "archive"}
     eyebrow="Source actions"
     title="Archive source?"
-    description={`Archiving deactivates the source, so syncing and manual re-sync stop, and hides all its packages from the ${resolvedBranding.name} registry listing. Releases and settings are kept. Restore source re-activates it and lists its packages again, including any you hid separately.`}
+    description={`Archiving deactivates the source, so syncing and manual re-sync stop, and hides all its packages from the ${resolvedBranding.name} registry, so Composer can no longer install or update them. Releases and settings are kept. Restore source re-activates it and lists its packages again, including any you hid separately.`}
     confirmLabel="Archive source"
     cancelLabel="Keep source active"
     confirming={actionSubmitting}

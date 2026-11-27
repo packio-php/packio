@@ -500,7 +500,7 @@ describe("Source details page", () => {
       renderActions();
       await confirmFlow(
         "Hide packages from Application",
-        /hidden from the Application registry listing/,
+        /Composer can no longer install or update them until they are shown again/,
         "Hide packages",
       );
       expect(router.post).toHaveBeenCalledWith(
@@ -536,6 +536,9 @@ describe("Source details page", () => {
 
     it("shows and restores without confirmation when hidden and archived", async () => {
       renderActions({ archived: true, packages_active: false });
+      vi.mocked(router.post).mockImplementation((_u, _d, o) => {
+        (o as { onFinish?: () => void }).onFinish?.();
+      });
 
       expect(
         screen.queryByRole("button", { name: /^Hide packages/ }),

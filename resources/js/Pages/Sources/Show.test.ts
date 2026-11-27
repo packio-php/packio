@@ -115,6 +115,7 @@ describe("Source details page", () => {
     );
 
     expect(screen.getAllByText("publication.github.completed")).toHaveLength(3);
+    expect(screen.getAllByText("Publication github completed")).toHaveLength(3);
   });
 
   it("does not reflect admin source return URLs for non-admin users", () => {
@@ -364,6 +365,8 @@ describe("Source details page", () => {
       renderBlocks({}, { can_manage_sources: false });
 
       expect(screen.queryByText("Manual registration")).toBeNull();
+      expect(screen.queryByText("Visible to managers")).toBeNull();
+      expect(screen.queryByText("Registration:")).toBeNull();
       expect(screen.queryByText("Not registered at provider")).toBeNull();
       expect(screen.queryByText(/cannot register webhooks/)).toBeNull();
     });
@@ -411,6 +414,160 @@ describe("Source details page", () => {
         {},
         expect.anything(),
       );
+    });
+  });
+
+  describe("packages, audit and source actions", () => {
+    const packages = [
+      {
+        active: true,
+        name: "acme/app",
+        release_count: 3,
+        releases: [{ version: "1.2.3" }],
+        visibility: "public",
+      },
+      {
+        active: false,
+        name: "acme/other",
+        release_count: 1,
+        releases: [],
+        visibility: "private",
+      },
+    ] as never;
+
+    function renderActions(
+      overrides: Partial<SourceDetailsPayload> = {},
+      extra: Record<string, unknown> = {},
+    ) {
+      vi.mocked(router.post).mockClear();
+
+      return render(SourcesShow, {
+        props: {
+          audit: [
+            {
+              event: "source.sync",
+              id: "a1",
+              occurred_at: "2026-07-04T10:52:27+00:00",
+            },
+          ],
+          can_manage_sources: true,
+          organization,
+          packages,
+          source: { ...source, ...overrides },
+          ...extra,
+        },
+      });
+    }
+
+    async function confirmFlow(open: string, effect: RegExp, confirm: string) {
+      await fireEvent.click(screen.getByRole("button", { name: open }));
+      expect(router.post).not.toHaveBeenCalled();
+      expect(screen.getByText(effect)).toBeInTheDocument();
+      const buttons = screen.getAllByRole("button", { name: confirm });
+      await fireEvent.click(buttons[buttons.length - 1]);
+    }
+
+    it("lists packages compactly without version chips", () => {
+      renderActions();
+
+      expect(screen.getByRole("link", { name: "acme/app" })).toHaveAttribute(
+        "href",
+        "/organization/acme/packages/acme/app",
+      );
+      expect(
+        screen.getByText(/public · listed · 3 releases/),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByText(/private · hidden · 1 release$/),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("1.2.3")).toBeNull();
+    });
+
+    it("shows audit label with the key and an empty line", () => {
+      const { unmount } = renderActions();
+
+      expect(screen.getByText("Source synchronized")).toBeInTheDocument();
+      expect(screen.getByText("source.sync")).toBeInTheDocument();
+      unmount();
+
+      renderActions({}, { audit: [] });
+      expect(
+        screen.getByText("No audit entries for this source yet."),
+      ).toBeInTheDocument();
+    });
+
+    it("confirms hiding packages before posting", async () => {
+      renderActions();
+      await confirmFlow(
+        "Hide packages from Application",
+        /hidden from the Application registry listing/,
+        "Hide packages",
+      );
+      expect(router.post).toHaveBeenCalledWith(
+        "/organization/acme/sources/source-1/packages/activity",
+        { active: "0" },
+        expect.anything(),
+      );
+    });
+
+    it("confirms archiving before posting", async () => {
+      renderActions();
+      await confirmFlow(
+        "Archive source",
+        /syncing and manual re-sync stop/,
+        "Archive source",
+      );
+      expect(router.post).toHaveBeenCalledWith(
+        "/organization/acme/sources/source-1/archive",
+        { archived: "1" },
+        expect.anything(),
+      );
+    });
+
+    it("confirms deletion before posting", async () => {
+      renderActions();
+      await confirmFlow("Delete source", /cannot be undone/, "Delete source");
+      expect(router.post).toHaveBeenCalledWith(
+        "/organization/acme/sources/source-1/delete",
+        {},
+        expect.anything(),
+      );
+    });
+
+    it("shows and restores without confirmation when hidden and archived", async () => {
+      renderActions({ archived: true, packages_active: false });
+
+      expect(
+        screen.queryByRole("button", { name: /^Hide packages/ }),
+      ).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Archive source" }),
+      ).toBeNull();
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Show packages in Application" }),
+      );
+      expect(router.post).toHaveBeenLastCalledWith(
+        "/organization/acme/sources/source-1/packages/activity",
+        { active: "1" },
+        expect.anything(),
+      );
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Restore source" }),
+      );
+      expect(router.post).toHaveBeenLastCalledWith(
+        "/organization/acme/sources/source-1/archive",
+        { archived: "0" },
+        expect.anything(),
+      );
+    });
+
+    it("hides source actions from viewers", () => {
+      renderActions({}, { can_manage_sources: false });
+
+      expect(screen.queryByText("Source actions")).toBeNull();
+      expect(
+        screen.queryByRole("button", { name: "Delete source" }),
+      ).toBeNull();
     });
   });
 });

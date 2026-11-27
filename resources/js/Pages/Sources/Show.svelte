@@ -17,6 +17,7 @@
   import { mergeBranding } from "@/lib/branding";
   import { formatDate } from "@/lib/date";
   import type { AppPageProps } from "@/types/app";
+  import { auditEventLabel } from "./auditEventLabel";
   import {
     sourceStateLabel,
     sourceStateTone,
@@ -59,6 +60,8 @@
   let resolvedBranding = $derived(mergeBranding(branding ?? {}));
   let sourceDeleteConfirmOpen = $state(false);
   let sourceDeleting = $state(false);
+  let pendingAction = $state<"hide" | "archive" | null>(null);
+  let actionSubmitting = $state(false);
   let editingSettings = $state(false);
   // Copied on Edit so refreshes of `source` (poll, failed save) do not overwrite typed values.
   let draft = $state({ visibility: "public", active: true, keep: 0 });
@@ -214,6 +217,34 @@
         },
       },
     );
+  }
+
+  function confirmAction(): void {
+    if (actionSubmitting || !pendingAction) {
+      return;
+    }
+
+    const hide = pendingAction === "hide";
+    actionSubmitting = true;
+    router.post(
+      withOrganization(
+        `/sources/${source.id}/${hide ? "packages/activity" : "archive"}`,
+      ),
+      hide ? { active: "0" } : { archived: "1" },
+      {
+        preserveScroll: true,
+        onFinish: () => {
+          actionSubmitting = false;
+          pendingAction = null;
+        },
+      },
+    );
+  }
+
+  function postNow(path: string, data: Record<string, string>): void {
+    router.post(withOrganization(`/sources/${source.id}/${path}`), data, {
+      preserveScroll: true,
+    });
   }
 
   function confirmSourceDelete(): void {
@@ -520,21 +551,23 @@
       <div class="mt-4 grid gap-4">
         {#if supportsWebhookProcessing}
           <InsetCard className="grid gap-2 p-4 text-sm ui-muted">
-            <div class="flex flex-wrap items-center gap-2">
-              <span class="font-medium ui-title">Registration:</span>
-              {#if !can_manage_sources}
-                <!-- registration data is only sent to managers -->
-                <Badge tone="neutral">Visible to managers</Badge>
-              {:else if source.supports_auto_registration}
-                <Badge tone={source.webhook_registered ? "accent" : "neutral"}>
-                  {source.webhook_registered
-                    ? "Registered at provider"
-                    : "Not registered at provider"}
-                </Badge>
-              {:else}
-                <Badge tone="neutral">Manual registration</Badge>
-              {/if}
-            </div>
+            <!-- registration data is only sent to managers; viewers see no badge -->
+            {#if can_manage_sources}
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium ui-title">Registration:</span>
+                {#if source.supports_auto_registration}
+                  <Badge
+                    tone={source.webhook_registered ? "accent" : "neutral"}
+                  >
+                    {source.webhook_registered
+                      ? "Registered at provider"
+                      : "Not registered at provider"}
+                  </Badge>
+                {:else}
+                  <Badge tone="neutral">Manual registration</Badge>
+                {/if}
+              </div>
+            {/if}
             {#if can_manage_sources && source.supports_auto_registration && source.webhook_registered && source.webhook_external_id}
               <p class="text-xs">
                 External ID:
@@ -704,140 +737,140 @@
     </Card>
   </section>
 
-  <!-- Temporary location; Task 7 restyles these source actions. -->
-  {#if can_manage_sources}
-    <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <form
-        method="POST"
-        action={withOrganization(`/sources/${source.id}/packages/activity`)}
-        onsubmit={(event) => {
-          event.preventDefault();
-          submit(
-            event as SubmitEvent & {
-              currentTarget: EventTarget & HTMLFormElement;
-            },
-          );
-        }}
-      >
-        <input
-          type="hidden"
-          name="active"
-          value={source.packages_active ? "0" : "1"}
-        />
-        <Button
-          className="w-full rounded-full px-4 py-2 text-sm"
-          type="submit"
-          variant="secondary"
-        >
-          {source.packages_active
-            ? `Hide packages from ${resolvedBranding.name}`
-            : `Show packages in ${resolvedBranding.name}`}
-        </Button>
-      </form>
-      <form
-        method="POST"
-        action={withOrganization(`/sources/${source.id}/archive`)}
-        onsubmit={(event) => {
-          event.preventDefault();
-          submit(
-            event as SubmitEvent & {
-              currentTarget: EventTarget & HTMLFormElement;
-            },
-          );
-        }}
-      >
-        <input
-          type="hidden"
-          name="archived"
-          value={source.archived ? "0" : "1"}
-        />
-        <Button
-          className="w-full rounded-full px-4 py-2 text-sm"
-          type="submit"
-          variant="secondary"
-        >
-          {source.archived ? "Restore source" : "Archive source"}
-        </Button>
-      </form>
-      <Button
-        className="w-full rounded-full px-4 py-2 text-sm"
-        type="button"
-        variant="danger"
-        onclick={() => (sourceDeleteConfirmOpen = true)}
-      >
-        Delete source
-      </Button>
-    </div>
-  {/if}
-
-  <section class="grid gap-6 xl:grid-cols-2">
-    <Card className="rounded-[1.75rem] p-6">
-      <SectionHeading eyebrow="Packages and releases" className="mb-4" />
-      <div class="mt-4 grid gap-4">
-        {#if packages.length === 0}
-          <p class="text-sm ui-muted">No packages synchronized yet.</p>
-        {:else}
+  <section class="grid gap-6">
+    <Card className="min-w-0 rounded-[1.75rem] p-6">
+      <SectionHeading eyebrow="Packages" className="mb-4" />
+      {#if packages.length === 0}
+        <p class="text-sm ui-muted">No packages synchronized yet.</p>
+      {:else}
+        <ul class="grid gap-2">
           {#each packages as pkg (pkg.name)}
-            <InsetCard as="article" className="p-5">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="ui-title text-lg font-semibold">
-                    <Link
-                      class="ui-link-accent"
-                      href={withOrganization(`/packages/${pkg.name}`)}
-                    >
-                      {pkg.name}
-                    </Link>
-                  </p>
-                  <p class="ui-muted mt-2 text-sm leading-6">
-                    {pkg.description || "No description"}
-                  </p>
-                </div>
-                <div class="text-right text-sm ui-muted">
-                  <p>{pkg.release_count} releases</p>
-                  <p class="mt-1">{pkg.visibility}</p>
-                  <p class="mt-1">
-                    {pkg.active ? "listed" : "hidden"}
-                  </p>
-                </div>
-              </div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                {#each pkg.releases as release (release.version)}
-                  <span
-                    class="ui-code rounded-full px-3 py-1.5 text-xs font-medium"
-                  >
-                    {release.version}
-                  </span>
-                {/each}
-              </div>
-            </InsetCard>
+            <li>
+              <InsetCard
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+              >
+                <Link
+                  class="ui-link-accent min-w-0 font-medium break-all"
+                  href={withOrganization(`/packages/${pkg.name}`)}
+                >
+                  {pkg.name}
+                </Link>
+                <span class="ui-muted">
+                  {pkg.visibility} · {pkg.active ? "listed" : "hidden"} · {pkg.release_count}
+                  {pkg.release_count === 1 ? "release" : "releases"}
+                </span>
+              </InsetCard>
+            </li>
           {/each}
-        {/if}
-      </div>
+        </ul>
+      {/if}
     </Card>
 
-    <Card className="rounded-[1.75rem] p-6">
+    <Card className="min-w-0 rounded-[1.75rem] p-6">
       <SectionHeading eyebrow="Audit trail" className="mb-4" />
-      <div class="mt-4 grid gap-3">
-        {#if audit.length === 0}
-          <p class="text-sm ui-muted">
-            No {resolvedBranding.name} audit entries for this source yet.
-          </p>
-        {:else}
+      {#if audit.length === 0}
+        <p class="text-sm ui-muted">No audit entries for this source yet.</p>
+      {:else}
+        <ul class="grid gap-2">
           {#each audit as entry (entry.id)}
-            <InsetCard className="p-4">
-              <p class="font-medium ui-title">
-                {entry.event}
-              </p>
-              <p class="ui-muted mt-2 text-sm">
-                {formatDate(entry.occurred_at)}
-              </p>
-            </InsetCard>
+            <li>
+              <InsetCard
+                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+              >
+                <span class="min-w-0">
+                  <span class="font-medium ui-title">
+                    {auditEventLabel(entry.event)}
+                  </span>
+                  <span class="ui-muted ml-2 text-xs break-all">
+                    {entry.event}
+                  </span>
+                </span>
+                <span class="ui-muted">{formatDate(entry.occurred_at)}</span>
+              </InsetCard>
+            </li>
           {/each}
-        {/if}
-      </div>
+        </ul>
+      {/if}
     </Card>
+
+    {#if can_manage_sources}
+      <Card className="min-w-0 rounded-[1.75rem] border-red-500/40 p-6">
+        <SectionHeading eyebrow="Source actions" className="mb-4" />
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {#if source.packages_active}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => (pendingAction = "hide")}
+            >
+              Hide packages from {resolvedBranding.name}
+            </Button>
+          {:else}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => postNow("packages/activity", { active: "1" })}
+            >
+              Show packages in {resolvedBranding.name}
+            </Button>
+          {/if}
+          {#if source.archived}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => postNow("archive", { archived: "0" })}
+            >
+              Restore source
+            </Button>
+          {:else}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => (pendingAction = "archive")}
+            >
+              Archive source
+            </Button>
+          {/if}
+          <Button
+            className="w-full rounded-full px-4 py-2 text-sm"
+            type="button"
+            variant="danger"
+            onclick={() => (sourceDeleteConfirmOpen = true)}
+          >
+            Delete source
+          </Button>
+        </div>
+      </Card>
+    {/if}
   </section>
+
+  <ConfirmationModal
+    open={pendingAction === "hide"}
+    eyebrow="Source actions"
+    title={`Hide packages from ${resolvedBranding.name}?`}
+    description={`All packages of this source are hidden from the ${resolvedBranding.name} registry listing. Releases, webhooks and sync settings are not changed. Use "Show packages in ${resolvedBranding.name}" to list them again.`}
+    confirmLabel="Hide packages"
+    cancelLabel="Keep packages listed"
+    confirming={actionSubmitting}
+    onCancel={() => (pendingAction = null)}
+    onConfirm={confirmAction}
+  />
+
+  <ConfirmationModal
+    open={pendingAction === "archive"}
+    eyebrow="Source actions"
+    title="Archive source?"
+    description={`Archiving deactivates the source, so syncing and manual re-sync stop, and hides all its packages from the ${resolvedBranding.name} registry listing. Releases and settings are kept. Restore source re-activates it and lists its packages again, including any you hid separately.`}
+    confirmLabel="Archive source"
+    cancelLabel="Keep source active"
+    confirming={actionSubmitting}
+    onCancel={() => (pendingAction = null)}
+    onConfirm={confirmAction}
+  />
 
   <ConfirmationModal
     open={rotateConfirmOpen}
@@ -855,7 +888,7 @@
     open={sourceDeleteConfirmOpen}
     eyebrow="Source"
     title="Delete source?"
-    description="This removes the source and its synchronized package data from the organization."
+    description={`Deletion runs in the background and cannot be undone. It permanently removes the source, all its packages and releases, their stored archives and its webhook data from ${resolvedBranding.name}. An automatically registered webhook is also removed at the provider; the repository itself is not touched.`}
     confirmLabel="Delete source"
     cancelLabel="Keep source"
     confirming={sourceDeleting}

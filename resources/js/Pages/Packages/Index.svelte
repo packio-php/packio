@@ -209,12 +209,6 @@
       </div>
     {/if}
 
-    {#if pagination.total > 0}
-      <p class="text-sm ui-muted">
-        {pagination.from}–{pagination.to} of {pagination.total} packages
-      </p>
-    {/if}
-
     {#if sections.length === 0}
       <Card className="rounded-[1.75rem] p-6">
         {#if catalogEmpty}

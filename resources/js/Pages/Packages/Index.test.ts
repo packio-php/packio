@@ -122,7 +122,7 @@ describe("Packages index page", () => {
     expect(screen.queryByText("→")).toBeNull();
   });
 
-  it("shows the result range", () => {
+  it("does not show a separate result counter above the list", () => {
     render(PackagesIndex, {
       props: {
         organization_summary: organization,
@@ -132,7 +132,7 @@ describe("Packages index page", () => {
       },
     });
 
-    expect(screen.getByText("19–36 of 40 packages")).toBeInTheDocument();
+    expect(screen.queryByText(/of 40 packages/)).toBeNull();
   });
 
   it("explains where to start in an empty catalog", () => {

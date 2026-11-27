@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
-import { router } from "@/test/inertia";
+import { router, setPageProps } from "@/test/inertia";
 import PackagesIndex from "./Index.svelte";
 import type {
   PackageFilterOptions,
@@ -92,6 +92,88 @@ const activeFilters: PackageIndexFilters = {
 };
 
 describe("Packages index page", () => {
+  it("renders a compact header without intro cards", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(
+      screen.getByRole("heading", { level: 1, name: "Packages" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText("What this page is for")).toBeNull();
+    expect(screen.queryByText("Visibility split")).toBeNull();
+  });
+
+  it("shows the result range", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: { ...packageStats, total: 40 },
+        pagination: { ...multiPagePagination, from: 19, to: 36, total: 40 },
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getByText("19–36 of 40 packages")).toBeInTheDocument();
+  });
+
+  it("explains where to start in an empty catalog", () => {
+    setPageProps({ current_membership: { role: "owner" } });
+    const empty = {
+      auth: { check: true },
+      organization_summary: organization,
+      package_stats: { ...packageStats, total: 0 },
+      pagination: { ...pagination, from: 0, to: 0, total: 0 },
+      sections: [],
+    };
+    const { unmount } = render(PackagesIndex, { props: empty });
+
+    expect(screen.getByText("No packages yet")).toBeInTheDocument();
+    expect(
+      screen.getByText(/Connect a repository in Sources/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open sources" })).toHaveAttribute(
+      "href",
+      "/organization/acme/sources",
+    );
+    unmount();
+
+    setPageProps({});
+    render(PackagesIndex, { props: empty });
+    expect(screen.queryByRole("link", { name: "Open sources" })).toBeNull();
+  });
+
+  it("offers a reset when the search finds nothing", async () => {
+    render(PackagesIndex, {
+      props: {
+        filters: { ...activeFilters, search: "zzz" },
+        organization_summary: organization,
+        package_filter_options: filterOptions,
+        package_stats: packageStats,
+        pagination: { ...pagination, from: 0, to: 0, total: 0 },
+        sections: [],
+      },
+    });
+
+    expect(
+      screen.getByText("No packages match your search"),
+    ).toBeInTheDocument();
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Clear filters" }).at(-1)!,
+    );
+
+    expect(router.get).toHaveBeenCalledWith(
+      "/organization/acme/packages",
+      { per_page: 18 },
+      { preserveScroll: true },
+    );
+  });
+
   it("renders package cards in the default grid view", () => {
     render(PackagesIndex, {
       props: {

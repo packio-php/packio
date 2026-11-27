@@ -1,12 +1,11 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { router } from "@inertiajs/svelte";
+  import { router, usePage } from "@inertiajs/svelte";
   import AppShell from "@/Layouts/AppShell.svelte";
   import Card from "@/Components/ui/Card.svelte";
-  import InsetCard from "@/Components/ui/InsetCard.svelte";
+  import Button from "@/Components/ui/Button.svelte";
   import Link from "@/Components/core/Link.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import PackagesFilterToolbar from "./Partials/PackagesFilterToolbar.svelte";
   import PackagesGrid from "./Partials/PackagesGrid.svelte";
   import PackagesTable from "./Partials/PackagesTable.svelte";
@@ -90,14 +89,9 @@
     }
   });
 
-  let packageTotal = $derived(package_stats.total);
-  let publicCount = $derived(package_stats.public);
-  let privateCount = $derived(package_stats.private);
-  let listedCount = $derived(package_stats.listed);
   let anonymousAccessEnabled = $derived(
     Boolean(organization_summary?.anonymous_access),
   );
-  let hasPackages = $derived(packageTotal > 0);
   let activeFilterCount = $derived(
     (filters.search !== "" ? 1 : 0) +
       (filters.visibility.length > 0 ? 1 : 0) +
@@ -105,7 +99,15 @@
       (filters.source !== "" ? 1 : 0) +
       (filters.source_sync_status.length > 0 ? 1 : 0),
   );
-  let showPackageToolbar = $derived(hasPackages || activeFilterCount > 0);
+  let showPackageToolbar = $derived(
+    package_stats.total > 0 || activeFilterCount > 0,
+  );
+  let catalogEmpty = $derived(
+    package_stats.total === 0 && activeFilterCount === 0,
+  );
+  let hasSourcesAccess = $derived(
+    Boolean(auth?.check && usePage().props.current_membership),
+  );
 
   onMount(() => {
     listViewMode = readStoredListViewMode(
@@ -134,6 +136,16 @@
     router.get(withOrganization("/packages"), currentQuery({ page }), {
       preserveScroll: true,
     });
+  }
+
+  function clearFilters(): void {
+    router.get(
+      withOrganization("/packages"),
+      cleanQuery({ per_page: filters.per_page }),
+      {
+        preserveScroll: true,
+      },
+    );
   }
 
   function currentQuery(
@@ -166,66 +178,7 @@
 
 <AppShell title="Packages" {auth}>
   <section class="grid gap-6">
-    <Card className="rounded-[1.9rem] p-7 md:p-9">
-      <div
-        class="grid gap-8 lg:grid-cols-[minmax(0,1.5fr)_minmax(16rem,0.9fr)]"
-      >
-        <div class="min-w-0">
-          <SectionHeading
-            eyebrow={`${organization_summary?.slug ?? "organization"} packages`}
-            title={`${organization_summary?.name ?? "Organization"} packages`}
-            description="Packages are the Composer-facing catalog of what this organization publishes. Use Sources to connect repositories, configure credentials, manage webhooks, and troubleshoot synchronization."
-            className="max-w-3xl"
-          />
-
-          <div class="mt-6 grid gap-4 md:grid-cols-3">
-            <InsetCard className="p-4">
-              <p class="ui-eyebrow">Packages</p>
-              <p class="ui-title mt-2 text-3xl font-semibold">
-                {packageTotal}
-              </p>
-            </InsetCard>
-            <InsetCard className="p-4">
-              <p class="ui-eyebrow">Listed</p>
-              <p class="ui-title mt-2 text-3xl font-semibold">{listedCount}</p>
-            </InsetCard>
-            <InsetCard className="p-4">
-              <p class="ui-eyebrow">Visibility split</p>
-              <p class="ui-title mt-2 text-lg font-semibold">
-                {publicCount} public / {privateCount} private
-              </p>
-            </InsetCard>
-          </div>
-        </div>
-
-        <div class="grid gap-4 self-start">
-          <InsetCard className="p-5">
-            <p class="text-sm font-medium ui-title">What this page is for</p>
-            <p class="mt-3 text-sm leading-7 ui-muted">
-              Browse package names, latest versions, visibility, and download
-              endpoints. This is the catalog consumers use when they require
-              dependencies through Composer.
-            </p>
-          </InsetCard>
-
-          <InsetCard className="p-5">
-            <p class="text-sm font-medium ui-title">Where to manage sources</p>
-            <p class="mt-3 text-sm leading-7 ui-muted">
-              Repository connections, provider authorization, webhook secrets,
-              manual re-sync, and provider troubleshooting live in the
-              <span class="font-medium ui-title"> Sources </span>
-              section.
-            </p>
-            <Link
-              class="ui-button-secondary mt-4 inline-flex rounded-full px-4 py-2 text-sm font-medium"
-              href={withOrganization("/sources")}
-            >
-              Open sources
-            </Link>
-          </InsetCard>
-        </div>
-      </div>
-    </Card>
+    <h1 class="ui-title text-2xl font-semibold">Packages</h1>
 
     {#if showPackageToolbar}
       <PackagesFilterToolbar
@@ -238,23 +191,41 @@
     {/if}
 
     {#if pagination.total > 0}
-      <Pagination
-        currentPage={pagination.current_page}
-        lastPage={pagination.last_page}
-        hasMorePages={pagination.has_more_pages}
-        hasPreviousPages={pagination.has_previous_pages}
-        from={pagination.from}
-        to={pagination.to}
-        total={pagination.total}
-        perPage={pagination.per_page}
-        onPageChange={handlePageChange}
-        showPerPageSelector={false}
-      />
+      <!-- Task 2 adds filter chips beside the counter -->
+      <div class="flex flex-wrap items-center gap-2">
+        <p class="text-sm ui-muted">
+          {pagination.from}–{pagination.to} of {pagination.total} packages
+        </p>
+      </div>
     {/if}
 
     {#if sections.length === 0}
       <Card className="rounded-[1.75rem] p-6">
-        <p class="text-sm ui-muted">No packages found.</p>
+        {#if catalogEmpty}
+          <p class="ui-title font-medium">No packages yet</p>
+          <p class="mt-2 text-sm ui-muted">
+            Packages appear here after a source syncs. Connect a repository in
+            Sources.
+          </p>
+          {#if hasSourcesAccess}
+            <Link
+              class="ui-button-secondary mt-4 inline-flex rounded-full px-4 py-2 text-sm font-medium"
+              href={withOrganization("/sources")}
+            >
+              Open sources
+            </Link>
+          {/if}
+        {:else}
+          <p class="ui-title font-medium">No packages match your search</p>
+          <Button
+            className="mt-4"
+            type="button"
+            variant="secondary"
+            onclick={clearFilters}
+          >
+            Clear filters
+          </Button>
+        {/if}
       </Card>
     {:else if listViewMode === "grid"}
       <PackagesGrid
@@ -272,7 +243,7 @@
       />
     {/if}
 
-    {#if pagination.total > 0}
+    {#if pagination.last_page > 1}
       <Pagination
         currentPage={pagination.current_page}
         lastPage={pagination.last_page}

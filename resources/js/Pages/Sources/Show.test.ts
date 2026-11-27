@@ -55,6 +55,9 @@ describe("Source details page", () => {
     render(SourcesShow, {
       props: { source, organization, can_manage_sources: true },
     });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Edit settings" }),
+    );
     const checkbox = screen.getByRole("checkbox", { name: /Source is active/ });
     expect(
       screen.getByText(/Older versions are hidden from the registry/),
@@ -67,7 +70,7 @@ describe("Source details page", () => {
     expect(router.post).toHaveBeenLastCalledWith(
       expect.stringContaining("/sources/source-1/settings"),
       expect.objectContaining({ active: "on" }),
-      expect.anything(),
+      expect.objectContaining({ preserveState: true }),
     );
     await fireEvent.click(checkbox);
     await fireEvent.submit(form);
@@ -279,9 +282,116 @@ describe("Source details page", () => {
 
       expect(screen.getByText("Failed")).toBeInTheDocument();
       expect(screen.getByText(/Bad credentials/)).toBeInTheDocument();
+      for (const link of screen.getAllByRole("link", {
+        name: "Manage provider access",
+      })) {
+        expect(link).toHaveAttribute(
+          "href",
+          "/organization/acme/sources?manage_access=1",
+        );
+      }
+    });
+
+    it("shows the summary access link for missing credentials only on private sources", () => {
+      const failed = {
+        credentials: { configured: false, auth_failure_reason: "Token gone" },
+        last_sync_status: "failed",
+      } as const;
+      const { unmount } = renderSummary({ ...failed, visibility: "public" });
+      // Only the settings block link, not the summary one
+      expect(screen.getAllByText("Token gone")).toHaveLength(1);
+      unmount();
+
+      renderSummary({ ...failed, visibility: "private" });
+      expect(screen.getAllByText("Token gone")).toHaveLength(2);
+    });
+  });
+
+  describe("settings and webhook blocks", () => {
+    function renderBlocks(
+      overrides: Partial<SourceDetailsPayload> = {},
+      extra: Record<string, unknown> = {},
+    ) {
+      return render(SourcesShow, {
+        props: {
+          can_manage_sources: true,
+          organization,
+          source: {
+            ...source,
+            supports_auto_registration: true,
+            webhook_registered: false,
+            webhook_secret: "secretvalue123456",
+            webhook_url: "https://packio.test/hook",
+            ...overrides,
+          },
+          stats: { deliveries_count: 0 },
+          webhook_events: [],
+          ...extra,
+        },
+      });
+    }
+
+    it("shows both blocks, edit form with Save and Cancel, and the access link", async () => {
+      renderBlocks();
+
+      expect(screen.getByText("Source settings")).toBeInTheDocument();
+      expect(screen.getByText("Webhook")).toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
       expect(
-        screen.getByRole("link", { name: "Manage provider access" }),
+        screen.getAllByRole("link", { name: "Manage provider access" }).at(-1),
       ).toHaveAttribute("href", "/organization/acme/sources?manage_access=1");
+
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Edit settings" }),
+      );
+      expect(screen.getByRole("button", { name: "Save" })).toBeInTheDocument();
+      await fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+      expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
+    });
+
+    it("tells not registered apart from no deliveries yet", () => {
+      renderBlocks();
+
+      expect(
+        screen.getByText("Not registered at provider"),
+      ).toBeInTheDocument();
+      expect(screen.getByText(/No deliveries yet/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Register webhook at provider" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows the manual flow when auto-registration is unsupported", () => {
+      renderBlocks({ supports_auto_registration: false });
+
+      expect(screen.getByText("Manual registration")).toBeInTheDocument();
+      expect(
+        screen.getByText(/cannot register webhooks automatically/),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Register webhook at provider" }),
+      ).toBeNull();
+    });
+
+    it("asks for confirmation before rotating the secret", async () => {
+      renderBlocks();
+      vi.mocked(router.post).mockClear();
+
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Rotate secret" }),
+      );
+      expect(router.post).not.toHaveBeenCalled();
+      expect(
+        screen.getByText(/Packio does not update the webhook at the provider/),
+      ).toBeInTheDocument();
+
+      const buttons = screen.getAllByRole("button", { name: "Rotate secret" });
+      await fireEvent.click(buttons[buttons.length - 1]);
+      expect(router.post).toHaveBeenCalledWith(
+        "/organization/acme/sources/source-1/webhook/rotate",
+        {},
+        expect.anything(),
+      );
     });
   });
 });

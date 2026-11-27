@@ -349,6 +349,25 @@ describe("Source details page", () => {
       expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     });
 
+    it("keeps typed settings when the source refreshes", async () => {
+      const { rerender } = renderBlocks();
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Edit settings" }),
+      );
+      const input = screen.getByRole("spinbutton");
+      await fireEvent.input(input, { target: { value: "7" } });
+      await rerender({ source: { ...source, keep_last_releases: 3 } });
+      expect(screen.getByRole("spinbutton")).toHaveValue(7);
+    });
+
+    it("hides registration status and manual flow from viewers", () => {
+      renderBlocks({}, { can_manage_sources: false });
+
+      expect(screen.queryByText("Manual registration")).toBeNull();
+      expect(screen.queryByText("Not registered at provider")).toBeNull();
+      expect(screen.queryByText(/cannot register webhooks/)).toBeNull();
+    });
+
     it("tells not registered apart from no deliveries yet", () => {
       renderBlocks();
 
@@ -382,7 +401,7 @@ describe("Source details page", () => {
       );
       expect(router.post).not.toHaveBeenCalled();
       expect(
-        screen.getByText(/Packio does not update the webhook at the provider/),
+        screen.getByText(/does not update the webhook at the provider/),
       ).toBeInTheDocument();
 
       const buttons = screen.getAllByRole("button", { name: "Rotate secret" });

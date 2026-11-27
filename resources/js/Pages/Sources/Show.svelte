@@ -60,6 +60,17 @@
   let sourceDeleteConfirmOpen = $state(false);
   let sourceDeleting = $state(false);
   let editingSettings = $state(false);
+  // Copied on Edit so refreshes of `source` (poll, failed save) do not overwrite typed values.
+  let draft = $state({ visibility: "public", active: true, keep: 0 });
+
+  function startEditing(): void {
+    draft = {
+      visibility: source.visibility,
+      active: source.active,
+      keep: source.keep_last_releases,
+    };
+    editingSettings = true;
+  }
   let rotateConfirmOpen = $state(false);
   let rotating = $state(false);
   let lastDelivery = $derived(webhook_events[0] ?? null);
@@ -408,7 +419,7 @@
                 className="rounded-full px-4 py-2 text-sm"
                 type="button"
                 variant="secondary"
-                onclick={() => (editingSettings = true)}
+                onclick={startEditing}
               >
                 Edit settings
               </Button>
@@ -437,19 +448,10 @@
                 <Select
                   className="mt-3 w-full rounded-xl px-3 py-2 text-sm"
                   name="visibility"
+                  bind:value={draft.visibility}
                 >
-                  <option
-                    value="public"
-                    selected={source.visibility === "public"}
-                  >
-                    Public
-                  </option>
-                  <option
-                    value="private"
-                    selected={source.visibility === "private"}
-                  >
-                    Private
-                  </option>
+                  <option value="public">Public</option>
+                  <option value="private">Private</option>
                 </Select>
                 <label
                   class="ui-code mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm"
@@ -458,7 +460,7 @@
                   <input
                     type="checkbox"
                     name="active"
-                    checked={source.active}
+                    bind:checked={draft.active}
                   />
                   <span>
                     Source is active and {resolvedBranding.name} may synchronize it
@@ -474,7 +476,7 @@
                     type="number"
                     min="0"
                     step="1"
-                    value={source.keep_last_releases}
+                    bind:value={draft.keep}
                   />
                   <span class="text-xs ui-muted">
                     Limits active release versions, keeping the highest version
@@ -520,7 +522,10 @@
           <InsetCard className="grid gap-2 p-4 text-sm ui-muted">
             <div class="flex flex-wrap items-center gap-2">
               <span class="font-medium ui-title">Registration:</span>
-              {#if source.supports_auto_registration}
+              {#if !can_manage_sources}
+                <!-- registration data is only sent to managers -->
+                <Badge tone="neutral">Visible to managers</Badge>
+              {:else if source.supports_auto_registration}
                 <Badge tone={source.webhook_registered ? "accent" : "neutral"}>
                   {source.webhook_registered
                     ? "Registered at provider"
@@ -530,7 +535,7 @@
                 <Badge tone="neutral">Manual registration</Badge>
               {/if}
             </div>
-            {#if source.supports_auto_registration && source.webhook_registered && source.webhook_external_id}
+            {#if can_manage_sources && source.supports_auto_registration && source.webhook_registered && source.webhook_external_id}
               <p class="text-xs">
                 External ID:
                 <code class="ui-code break-all">
@@ -538,7 +543,7 @@
                 </code>
               </p>
             {/if}
-            {#if !source.supports_auto_registration}
+            {#if can_manage_sources && !source.supports_auto_registration}
               <p>
                 This provider cannot register webhooks automatically. Add a
                 webhook in the provider yourself: open Connection details, copy
@@ -549,7 +554,7 @@
             <p>
               <span class="font-medium ui-title">Deliveries:</span>
               {#if lastDelivery}
-                {stats.deliveries_count ?? webhook_events.length} total · last {lastDelivery.status}
+                {stats.deliveries_count ?? webhook_events.length} recent · last {lastDelivery.status}
                 at {formatDate(lastDelivery.created_at)}
               {:else}
                 No deliveries yet
@@ -838,7 +843,7 @@
     open={rotateConfirmOpen}
     eyebrow="Webhook"
     title="Rotate webhook secret?"
-    description="Rotating generates a new secret and the old one stops working at once. Packio does not update the webhook at the provider, not even an automatically registered one: replace the secret in the provider webhook settings yourself, otherwise deliveries will be rejected."
+    description={`Rotating generates a new secret and the old one stops working at once. ${resolvedBranding.name} does not update the webhook at the provider, not even an automatically registered one: replace the secret in the provider webhook settings yourself, otherwise deliveries will be rejected.`}
     confirmLabel="Rotate secret"
     cancelLabel="Keep current secret"
     confirming={rotating}

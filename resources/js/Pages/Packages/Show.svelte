@@ -7,6 +7,7 @@
   import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
+  import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
   import CopyButton from "@/Components/ui/CopyButton.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
@@ -107,14 +108,29 @@
 
   let backUrl = $derived(safeBackUrl(usePage<AppPageProps>().url ?? ""));
 
-  function submit(
-    event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
-  ): void {
-    const form = event.currentTarget;
+  let pendingRelease = $state<PackageReleasePayload | null>(null);
+  let confirming = $state(false);
 
-    router.post(form.action, Object.fromEntries(new FormData(form)), {
-      preserveScroll: true,
-    });
+  function confirmRelease(): void {
+    const release = pendingRelease;
+    if (!release) {
+      return;
+    }
+
+    confirming = true;
+    // preserveUrl keeps ?return_to so "Back to packages" still works after the redirect.
+    router.post(
+      withOrganization(`/packages/${pkg.name}/releases/activity`),
+      { version: release.version, active: release.active ? "0" : "1" },
+      {
+        preserveScroll: true,
+        preserveUrl: true,
+        onFinish: () => {
+          confirming = false;
+          pendingRelease = null;
+        },
+      },
+    );
   }
 
   function handleReleasePageChange(page: number): void {
@@ -275,11 +291,9 @@
         Hide or restore specific versions in the registry without deleting
         release data.
       </p>
-      <div class="mt-4 flex flex-wrap gap-2" aria-label="Release counts">
-        <Badge tone="accent">{listedReleaseCount} listed in registry</Badge>
-        <Badge tone="muted">{hiddenReleaseCount} hidden from registry</Badge>
-        <Badge tone="neutral">{releases.length} total releases</Badge>
-      </div>
+      <p class="ui-muted mt-2 text-sm">
+        {listedReleaseCount} available · {hiddenReleaseCount} hidden
+      </p>
       {#if showReleasePagination}
         <div class="mt-4">
           <Pagination
@@ -298,106 +312,59 @@
       {/if}
       <div class="mt-4 grid gap-3">
         {#if releases.length === 0}
-          <p class="text-sm ui-muted">No releases indexed yet.</p>
+          <p class="text-sm ui-muted">No versions indexed yet.</p>
         {:else}
           {#each paginatedReleases as release (release.version)}
-            <InsetCard as="article" className="p-5">
-              <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
-              >
-                <div class="min-w-0">
-                  <p class="ui-title text-lg font-semibold">
-                    {release.version}
-                  </p>
-                  <div class="mt-2 grid min-w-0 gap-2">
-                    <p
-                      class="ui-muted min-w-0 max-w-full text-[11px] leading-4 sm:text-xs"
-                    >
-                      <span class="font-medium ui-title">ref</span>
-                      <span
-                        class="font-mono break-all [overflow-wrap:anywhere]"
-                      >
-                        {release.reference}
-                      </span>
-                    </p>
-                    <div>
-                      <Badge
-                        tone="muted"
-                        className="whitespace-nowrap px-2.5 py-0.5"
-                      >
-                        {release.download_count} downloads
-                      </Badge>
-                    </div>
-                  </div>
-                  <div class="mt-3 flex flex-wrap gap-2">
+            <InsetCard as="article" className="p-4">
+              <div class="flex items-start gap-3">
+                <details class="min-w-0 flex-1">
+                  <summary
+                    class="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2"
+                  >
+                    <span class="ui-title break-all font-semibold">
+                      {release.version}
+                    </span>
+                    <span class="ui-muted text-sm">
+                      {formatDate(release.released_at)}
+                    </span>
                     <Badge tone={release.active ? "accent" : "muted"}>
                       {release.active
                         ? "Listed in registry"
                         : "Hidden from registry"}
                     </Badge>
+                    <span class="ui-muted text-sm">
+                      {release.download_count} downloads
+                    </span>
+                  </summary>
+                  <div class="ui-muted mt-3 grid min-w-0 gap-2 text-sm">
+                    <p class="break-all">
+                      <span class="font-medium ui-title">ref</span>
+                      <span class="font-mono">{release.reference}</span>
+                    </p>
+                    <p class="break-all">
+                      <span class="font-medium ui-title">Dist:</span>
+                      {release.dist_url}
+                    </p>
+                    <p class="break-all">
+                      <span class="font-medium ui-title">Source:</span>
+                      {release.source_url}
+                    </p>
+                    <p>
+                      <span class="font-medium ui-title">Imported:</span>
+                      {formatDate(release.created_at)}
+                    </p>
                   </div>
-                </div>
-                <div class="w-full sm:min-w-36 sm:w-auto sm:text-right">
-                  <div class="grid grid-cols-2 gap-3 sm:block">
-                    <div>
-                      <p class="text-xs ui-muted">Released</p>
-                      <p class="text-sm ui-title">
-                        {formatDate(release.released_at)}
-                      </p>
-                    </div>
-                    <div>
-                      <p class="text-xs ui-muted sm:mt-2">Imported</p>
-                      <p class="text-sm ui-muted">
-                        {formatDate(release.created_at)}
-                      </p>
-                    </div>
-                  </div>
-                  {#if can_manage_packages}
-                    <form
-                      class="mt-3 sm:flex sm:justify-end"
-                      method="POST"
-                      action={withOrganization(
-                        `/packages/${pkg.name}/releases/activity`,
-                      )}
-                      onsubmit={(event) => {
-                        event.preventDefault();
-                        submit(
-                          event as SubmitEvent & {
-                            currentTarget: EventTarget & HTMLFormElement;
-                          },
-                        );
-                      }}
-                    >
-                      <input
-                        type="hidden"
-                        name="version"
-                        value={release.version}
-                      />
-                      <input
-                        type="hidden"
-                        name="active"
-                        value={release.active ? "0" : "1"}
-                      />
-                      <Button
-                        type="submit"
-                        variant={release.active ? "soft" : "primary"}
-                        className="h-9 w-full rounded-full px-4 text-xs sm:w-auto"
-                      >
-                        {release.active ? "Hide release" : "Show release"}
-                      </Button>
-                    </form>
-                  {/if}
-                </div>
-              </div>
-              <div class="ui-muted mt-4 grid gap-2 text-sm">
-                <p class="break-all">
-                  <span class="font-medium ui-title">Dist:</span>
-                  {release.dist_url}
-                </p>
-                <p class="break-all">
-                  <span class="font-medium ui-title">Source:</span>
-                  {release.source_url}
-                </p>
+                </details>
+                {#if can_manage_packages}
+                  <Button
+                    type="button"
+                    variant={release.active ? "soft" : "primary"}
+                    className="h-9 shrink-0 rounded-full px-4 text-xs"
+                    onclick={() => (pendingRelease = release)}
+                  >
+                    {release.active ? "Hide release" : "Restore release"}
+                  </Button>
+                {/if}
               </div>
             </InsetCard>
           {/each}
@@ -454,4 +421,20 @@
       {/if}
     </Card>
   </div>
+
+  <ConfirmationModal
+    open={pendingRelease !== null}
+    eyebrow="Release"
+    title={pendingRelease?.active
+      ? `Hide release ${pendingRelease.version}?`
+      : `Restore release ${pendingRelease?.version}?`}
+    description={pendingRelease?.active
+      ? `Composer will stop resolving ${pendingRelease.version} from this registry. Release data is kept.`
+      : `${pendingRelease?.version} returns to the registry metadata.`}
+    confirmLabel={pendingRelease?.active ? "Hide release" : "Restore release"}
+    variant={pendingRelease?.active ? "danger" : "primary"}
+    {confirming}
+    onConfirm={confirmRelease}
+    onCancel={() => (pendingRelease = null)}
+  />
 </AppShell>

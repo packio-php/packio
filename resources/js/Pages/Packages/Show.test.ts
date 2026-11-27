@@ -1,5 +1,6 @@
-import { render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
+import { router } from "@inertiajs/svelte";
 import { setPageProps, setPageUrl } from "@/test/inertia";
 import PackagesShow from "./Show.svelte";
 import type { AuthPayload } from "@/types/auth";
@@ -59,14 +60,10 @@ describe("Package details page", () => {
       props: { organization, packageData, releases },
     });
 
-    expect(screen.getByText("7 listed in registry")).toBeInTheDocument();
-    expect(screen.getByText("54 hidden from registry")).toBeInTheDocument();
-    expect(screen.getByText("61 total releases")).toBeInTheDocument();
+    expect(screen.getByText("7 available · 54 hidden")).toBeInTheDocument();
 
     await page.rerender({ organization, packageData, releases: [] });
-    expect(screen.getByText("0 listed in registry")).toBeInTheDocument();
-    expect(screen.getByText("0 hidden from registry")).toBeInTheDocument();
-    expect(screen.getByText("0 total releases")).toBeInTheDocument();
+    expect(screen.getByText("0 available · 0 hidden")).toBeInTheDocument();
   });
 
   it("does not reflect admin package return URLs for non-admin users", () => {
@@ -109,47 +106,6 @@ describe("Package details page", () => {
     expect(
       screen.getByRole("link", { name: "← Back to packages" }),
     ).toHaveAttribute("href", "/admin/packages?visibility[]=private&page=2");
-  });
-
-  it("posts release activity with the version in the body", () => {
-    render(PackagesShow, {
-      props: {
-        auth: {
-          check: true,
-          user: {
-            display_name: "Owner",
-            email: "owner@example.test",
-            id: "user-1",
-            is_admin: false,
-            roles: ["user"],
-          },
-        },
-        can_manage_packages: true,
-        organization,
-        packageData,
-        releases: [
-          {
-            active: true,
-            version: "dev-feature/x",
-            reference: "ref",
-            created_at: "2026-01-01T00:00:00+00:00",
-            dist_url: "",
-            source_url: "",
-            download_count: 0,
-          },
-        ],
-      },
-    });
-
-    const form = screen
-      .getByRole("button", { name: "Hide release" })
-      .closest("form") as HTMLFormElement;
-    expect(form.getAttribute("action")).toBe(
-      "/organization/acme/packages/acme/app/releases/activity",
-    );
-    expect(
-      form.querySelector<HTMLInputElement>("input[name=version]")?.value,
-    ).toBe("dev-feature/x");
   });
 });
 
@@ -267,6 +223,112 @@ describe("Package summary", () => {
 
     expect(document.getElementById("readme")).toHaveTextContent(
       "This package has no README.",
+    );
+  });
+});
+
+describe("Version rows", () => {
+  const manager = {
+    can_manage_packages: true,
+    organization,
+    packageData,
+  };
+
+  it("shows number, date, status and downloads with details collapsed", async () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData,
+        releases: [
+          {
+            ...release("1.2.3"),
+            download_count: 5,
+            dist_url: "https://dist.test/a.zip",
+          },
+        ],
+      },
+    });
+
+    const summary = document.querySelector("#versions summary") as HTMLElement;
+    expect(summary).toHaveTextContent("1.2.3");
+    expect(summary).toHaveTextContent("Listed in registry");
+    expect(summary).toHaveTextContent("5 downloads");
+    const details = summary.closest("details") as HTMLDetailsElement;
+    expect(details.open).toBe(false);
+    expect(details).toHaveTextContent("ref-1.2.3");
+    expect(details).toHaveTextContent("https://dist.test/a.zip");
+    expect(details).toHaveTextContent("Imported");
+
+    await fireEvent.click(summary);
+    expect(details.open).toBe(true);
+  });
+
+  it("shows an empty state", () => {
+    render(PackagesShow, { props: { organization, packageData } });
+
+    expect(screen.getByText("No versions indexed yet.")).toBeInTheDocument();
+  });
+
+  it("hides actions without manage permission", () => {
+    render(PackagesShow, {
+      props: { organization, packageData, releases: [release("1.2.3")] },
+    });
+
+    expect(
+      screen.queryByRole("button", { name: "Hide release" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("confirms hiding a version before posting", async () => {
+    vi.mocked(router.post).mockClear();
+    render(PackagesShow, {
+      props: {
+        ...manager,
+        releases: [release("1.2.3"), release("1.0.0", false)],
+      },
+    });
+
+    expect(screen.getByText("1 available · 1 hidden")).toBeInTheDocument();
+    await fireEvent.click(screen.getByRole("button", { name: "Hide release" }));
+    const dialog = screen.getByRole("dialog");
+    expect(dialog).toHaveTextContent("Hide release 1.2.3?");
+    expect(dialog).toHaveTextContent("Composer will stop resolving 1.2.3");
+
+    await fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(router.post).not.toHaveBeenCalled();
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    await fireEvent.click(screen.getByRole("button", { name: "Hide release" }));
+    const confirm = screen
+      .getAllByRole("button", { name: "Hide release" })
+      .at(-1) as HTMLElement;
+    await fireEvent.click(confirm);
+    expect(router.post).toHaveBeenCalledWith(
+      "/organization/acme/packages/acme/app/releases/activity",
+      { version: "1.2.3", active: "0" },
+      expect.objectContaining({ preserveScroll: true, preserveUrl: true }),
+    );
+  });
+
+  it("restores a hidden version", async () => {
+    vi.mocked(router.post).mockClear();
+    render(PackagesShow, {
+      props: { ...manager, releases: [release("1.0.0", false)] },
+    });
+
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Restore release" }),
+    );
+    expect(screen.getByRole("dialog")).toHaveTextContent(
+      "Restore release 1.0.0?",
+    );
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Restore release" }).at(-1)!,
+    );
+    expect(router.post).toHaveBeenCalledWith(
+      "/organization/acme/packages/acme/app/releases/activity",
+      { version: "1.0.0", active: "1" },
+      expect.objectContaining({ preserveScroll: true, preserveUrl: true }),
     );
   });
 });

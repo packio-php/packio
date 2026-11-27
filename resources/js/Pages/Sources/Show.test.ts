@@ -155,4 +155,133 @@ describe("Source details page", () => {
       screen.getByRole("link", { name: "← Back to sources" }),
     ).toHaveAttribute("href", "/admin/sources?provider[]=github&page=2");
   });
+
+  describe("summary and re-sync", () => {
+    function renderSummary(overrides: Partial<SourceDetailsPayload> = {}) {
+      return render(SourcesShow, {
+        props: {
+          can_manage_sources: true,
+          organization,
+          source: { ...source, ...overrides },
+          stats: { deliveries_count: 4, packages_count: 2, releases_count: 7 },
+        },
+      });
+    }
+
+    it("shows name, link, badges, explicit dates and counts", () => {
+      renderSummary({
+        last_failed_sync_at: "2026-02-02T00:00:00+00:00",
+        last_successful_sync_at: "2026-03-03T00:00:00+00:00",
+      });
+
+      expect(
+        screen.getByRole("heading", { name: "acme/app" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "https://github.com/acme/app" }),
+      ).toHaveAttribute("href", "https://github.com/acme/app");
+      expect(screen.getByText("GitHub")).toBeInTheDocument();
+      expect(screen.getByText("Active")).toBeInTheDocument();
+      expect(screen.getByText("Synced")).toBeInTheDocument();
+      expect(screen.getByText("Last success:")).toBeInTheDocument();
+      expect(screen.getByText("Last failure:")).toBeInTheDocument();
+      expect(screen.getByText("2 packages · 7 releases")).toBeInTheDocument();
+      expect(screen.getByText(/Recent deliveries \(4\)/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Re-sync source" }),
+      ).toBeEnabled();
+    });
+
+    it("disables re-sync with a reason for inactive and archived sources", () => {
+      const { unmount } = renderSummary({ active: false });
+      expect(
+        screen.getByRole("button", { name: "Re-sync source" }),
+      ).toBeDisabled();
+      expect(
+        screen.getByText(
+          "Source is inactive. Enable it before running a manual re-sync.",
+        ),
+      ).toBeInTheDocument();
+      unmount();
+
+      renderSummary({ active: false, archived: true });
+      expect(screen.getByText("Archived")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "Source is archived. Restore it before running a manual re-sync.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("shows queued and running state with a disabled button", () => {
+      const { unmount } = renderSummary({ sync_job_status: "pending" });
+      expect(
+        screen.getByRole("button", { name: "Sync queued…" }),
+      ).toBeDisabled();
+      expect(screen.getByText("Sync queued")).toBeInTheDocument();
+      unmount();
+
+      renderSummary({ sync_job_status: "running" });
+      expect(screen.getByRole("button", { name: "Syncing…" })).toBeDisabled();
+      expect(screen.getByText("Sync running")).toBeInTheDocument();
+    });
+
+    it("polls while a sync job is active and stops when it is done", async () => {
+      vi.useFakeTimers();
+      vi.mocked(router.reload).mockImplementation((options) => {
+        options?.onFinish?.({} as never);
+      });
+      const { rerender } = renderSummary({ sync_job_status: "pending" });
+
+      expect(router.reload).not.toHaveBeenCalled();
+      vi.advanceTimersByTime(5000);
+      expect(router.reload).toHaveBeenCalledTimes(1);
+      expect(router.reload).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          only: ["source", "stats", "packages", "webhook_events", "audit"],
+        }),
+      );
+      vi.advanceTimersByTime(5000);
+      expect(router.reload).toHaveBeenCalledTimes(2);
+
+      await rerender({ source: { ...source, sync_job_status: null } });
+      vi.advanceTimersByTime(15000);
+      expect(router.reload).toHaveBeenCalledTimes(2);
+    });
+
+    it("does not overlap reloads", () => {
+      vi.useFakeTimers();
+      // A reload that never finishes must block the next tick.
+      vi.mocked(router.reload).mockImplementation(() => {});
+      renderSummary({ sync_job_status: "running" });
+
+      vi.advanceTimersByTime(15000);
+      expect(router.reload).toHaveBeenCalledTimes(1);
+    });
+
+    it("does not poll without an active sync job", () => {
+      vi.useFakeTimers();
+      renderSummary();
+
+      vi.advanceTimersByTime(15000);
+      expect(router.reload).not.toHaveBeenCalled();
+    });
+
+    it("links to provider access after a failed sync that needs reauthorization", () => {
+      renderSummary({
+        credentials: {
+          auth_health: "reauthorization_required",
+          configured: true,
+        },
+        last_sync_error: "Bad credentials",
+        last_sync_status: "failed",
+      });
+
+      expect(screen.getByText("Failed")).toBeInTheDocument();
+      expect(screen.getByText(/Bad credentials/)).toBeInTheDocument();
+      expect(
+        screen.getByRole("link", { name: "Manage provider access" }),
+      ).toHaveAttribute("href", "/organization/acme/sources?manage_access=1");
+    });
+  });
 });

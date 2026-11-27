@@ -3,6 +3,7 @@
   import { router } from "@inertiajs/svelte";
 
   import AppShell from "@/Layouts/AppShell.svelte";
+  import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import BackButton from "@/Components/ui/BackButton.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -16,6 +17,11 @@
   import { mergeBranding } from "@/lib/branding";
   import { formatDate } from "@/lib/date";
   import type { AppPageProps } from "@/types/app";
+  import {
+    sourceStateLabel,
+    sourceStateTone,
+    syncSummary,
+  } from "./sourceStatus";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
   import type {
@@ -54,6 +60,47 @@
   let sourceDeleteConfirmOpen = $state(false);
   let sourceDeleting = $state(false);
   let supportsWebhookProcessing = $derived(source.provider !== "generic_git");
+  let sync = $derived(syncSummary(source));
+  let syncing = $derived(source.sync_job_status != null);
+  // Mirrors SourceResyncHandler: only active sources can be re-synced; archiving deactivates.
+  let resyncUnavailableReason = $derived(
+    source.archived
+      ? "Source is archived. Restore it before running a manual re-sync."
+      : !source.active
+        ? "Source is inactive. Enable it before running a manual re-sync."
+        : "",
+  );
+  let showManageAccess = $derived(
+    can_manage_sources &&
+      !syncing &&
+      source.last_sync_status === "failed" &&
+      (source.credentials?.auth_health === "reauthorization_required" ||
+        !source.credentials?.configured),
+  );
+
+  // Poll while a sync job is queued or running; $effect never runs during SSR.
+  $effect(() => {
+    if (!syncing) {
+      return;
+    }
+
+    let reloading = false;
+    const timer = setInterval(() => {
+      if (reloading) {
+        return;
+      }
+
+      reloading = true;
+      router.reload({
+        only: ["source", "stats", "packages", "webhook_events", "audit"],
+        onFinish: () => {
+          reloading = false;
+        },
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  });
 
   function withOrganization(path: string): string {
     if (!organization?.slug) {
@@ -149,111 +196,74 @@
     <BackButton label="Back to sources" href={backUrl} />
 
     <Card className="rounded-[1.75rem] p-6">
-      <div class="flex items-start justify-between gap-4">
-        <SectionHeading
-          eyebrow={`${resolvedBranding.name} source`}
-          title={source.name}
-          description={source.url}
-        />
-      </div>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <span
-          class={`rounded-full px-3 py-1 text-xs font-medium ${
-            source.active ? "ui-badge-accent" : "ui-badge-muted"
-          }`}
-        >
-          {source.active ? "active" : "inactive"}
-        </span>
-        {#if source.archived}
-          <span
-            class="rounded-full ui-badge-muted px-3 py-1 text-xs font-medium"
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p class="ui-eyebrow">{resolvedBranding.name} source</p>
+          <h2 class="ui-title mt-1 text-2xl font-semibold break-all">
+            {source.name}
+          </h2>
+          <a
+            class="ui-link-accent mt-1 block text-sm break-all"
+            href={source.url}
+            rel="noopener noreferrer"
+            target="_blank"
           >
-            archived
-          </span>
+            {source.url}
+          </a>
+        </div>
+        {#if can_manage_sources}
+          <form
+            method="POST"
+            action={withOrganization(`/sources/${source.id}/resync`)}
+            onsubmit={(event) => {
+              event.preventDefault();
+              submit(
+                event as SubmitEvent & {
+                  currentTarget: EventTarget & HTMLFormElement;
+                },
+              );
+            }}
+          >
+            <Button
+              className="rounded-full px-4 py-2 text-sm"
+              disabled={!source.active || syncing}
+              type="submit"
+              variant="primary"
+            >
+              {source.sync_job_status === "running"
+                ? "Syncing…"
+                : source.sync_job_status === "pending"
+                  ? "Sync queued…"
+                  : "Re-sync source"}
+            </Button>
+          </form>
         {/if}
-        <span
-          class={`rounded-full px-3 py-1 text-xs font-medium ${
-            source.visibility === "private"
-              ? "ui-badge-danger"
-              : "ui-badge-accent"
-          }`}
-        >
-          {source.visibility}
-        </span>
       </div>
 
-      <div class="mt-6 grid gap-4 md:grid-cols-3">
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Packages</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.packages_count ?? 0}
-          </p>
-        </InsetCard>
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Releases</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.releases_count ?? 0}
-          </p>
-        </InsetCard>
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Deliveries</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.deliveries_count ?? 0}
-          </p>
-        </InsetCard>
-      </div>
-
-      <div class="mt-6 grid gap-2 text-sm ui-muted">
-        <p>
-          <span class="font-medium ui-title">Provider:</span>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <Badge tone="neutral">
           {source.provider_label ?? source.provider ?? source.type}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Type:</span>
-          {source.type}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Default ref:</span>
-          {source.default_ref}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Visibility:</span>
+        </Badge>
+        <Badge tone={source.visibility === "private" ? "danger" : "accent"}>
           {source.visibility}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Release retention:</span>
-          {source.keep_last_releases > 0
-            ? `latest ${source.keep_last_releases} releases`
-            : "all releases"}
-        </p>
-        <p>
-          <span class="font-medium ui-title">State:</span>
-          {source.active ? "active" : "inactive"}
-        </p>
-        {#if source.archived_at}
-          <p>
-            <span class="font-medium ui-title">Archived at:</span>
-            {formatDate(source.archived_at)}
-          </p>
+        </Badge>
+        <Badge tone={sourceStateTone(source)}>{sourceStateLabel(source)}</Badge>
+        {#if source.sync_job_status}
+          <Badge tone="gold">
+            {source.sync_job_status === "running"
+              ? "Sync running"
+              : "Sync queued"}
+          </Badge>
+        {:else}
+          <Badge tone={sync.tone}>{sync.label}</Badge>
         {/if}
-        <p>
-          <span class="font-medium ui-title">Created at:</span>
-          {formatDate(source.created_at)}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Sync status:</span>
-          <span
-            class={`ml-2 rounded-full px-2.5 py-1 text-xs font-medium ${
-              source.last_sync_status === "failed"
-                ? "ui-badge-danger"
-                : source.last_sync_status === "success"
-                  ? "ui-badge-accent"
-                  : "ui-badge-gold"
-            }`}
-          >
-            {source.last_sync_status}
-          </span>
-        </p>
+      </div>
+
+      {#if resyncUnavailableReason}
+        <p class="mt-3 text-sm ui-muted">{resyncUnavailableReason}</p>
+      {/if}
+
+      <div class="mt-3 grid gap-1 text-sm ui-muted">
         {#if source.last_successful_sync_at}
           <p>
             <span class="font-medium ui-title">Last success:</span>
@@ -267,12 +277,35 @@
           </p>
         {/if}
         {#if source.last_sync_error}
-          <p style="color: var(--flash-error-text);">
+          <p class="break-words" style="color: var(--flash-error-text);">
             <span class="font-medium ui-title">Last error:</span>
             {source.last_sync_error}
           </p>
         {/if}
+        {#if showManageAccess}
+          <p>
+            <Link
+              class="ui-link-accent font-medium"
+              href={withOrganization("/sources?manage_access=1")}
+            >
+              Manage provider access
+            </Link>
+          </p>
+        {/if}
+        <p>
+          {stats.packages_count ?? 0} packages · {stats.releases_count ?? 0} releases
+        </p>
       </div>
+
+      <p class="mt-3 text-xs ui-muted">
+        Type: {source.type} · Default ref: {source.default_ref} · Release retention:
+        {source.keep_last_releases > 0
+          ? `latest ${source.keep_last_releases} releases`
+          : "all releases"} · Created at: {formatDate(source.created_at)}
+        {#if source.archived_at}
+          · Archived at: {formatDate(source.archived_at)}
+        {/if}
+      </p>
     </Card>
   </section>
 
@@ -433,27 +466,6 @@
 
         {#if can_manage_sources}
           <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <form
-              method="POST"
-              action={withOrganization(`/sources/${source.id}/resync`)}
-              onsubmit={(event) => {
-                event.preventDefault();
-                submit(
-                  event as SubmitEvent & {
-                    currentTarget: EventTarget & HTMLFormElement;
-                  },
-                );
-              }}
-            >
-              <Button
-                className="w-full rounded-full px-4 py-2 text-sm"
-                disabled={!source.active}
-                type="submit"
-                variant="primary"
-              >
-                Re-sync source
-              </Button>
-            </form>
             <form
               method="POST"
               action={withOrganization(
@@ -650,7 +662,9 @@
             </div>
           {/if}
           <InsetCard className="p-4 text-sm ui-muted">
-            <p class="font-medium ui-title">Recent deliveries</p>
+            <p class="font-medium ui-title">
+              Recent deliveries ({stats.deliveries_count ?? 0})
+            </p>
             <div class="mt-4 grid gap-3 max-h-[33rem] overflow-y-auto">
               {#if webhook_events.length === 0}
                 <p class="text-sm ui-muted">No webhook deliveries yet.</p>

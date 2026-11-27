@@ -8,6 +8,7 @@
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
   import ConfirmationModal from "@/Components/ui/ConfirmationModal.svelte";
+  import { ChevronRight } from "@lucide/svelte";
   import CopyButton from "@/Components/ui/CopyButton.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
@@ -317,10 +318,14 @@
           {#each paginatedReleases as release (release.version)}
             <InsetCard as="article" className="p-4">
               <div class="flex items-start gap-3">
-                <details class="min-w-0 flex-1">
+                <details class="group min-w-0 flex-1">
                   <summary
-                    class="flex cursor-pointer flex-wrap items-center gap-x-3 gap-y-2"
+                    class="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2"
                   >
+                    <ChevronRight
+                      aria-hidden="true"
+                      class="size-4 shrink-0 transition-transform group-open:rotate-90"
+                    />
                     <span class="ui-title break-all font-semibold">
                       {release.version}
                     </span>

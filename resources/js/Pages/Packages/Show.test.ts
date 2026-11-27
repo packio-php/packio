@@ -1,6 +1,7 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { router } from "@inertiajs/svelte";
+import { formatDate } from "@/lib/date";
 import { setPageProps, setPageUrl } from "@/test/inertia";
 import PackagesShow from "./Show.svelte";
 import type { AuthPayload } from "@/types/auth";
@@ -251,6 +252,7 @@ describe("Version rows", () => {
 
     const summary = document.querySelector("#versions summary") as HTMLElement;
     expect(summary).toHaveTextContent("1.2.3");
+    expect(summary).toHaveTextContent(formatDate("2026-01-01T00:00:00+00:00"));
     expect(summary).toHaveTextContent("Listed in registry");
     expect(summary).toHaveTextContent("5 downloads");
     const details = summary.closest("details") as HTMLDetailsElement;
@@ -284,28 +286,31 @@ describe("Version rows", () => {
     render(PackagesShow, {
       props: {
         ...manager,
-        releases: [release("1.2.3"), release("1.0.0", false)],
+        releases: [release("dev-feature/x"), release("1.0.0", false)],
       },
     });
 
     expect(screen.getByText("1 available · 1 hidden")).toBeInTheDocument();
     await fireEvent.click(screen.getByRole("button", { name: "Hide release" }));
     const dialog = screen.getByRole("dialog");
-    expect(dialog).toHaveTextContent("Hide release 1.2.3?");
-    expect(dialog).toHaveTextContent("Composer will stop resolving 1.2.3");
+    expect(dialog).toHaveTextContent("Hide release dev-feature/x?");
+    expect(dialog).toHaveTextContent(
+      "Composer will stop resolving dev-feature/x",
+    );
 
     await fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
     expect(router.post).not.toHaveBeenCalled();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
 
     await fireEvent.click(screen.getByRole("button", { name: "Hide release" }));
-    const confirm = screen
-      .getAllByRole("button", { name: "Hide release" })
-      .at(-1) as HTMLElement;
-    await fireEvent.click(confirm);
+    await fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Hide release",
+      }),
+    );
     expect(router.post).toHaveBeenCalledWith(
       "/organization/acme/packages/acme/app/releases/activity",
-      { version: "1.2.3", active: "0" },
+      { version: "dev-feature/x", active: "0" },
       expect.objectContaining({ preserveScroll: true, preserveUrl: true }),
     );
   });
@@ -313,21 +318,23 @@ describe("Version rows", () => {
   it("restores a hidden version", async () => {
     vi.mocked(router.post).mockClear();
     render(PackagesShow, {
-      props: { ...manager, releases: [release("1.0.0", false)] },
+      props: { ...manager, releases: [release("dev-feature/y", false)] },
     });
 
     await fireEvent.click(
       screen.getByRole("button", { name: "Restore release" }),
     );
     expect(screen.getByRole("dialog")).toHaveTextContent(
-      "Restore release 1.0.0?",
+      "Restore release dev-feature/y?",
     );
     await fireEvent.click(
-      screen.getAllByRole("button", { name: "Restore release" }).at(-1)!,
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Restore release",
+      }),
     );
     expect(router.post).toHaveBeenCalledWith(
       "/organization/acme/packages/acme/app/releases/activity",
-      { version: "1.0.0", active: "1" },
+      { version: "dev-feature/y", active: "1" },
       expect.objectContaining({ preserveScroll: true, preserveUrl: true }),
     );
   });

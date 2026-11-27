@@ -144,7 +144,7 @@
         <p class="text-sm ui-muted">User not found.</p>
       </Card>
     {:else}
-      <div class="grid gap-6">
+      <div class="grid grid-cols-1 gap-6">
         <BackButton label="Back to users" href="/admin/users" />
 
         <Card className="rounded-[1.25rem] p-4 sm:p-6">

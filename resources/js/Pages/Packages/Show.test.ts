@@ -139,9 +139,14 @@ describe("Package summary", () => {
       screen.getByRole("heading", { level: 2, name: "acme/app" }),
     ).toBeInTheDocument();
     expect(screen.getByText("Package description")).toBeInTheDocument();
-    expect(screen.getAllByText("1.2.3").length).toBeGreaterThan(0);
+    const summary = within(
+      screen
+        .getByRole("heading", { level: 2, name: "acme/app" })
+        .closest("article") as HTMLElement,
+    );
+    expect(summary.getByText("1.2.3")).toBeInTheDocument();
     expect(screen.getByText("Token required")).toBeInTheDocument();
-    expect(screen.getAllByText("Listed in registry").length).toBeGreaterThan(0);
+    expect(summary.getByText("Listed in registry")).toBeInTheDocument();
     expect(screen.getByText("42 downloads")).toBeInTheDocument();
     expect(screen.getByText("composer require acme/app")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
@@ -192,7 +197,7 @@ describe("Package summary", () => {
     expect(screen.queryByText(/composer require/)).not.toBeInTheDocument();
   });
 
-  it("links to the Versions and README sections in order", () => {
+  it("jumps to the README and lists Versions before it", () => {
     render(PackagesShow, {
       props: { organization, packageData, releases: [release("1.2.3")] },
     });

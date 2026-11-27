@@ -159,7 +159,7 @@
         {pkg.description || "No description"}
       </p>
       <div class="mt-4 flex flex-wrap items-center gap-2">
-        <Badge tone={latestRelease ? "accent" : "muted"}>
+        <Badge tone={latestRelease ? "accent" : "muted"} className="break-all">
           {latestRelease ? latestRelease.version : "No available version"}
         </Badge>
         <Badge tone={tokenRequired ? "danger" : "accent"}>
@@ -317,7 +317,7 @@
               <div class="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <details class="group min-w-0 flex-1">
                   <summary
-                    class="flex cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2"
+                    class="flex cursor-pointer list-none flex-wrap [&::-webkit-details-marker]:hidden items-center gap-x-3 gap-y-2"
                   >
                     <ChevronRight
                       aria-hidden="true"

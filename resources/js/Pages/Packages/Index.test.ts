@@ -124,6 +124,19 @@ describe("Packages index page", () => {
     expect(screen.queryByText("→")).toBeNull();
   });
 
+  it("shows pagination above and below the list on multiple pages", () => {
+    render(PackagesIndex, {
+      props: {
+        organization_summary: organization,
+        package_stats: packageStats,
+        pagination: multiPagePagination,
+        sections: [packageWithSource],
+      },
+    });
+
+    expect(screen.getAllByText(/Showing/)).toHaveLength(2);
+  });
+
   it("uses the singular package count for one package", () => {
     render(PackagesIndex, {
       props: {

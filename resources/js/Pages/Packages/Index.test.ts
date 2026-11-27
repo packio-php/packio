@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/svelte";
+import { fireEvent, render, screen, within } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
 import { router, setPageProps } from "@/test/inertia";
 import PackagesIndex from "./Index.svelte";
@@ -224,8 +224,16 @@ describe("Packages index page", () => {
         screen.getByRole("link", { name: "acme/app" }).getAttribute("href"),
       ).toContain("/organization/acme/packages/acme/app");
       expect(screen.getAllByText("1.2.3")).toHaveLength(2);
-      expect(screen.getAllByText("Token required").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Listed").length).toBeGreaterThan(1);
+      // The filter toolbar also renders Listed/Hidden/Manual, so scope to the catalog.
+      const catalog = within(
+        mode === "table"
+          ? screen.getByRole("table", { name: "Packages" })
+          : screen.getAllByRole("article")[0].parentElement!,
+      );
+      expect(catalog.getAllByText("Token required")).toHaveLength(2);
+      expect(catalog.getAllByText("Listed")).toHaveLength(
+        2 + (mode === "table" ? 1 : 0),
+      );
       expect(screen.getAllByText("42")).toHaveLength(2);
       expect(
         screen.getAllByRole("link", { name: "acme/app-source" })[0],
@@ -233,8 +241,8 @@ describe("Packages index page", () => {
       expect(screen.queryByText("https://example.com/acme/app.git")).toBeNull();
       expect(screen.queryByRole("link", { name: "Open details" })).toBeNull();
       expect(screen.getByText("Sync failed")).toBeInTheDocument();
-      expect(screen.getAllByText("Manual").length).toBeGreaterThan(0);
-      expect(screen.getAllByText("Hidden").length).toBeGreaterThan(0);
+      expect(catalog.getAllByText("Manual")).toHaveLength(1);
+      expect(catalog.getAllByText("Hidden")).toHaveLength(1);
       expect(screen.getByText("No available version")).toBeInTheDocument();
     },
   );

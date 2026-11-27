@@ -246,9 +246,6 @@ describe("Sources index page", () => {
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("acme/app")).toBeInTheDocument();
     expect(
-      screen.getByText("https://example.com/acme/app.git"),
-    ).toBeInTheDocument();
-    expect(
       screen.queryByRole("table", { name: "Active sources" }),
     ).not.toBeInTheDocument();
   });
@@ -271,19 +268,11 @@ describe("Sources index page", () => {
 
     expect(localStorage.getItem("packio-list-view-mode")).toBe("table");
     expect(
-      within(table).getByRole("columnheader", { name: "Retention" }),
+      within(table).getByRole("columnheader", { name: "State" }),
     ).toBeInTheDocument();
-    expect(within(table).getAllByText("keeps latest 3").length).toBeGreaterThan(
-      0,
-    );
-    expect(within(table).getByText("success")).toBeInTheDocument();
-    expect(within(table).queryByText(/^success /)).not.toBeInTheDocument();
-    expect(within(table).queryByText(/^failure /)).not.toBeInTheDocument();
-    expect(within(table).getByText("no failures").closest("p")).toHaveAttribute(
-      "title",
-      "Last failed sync",
-    );
-    expect(within(table).getByText("archived")).toBeInTheDocument();
+    expect(within(table).getAllByText("Synced").length).toBeGreaterThan(0);
+    expect(within(table).queryByText("keeps latest 3")).not.toBeInTheDocument();
+    expect(within(table).getByText("Archived")).toBeInTheDocument();
   });
 
   it("shows one filtered empty state for unified sources", () => {

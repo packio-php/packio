@@ -1,6 +1,6 @@
 import { render, screen } from "@testing-library/svelte";
 import { describe, expect, it, vi } from "vitest";
-import { setPageUrl } from "@/test/inertia";
+import { setPageProps, setPageUrl } from "@/test/inertia";
 import PackagesShow from "./Show.svelte";
 import type { AuthPayload } from "@/types/auth";
 import type { OrganizationSummary } from "@/types/organization";
@@ -150,5 +150,123 @@ describe("Package details page", () => {
     expect(
       form.querySelector<HTMLInputElement>("input[name=version]")?.value,
     ).toBe("dev-feature/x");
+  });
+});
+
+const release = (version: string, active = true) => ({
+  active,
+  version,
+  reference: `ref-${version}`,
+  created_at: "2026-01-01T00:00:00+00:00",
+  released_at: "2026-01-01T00:00:00+00:00",
+  dist_url: "",
+  source_url: "",
+  download_count: 0,
+});
+
+describe("Package summary", () => {
+  it("shows the summary and install command", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: {
+          ...packageData,
+          download_count: 42,
+          anonymous_access: false,
+        },
+        releases: [release("1.2.3")],
+      },
+    });
+
+    expect(
+      screen.getByRole("heading", { level: 2, name: "acme/app" }),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Package description")).toBeInTheDocument();
+    expect(screen.getAllByText("1.2.3").length).toBeGreaterThan(0);
+    expect(screen.getByText("Token required")).toBeInTheDocument();
+    expect(screen.getAllByText("Listed in registry").length).toBeGreaterThan(0);
+    expect(screen.getByText("42 downloads")).toBeInTheDocument();
+    expect(screen.getByText("composer require acme/app")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+  });
+
+  it("explains token requirement with a Setup link", () => {
+    setPageProps({ current_membership: { role: "owner" } });
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, visibility: "private" },
+        releases: [release("1.2.3")],
+      },
+    });
+
+    expect(
+      screen.getByText("Installing requires a registry token."),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Setup" })).toHaveAttribute(
+      "href",
+      "/organization/acme/registry/setup",
+    );
+  });
+
+  it("shows no available version when every release is hidden", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData,
+        releases: [release("1.2.3", false)],
+      },
+    });
+
+    expect(screen.getByText("No available version")).toBeInTheDocument();
+    expect(screen.queryByText(/composer require/)).not.toBeInTheDocument();
+  });
+
+  it("hides the install command for a package hidden from the registry", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, active: false },
+        releases: [release("1.2.3")],
+      },
+    });
+
+    expect(screen.getByText("Hidden from registry")).toBeInTheDocument();
+    expect(screen.queryByText(/composer require/)).not.toBeInTheDocument();
+  });
+
+  it("links to the Versions and README sections in order", () => {
+    render(PackagesShow, {
+      props: { organization, packageData, releases: [release("1.2.3")] },
+    });
+
+    expect(screen.getByRole("link", { name: "Versions" })).toHaveAttribute(
+      "href",
+      "#versions",
+    );
+    expect(screen.getByRole("link", { name: "README" })).toHaveAttribute(
+      "href",
+      "#readme",
+    );
+    const versions = document.getElementById("versions")!;
+    const readme = document.getElementById("readme")!;
+    expect(
+      versions.compareDocumentPosition(readme) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("shows an empty README state", () => {
+    render(PackagesShow, {
+      props: {
+        organization,
+        packageData: { ...packageData, readme_html: null },
+        releases: [],
+      },
+    });
+
+    expect(document.getElementById("readme")).toHaveTextContent(
+      "This package has no README.",
+    );
   });
 });

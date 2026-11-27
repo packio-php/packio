@@ -11,6 +11,7 @@
   import Input from "@/Components/ui/Input.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import Select from "@/Components/ui/Select.svelte";
   import { addCalendarMonths, browserTimeZone, formatDate } from "@/lib/date";
   import { hasFieldErrors } from "@/lib/validationErrors";
   import type { AppPageProps } from "@/types/app";
@@ -210,7 +211,6 @@
 >
   <Card className="rounded-[1.75rem] p-6">
     <SectionHeading
-      eyebrow="API"
       title="API tokens"
       titleTag="h3"
       description="Create personal tokens for REST API automation."
@@ -226,7 +226,7 @@
         Create API token
       </Button>
       <a
-        class="inline-flex items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline ui-muted"
+        class="ui-button-secondary inline-flex h-11 items-center gap-1.5 rounded-lg px-5 text-sm font-semibold"
         href="/api/doc"
         rel="external noopener noreferrer"
         target="_blank"
@@ -256,24 +256,23 @@
           <FieldErrors {errors} field="name" />
         </label>
 
-        <fieldset class="grid gap-2">
-          <legend class="text-sm font-medium ui-title">Expiration</legend>
-          {#each expirationOptions as option (option.value)}
-            <label class="flex items-center gap-2 text-sm ui-title">
-              <input
-                type="radio"
-                name="expiration"
-                value={option.value}
-                bind:group={expiration}
-              />
-              {option.label}
-              {#if option.value === expiration && presetDate}
-                <span class="text-xs ui-muted">
-                  expires {formatDate(presetDate.toISOString())}
-                </span>
-              {/if}
-            </label>
-          {/each}
+        <div class="grid gap-2">
+          <label
+            class="text-sm font-medium ui-title"
+            for="api-token-expiration"
+          >
+            Expiration
+          </label>
+          <Select id="api-token-expiration" bind:value={expiration}>
+            {#each expirationOptions as option (option.value)}
+              <option value={option.value}>{option.label}</option>
+            {/each}
+          </Select>
+          {#if presetDate}
+            <span class="text-xs ui-muted">
+              Expires {formatDate(presetDate.toISOString())}
+            </span>
+          {/if}
           {#if expiration === "custom"}
             <Input
               aria-label="Custom expiration date"
@@ -287,7 +286,7 @@
             <span class="text-xs ui-muted">Time zone: {browserTimeZone()}</span>
           {/if}
           <FieldErrors {errors} field="expires_at" />
-        </fieldset>
+        </div>
 
         <fieldset class="grid gap-3">
           <legend class="text-sm font-medium ui-title">Scopes</legend>
@@ -384,24 +383,27 @@
       {:else}
         {#each api_tokens as token (token.id)}
           <InsetCard as="article" className="p-4">
-            <div
-              class="flex flex-col gap-3 md:flex-row md:items-start md:justify-between"
-            >
-              <div class="min-w-0">
+            <div class="flex flex-wrap items-start justify-between gap-3">
+              <div class="grid min-w-0 gap-2">
                 <div class="flex flex-wrap items-center gap-2">
-                  <p class="font-semibold ui-title">{token.name}</p>
+                  <p class="break-words font-semibold ui-title">{token.name}</p>
                   <Badge tone={token.revoked ? "danger" : "accent"}>
                     {token.revoked ? "Revoked" : "Active"}
                   </Badge>
                 </div>
-
-                <div
-                  class="mt-3 flex min-w-0 items-center rounded-xl border px-3 py-2 theme-border"
-                  style="background-color: var(--surface-muted);"
-                >
-                  <code class="min-w-0 truncate font-mono text-xs ui-muted">
-                    {token.token_prefix}...
-                  </code>
+                <div class="flex flex-wrap items-center gap-1.5">
+                  {#each token.scopes as scope (scope)}
+                    <span
+                      class="ui-code rounded-full px-2.5 py-1 text-xs font-medium"
+                    >
+                      {scopeLabel(scope)}
+                    </span>
+                  {/each}
+                  <span class="text-xs ui-muted">
+                    {token.expires_at
+                      ? `Expires ${formatDate(token.expires_at)}`
+                      : "Never expires"}
+                  </span>
                 </div>
               </div>
 
@@ -426,34 +428,21 @@
               {/if}
             </div>
 
-            <div class="mt-4 flex flex-wrap items-start justify-between gap-3">
-              <div class="grid gap-1 text-xs ui-muted">
+            <details class="mt-3 text-xs ui-muted">
+              <summary class="w-fit cursor-pointer">Details</summary>
+              <div class="mt-2 grid gap-1">
+                <code class="break-all font-mono">{token.token_prefix}...</code>
                 <p>Created {formatDate(token.created_at)}</p>
                 <p>
                   {token.last_used_at
                     ? `Last used ${formatDate(token.last_used_at)}`
                     : "Never used"}
                 </p>
-                <p>
-                  {token.expires_at
-                    ? `Expires ${formatDate(token.expires_at)}`
-                    : "Never expires"}
-                </p>
                 {#if token.revoked_at}
                   <p>Revoked {formatDate(token.revoked_at)}</p>
                 {/if}
               </div>
-
-              <div class="flex flex-wrap gap-1.5">
-                {#each token.scopes as scope (scope)}
-                  <span
-                    class="ui-code rounded-full px-2.5 py-1 text-xs font-medium"
-                  >
-                    {scopeLabel(scope)}
-                  </span>
-                {/each}
-              </div>
-            </div>
+            </details>
           </InsetCard>
         {/each}
       {/if}

@@ -4,15 +4,18 @@
   import { describeUserAgent } from "@/lib/userAgent";
   import type { SignInHistoryEntry } from "@/types/pages";
 
-  let { entries }: { entries: SignInHistoryEntry[] } = $props();
-
-  const zoneLabel = `Local time (${browserTimeZone()})`;
+  let {
+    entries,
+    showZone = true,
+  }: { entries: SignInHistoryEntry[]; showZone?: boolean } = $props();
 </script>
 
 {#if entries.length === 0}
   <p class="text-sm ui-muted">No sign-ins recorded yet.</p>
 {:else}
-  <p class="mb-2 text-xs ui-muted">{zoneLabel}</p>
+  {#if showZone}
+    <p class="mb-2 text-xs ui-muted">Local time ({browserTimeZone()})</p>
+  {/if}
   <TableFrame ariaLabel="Sign-in history" tableClassName="whitespace-nowrap">
     <thead>
       <tr>

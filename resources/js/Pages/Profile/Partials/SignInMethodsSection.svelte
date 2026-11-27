@@ -114,7 +114,6 @@
 >
   <section aria-label="Sign-in methods">
     <SectionHeading
-      eyebrow="Account"
       title="Sign-in methods"
       titleTag="h3"
       description="Manage how you sign in to your account. Keep at least one sign-in method enabled."
@@ -278,9 +277,7 @@
           </div>
         {/each}
       {:else}
-        <div class="rounded-xl border border-dashed px-4 py-6 text-center">
-          <p class="text-sm ui-muted">No OAuth sign-in methods connected.</p>
-        </div>
+        <p class="text-sm ui-muted">No OAuth sign-in methods connected.</p>
       {/if}
     </div>
   </section>

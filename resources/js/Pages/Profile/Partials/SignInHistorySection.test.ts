@@ -25,6 +25,8 @@ describe("SignInHistorySection", () => {
   it("has no button for five entries", () => {
     render(SignInHistorySection, { props: { sign_in_history: make(5) } });
     expect(rows()).toBe(5);
+    // the zone sits beside the heading once, not again above the table
+    expect(screen.getAllByText(/^Local time \(/)).toHaveLength(1);
     expect(screen.queryByRole("button")).toBeNull();
   });
 

@@ -76,6 +76,16 @@ describe("ApiTokensSection", () => {
     ).toBeTruthy();
   });
 
+  it("keeps token details behind a disclosure", () => {
+    render(ApiTokensSection, { props: { profile, api_tokens: [token] } });
+
+    expect(screen.getByText("Never expires")).toBeVisible();
+    const details = screen.getByText("Details").closest("details")!;
+    expect(details).not.toHaveAttribute("open");
+    expect(details).toContainElement(screen.getByText("packio_api_x..."));
+    expect(details).toContainElement(screen.getByText("Never used"));
+  });
+
   it("moves focus into the form and back on cancel", async () => {
     render(ApiTokensSection, { props: { profile } });
     const create = screen.getByRole("button", { name: "Create API token" });
@@ -95,11 +105,13 @@ describe("ApiTokensSection", () => {
     render(ApiTokensSection, { props: { profile } });
     await openForm();
 
-    expect(screen.getByText("expires 2026-02-28 10:30:00")).toBeInTheDocument();
+    expect(screen.getByText("Expires 2026-02-28 10:30:00")).toBeInTheDocument();
 
-    await fireEvent.click(screen.getByLabelText("3 months"));
+    await fireEvent.change(screen.getByLabelText("Expiration"), {
+      target: { value: "3-months" },
+    });
     await tick();
-    expect(screen.getByText("expires 2026-04-30 10:30:00")).toBeInTheDocument();
+    expect(screen.getByText("Expires 2026-04-30 10:30:00")).toBeInTheDocument();
   });
 
   it("submits a preset expiry as an ISO UTC string", async () => {
@@ -128,7 +140,9 @@ describe("ApiTokensSection", () => {
     await fireEvent.input(screen.getByLabelText("Token name"), {
       target: { value: "CI" },
     });
-    await fireEvent.click(screen.getByLabelText("Custom date"));
+    await fireEvent.change(screen.getByLabelText("Expiration"), {
+      target: { value: "custom" },
+    });
     await tick();
 
     await submit();
@@ -175,7 +189,9 @@ describe("ApiTokensSection", () => {
     await fireEvent.input(screen.getByLabelText("Token name"), {
       target: { value: "CI" },
     });
-    await fireEvent.click(screen.getByLabelText("No expiration"));
+    await fireEvent.change(screen.getByLabelText("Expiration"), {
+      target: { value: "never" },
+    });
     await submit();
 
     expect(lastPost().data.expires_at).toBe("");

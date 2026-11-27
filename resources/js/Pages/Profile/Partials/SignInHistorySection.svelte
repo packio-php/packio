@@ -3,6 +3,7 @@
   import Button from "@/Components/ui/Button.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import SignInHistoryList from "@/Components/ui/SignInHistoryList.svelte";
+  import { browserTimeZone } from "@/lib/date";
   import type { SignInHistoryEntry } from "@/types/pages";
 
   interface Props {
@@ -23,15 +24,19 @@
   class="scroll-mt-[calc(var(--admin-header-h,5rem)+1rem)]"
 >
   <Card className="rounded-[1.75rem] p-6">
-    <SectionHeading
-      eyebrow="Security"
-      title="Sign-in history"
-      titleTag="h3"
-      description="Your most recent successful sign-ins."
-    />
+    <div class="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+      <SectionHeading
+        title="Sign-in history"
+        titleTag="h3"
+        description="Your most recent successful sign-ins."
+      />
+      {#if sign_in_history.length > 0}
+        <p class="text-xs ui-muted">Local time ({browserTimeZone()})</p>
+      {/if}
+    </div>
 
     <div class="mt-6">
-      <SignInHistoryList entries={shown} />
+      <SignInHistoryList entries={shown} showZone={false} />
     </div>
     {#if sign_in_history.length > PREVIEW}
       <div class="mt-4">

@@ -44,26 +44,24 @@
     <div class="grid items-start gap-6 xl:grid-cols-2">
       <Card className="rounded-[1.75rem] p-6">
         <section aria-label="Account">
-          <div class="min-w-0">
-            <div class="break-words text-xl font-semibold ui-title">
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <div class="min-w-0 break-words text-xl font-semibold ui-title">
               {profile?.display_name ?? ""}
             </div>
-            <div class="break-words text-[15px] ui-muted">
-              {profile?.email ?? ""}
-            </div>
-          </div>
-          <div class="mt-3 flex flex-wrap gap-2">
             {#each profile?.roles ?? [] as role (role)}
               <Badge tone={role === "admin" ? "danger" : "accent"}>
                 {role}
               </Badge>
             {/each}
           </div>
-          <p class="mt-3 text-sm ui-muted">
+          <div class="mt-1 break-words text-[15px] ui-muted">
+            {profile?.email ?? ""}
+          </div>
+          <p class="mt-4 text-sm ui-muted">
             Created {formatDate(profile?.created_at)}
           </p>
         </section>
-        <hr class="my-6 theme-border" />
+        <hr class="my-8 theme-border" />
         <SignInMethodsSection {profile} {oauth_accounts} />
       </Card>
 

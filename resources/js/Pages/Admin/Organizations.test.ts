@@ -97,7 +97,7 @@ describe("Admin organizations page", () => {
       props: { filters, organizations, pagination },
     });
 
-    await fireEvent.click(screen.getAllByRole("button", { name: "2" })[0]);
+    await fireEvent.click(screen.getAllByRole("button", { name: "Page 2" })[0]);
 
     expect(router.get).toHaveBeenCalledWith(
       "/admin/organizations",

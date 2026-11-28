@@ -559,6 +559,11 @@ final readonly class SourceApiFacade implements SourceApiFacadeInterface
         $this->sourceJobScheduler->scheduleSourceSync($sourceId, $organizationId, $priority);
     }
 
+    public function activeSourceSyncStatus(string $sourceId, string $organizationId): ?string
+    {
+        return $this->sourceJobScheduler->activeSourceSyncStatus($sourceId, $organizationId);
+    }
+
     public function scheduleSourceSyncOnce(string $sourceId, string $organizationId, string $idempotencyKey, int $priority = 0): string
     {
         return $this->sourceJobScheduler->scheduleSourceSyncOnce($sourceId, $organizationId, $idempotencyKey, $priority);

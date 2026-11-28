@@ -1,14 +1,15 @@
 <script lang="ts">
   import { usePage } from "@inertiajs/svelte";
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import { router } from "@inertiajs/svelte";
   import AppShell from "@/Layouts/AppShell.svelte";
   import Button from "@/Components/ui/Button.svelte";
-  import Card from "@/Components/ui/Card.svelte";
-  import InsetCard from "@/Components/ui/InsetCard.svelte";
   import Pagination from "@/Components/ui/Pagination.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
-  import SourceListSection from "./Partials/SourceListSection.svelte";
+  import Badge from "@/Components/ui/Badge.svelte";
+  import Card from "@/Components/ui/Card.svelte";
+  import SourcesGrid from "./Partials/SourcesGrid.svelte";
+  import SourcesTable from "./Partials/SourcesTable.svelte";
+  import { activeFilterChips, clearFiltersQuery } from "./sourceFilters";
   import SourcesFilterToolbar from "./Partials/SourcesFilterToolbar.svelte";
   import SourceConnectionModal from "./Partials/SourceConnectionModal.svelte";
   import ProviderAuthorizationDeleteModal from "./Partials/ProviderAuthorizationDeleteModal.svelte";
@@ -124,6 +125,10 @@
   type ModalView = "access" | "connect" | null;
 
   let activeModal: ModalView = $state(null);
+  // Set when opened from a source page: preselects the provider and sends the user back there on close.
+  let initialProvider = $state("");
+  let initialProviderInstanceId = $state("");
+  let returnTo = $state("");
   let isSubmitting = $state(false);
   let scrollLockApplied = false;
   let previousBodyOverflow = "";
@@ -170,6 +175,42 @@
     );
     listViewModeInitialized = true;
 
+    const url = new URL(window.location.href);
+    if (url.searchParams.has("manage_access")) {
+      const requestedReturn = url.searchParams.get("return_to") ?? "";
+      // Mirrors the backend rule: one source page of this organization, optional query.
+      const sourcePrefix = withOrganization("/sources/").replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
+      if (
+        new RegExp(
+          `^${sourcePrefix}[0-9a-fA-F-]{36}(\\?[A-Za-z0-9_=&%.\\-]*)?$`,
+        ).test(requestedReturn)
+      ) {
+        returnTo = requestedReturn;
+      }
+      initialProvider = url.searchParams.get("provider") ?? "";
+      initialProviderInstanceId =
+        url.searchParams.get("provider_instance_id") ?? "";
+      for (const key of [
+        "manage_access",
+        "provider",
+        "provider_instance_id",
+        "return_to",
+      ]) {
+        url.searchParams.delete(key);
+      }
+      window.history.replaceState(
+        window.history.state,
+        "",
+        `${url.pathname}${url.search}${url.hash}`,
+      );
+      if (resolvedCanManage) {
+        activeModal = "access";
+      }
+    }
+
     const savedModalState = sessionStorage.getItem("sources_modal_state");
     if (savedModalState) {
       const state = JSON.parse(savedModalState);
@@ -204,12 +245,42 @@
     storeListViewMode(listViewStorageKey, mode);
   }
 
+  // Element that opened a dialog; focus returns to it on close.
+  let modalOpener: Element | null = null;
+  let deleteOpener: Element | null = null;
+
   function openConnectModal(): void {
+    modalOpener = document.activeElement;
     activeModal = "connect";
   }
 
   function openAccessModal(): void {
+    modalOpener = document.activeElement;
     activeModal = "access";
+  }
+
+  // Real close (button, Escape, backdrop). Dialogs opened without a click fall back to the header button.
+  async function dismissModal(): Promise<void> {
+    if (!activeModal) {
+      return; // Escape bubbles through two handlers
+    }
+    if (returnTo) {
+      closeModal();
+      router.visit(returnTo);
+      return;
+    }
+    const fallbackId =
+      activeModal === "access"
+        ? "sources-manage-access-button"
+        : "sources-add-source-button";
+    closeModal();
+    await tick();
+    const target =
+      modalOpener instanceof HTMLElement && modalOpener.isConnected
+        ? modalOpener
+        : document.getElementById(fallbackId);
+    modalOpener = null;
+    target?.focus();
   }
 
   function closeModal(clearSavedState = true): void {
@@ -219,6 +290,14 @@
       sessionStorage.removeItem("sources_modal_state");
       sessionStorage.removeItem("sources_connect_success");
     }
+  }
+
+  function clearFilters(): void {
+    router.get(
+      withOrganization("/sources"),
+      clearFiltersQuery(filters.per_page),
+      { preserveScroll: true },
+    );
   }
 
   function withOrganization(path: string): string {
@@ -260,6 +339,7 @@
   async function openDeleteModal(
     authorization: ProviderAuthorizationPayload,
   ): Promise<void> {
+    deleteOpener = document.activeElement;
     deleteModal = { authorization, check: null };
 
     const org = organization?.slug ?? "";
@@ -282,8 +362,13 @@
     }
   }
 
-  function closeDeleteModal(): void {
+  async function closeDeleteModal(): Promise<void> {
     deleteModal = { authorization: null, check: null };
+    await tick();
+    if (deleteOpener instanceof HTMLElement && deleteOpener.isConnected) {
+      deleteOpener.focus();
+    }
+    deleteOpener = null;
   }
 
   onDestroy(() => {
@@ -405,14 +490,7 @@
       (provider) => provider.capabilities?.supports_synchronization,
     ),
   );
-  let activeSourceTotal = $derived(source_stats.active);
-  let archivedSourceTotal = $derived(source_stats.archived);
   let hasSources = $derived(source_stats.total > 0);
-  let sourceResultTotal = $derived(
-    pagination.total > 0 || sources.length === 0
-      ? pagination.total
-      : sources.length,
-  );
   let activeFilterCount = $derived(
     (filters.search !== "" ? 1 : 0) +
       (filters.provider.length > 0 ? 1 : 0) +
@@ -421,6 +499,8 @@
       (filters.sync_status.length > 0 ? 1 : 0),
   );
   let showSourceToolbar = $derived(hasSources || activeFilterCount > 0);
+  let catalogEmpty = $derived(!hasSources && activeFilterCount === 0);
+  let chips = $derived(activeFilterChips(filters, source_filter_options));
   // Get all existing source URLs to check against.
   let existingSourceUrls = $derived(
     new Set(
@@ -442,100 +522,33 @@
 
 <AppShell title="Sources" {auth}>
   <section class="grid gap-6">
-    <Card className="rounded-[1.75rem] p-6 md:p-8">
-      <SectionHeading
-        eyebrow={`${organization?.slug ?? "organization"} sources`}
-        title={`${organization?.name || resolvedBranding.name} sources`}
-        description={`Connect repositories from GitHub or GitLab into ${resolvedBranding.name}. Provider access is reused automatically, so most teams only authorize once and then keep adding sources as needed.`}
-        className="max-w-3xl"
-      />
-      <div
-        class="mt-6 grid gap-4 lg:grid-cols-[minmax(18rem,0.72fr)_minmax(0,1.28fr)]"
-      >
-        <InsetCard className="p-5">
-          <p class="font-medium ui-title">Add and manage sources</p>
-          <p class="mt-2 text-sm leading-6 ui-muted">
-            Add a new source through a guided flow. Existing provider access is
-            reused automatically, and authorization is requested only when the
-            selected provider still needs it.
-          </p>
-          {#if resolvedCanManage}
-            <div class="mt-4 flex flex-wrap gap-3">
-              <Button
-                className="rounded-full px-5"
-                type="button"
-                variant="primary"
-                onclick={() => openConnectModal()}
-                disabled={connectableProviders.length === 0}
-              >
-                Add source
-              </Button>
-              <Button
-                className="rounded-full px-5"
-                type="button"
-                variant="secondary"
-                onclick={() => openAccessModal()}
-              >
-                Manage provider access
-              </Button>
-            </div>
-          {:else}
-            <p class="mt-4 text-sm ui-muted">
-              Owner membership is required to connect and synchronize
-              organization sources.
-            </p>
-          {/if}
-          <div class="mt-4 flex flex-wrap gap-2 text-xs">
-            {#each providers as provider (provider.key)}
-              <span
-                class={`rounded-full px-3 py-1 font-medium ${
-                  provider.capabilities?.supports_synchronization
-                    ? "ui-badge-accent"
-                    : "ui-badge-muted"
-                }`}
-              >
-                {provider.name}
-                {provider.capabilities?.supports_synchronization
-                  ? " ready"
-                  : " coming soon"}
-              </span>
-            {/each}
-          </div>
-        </InsetCard>
-        <div class="grid gap-4 sm:grid-cols-3 self-start">
-          <InsetCard className="p-4">
-            <p class="ui-eyebrow">Active</p>
-            <p class="ui-title mt-2 text-3xl font-semibold">
-              {activeSourceTotal}
-            </p>
-            <p class="mt-2 text-xs ui-muted">
-              connected sources synchronizing packages
-            </p>
-          </InsetCard>
-          <InsetCard className="p-4">
-            <p class="ui-eyebrow">Archived</p>
-            <p class="ui-title mt-2 text-3xl font-semibold">
-              {archivedSourceTotal}
-            </p>
-            <p class="mt-2 text-xs ui-muted">
-              inactive sources kept for recovery
-            </p>
-          </InsetCard>
-          <InsetCard className="p-4">
-            <p class="ui-eyebrow">Providers</p>
-            <p class="ui-title mt-2 text-3xl font-semibold">
-              {connectableProviders.length}
-            </p>
-            <p class="mt-2 text-xs ui-muted">
-              ready for repository synchronization
-            </p>
-          </InsetCard>
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <h2 class="ui-title text-2xl font-semibold">Sources</h2>
+      {#if resolvedCanManage}
+        <div class="flex flex-wrap gap-3">
+          <Button
+            id="sources-add-source-button"
+            className="rounded-full px-5"
+            type="button"
+            variant="primary"
+            onclick={() => openConnectModal()}
+            disabled={connectableProviders.length === 0}
+          >
+            Add source
+          </Button>
+          <Button
+            id="sources-manage-access-button"
+            className="rounded-full px-5"
+            type="button"
+            variant="secondary"
+            onclick={() => openAccessModal()}
+          >
+            Manage provider access
+          </Button>
         </div>
-      </div>
-    </Card>
-  </section>
+      {/if}
+    </div>
 
-  <section class="grid gap-6">
     {#if showSourceToolbar}
       <SourcesFilterToolbar
         {filters}
@@ -546,7 +559,81 @@
       />
     {/if}
 
-    {#if pagination.total > 0}
+    {#if chips.length > 0 || (activeFilterCount > 0 && sources.length > 0)}
+      <div class="flex flex-wrap items-center gap-2">
+        {#each chips as chip (chip)}
+          <Badge tone="neutral">{chip}</Badge>
+        {/each}
+        {#if activeFilterCount > 0 && sources.length > 0}
+          <Button
+            className="rounded-full px-3 py-1 text-xs"
+            type="button"
+            variant="secondary"
+            onclick={clearFilters}
+          >
+            Clear filters
+          </Button>
+        {/if}
+      </div>
+    {/if}
+
+    {#if pagination.last_page > 1}
+      <Pagination
+        currentPage={pagination.current_page}
+        lastPage={pagination.last_page}
+        hasMorePages={pagination.has_more_pages}
+        hasPreviousPages={pagination.has_previous_pages}
+        from={pagination.from}
+        to={pagination.to}
+        total={pagination.total}
+        perPage={pagination.per_page}
+        onPageChange={handlePageChange}
+        showPerPageSelector={false}
+      />
+    {:else if pagination.total > 0}
+      <p class="text-sm ui-muted">
+        {pagination.total}
+        {pagination.total === 1 ? "source" : "sources"}
+      </p>
+    {/if}
+
+    {#if sources.length === 0}
+      <Card className="rounded-[1.75rem] p-6">
+        {#if catalogEmpty}
+          <p class="ui-title font-medium">No sources yet</p>
+          <p class="mt-2 text-sm ui-muted">
+            Connect a repository to start syncing packages.
+          </p>
+          {#if resolvedCanManage}
+            <Button
+              className="mt-4 rounded-full px-5"
+              type="button"
+              variant="primary"
+              onclick={() => openConnectModal()}
+              disabled={connectableProviders.length === 0}
+            >
+              Add source
+            </Button>
+          {/if}
+        {:else}
+          <p class="ui-title font-medium">No sources match your search</p>
+          <Button
+            className="mt-4"
+            type="button"
+            variant="secondary"
+            onclick={clearFilters}
+          >
+            Clear filters
+          </Button>
+        {/if}
+      </Card>
+    {:else if listViewMode === "grid"}
+      <SourcesGrid {sources} {sourceDetailsUrl} />
+    {:else}
+      <SourcesTable {sources} {sourceDetailsUrl} />
+    {/if}
+
+    {#if pagination.last_page > 1}
       <Pagination
         currentPage={pagination.current_page}
         lastPage={pagination.last_page}
@@ -560,34 +647,7 @@
         showPerPageSelector={false}
       />
     {/if}
-
-    <SourceListSection
-      title="Sources"
-      {sources}
-      total={sourceResultTotal}
-      emptyAllMessage={hasSources
-        ? "No sources match current filters."
-        : `No ${resolvedBranding.name} sources connected yet.`}
-      emptyPageMessage="No sources on this page."
-      mode={listViewMode}
-      {sourceDetailsUrl}
-    />
   </section>
-
-  {#if pagination.total > 0}
-    <Pagination
-      currentPage={pagination.current_page}
-      lastPage={pagination.last_page}
-      hasMorePages={pagination.has_more_pages}
-      hasPreviousPages={pagination.has_previous_pages}
-      from={pagination.from}
-      to={pagination.to}
-      total={pagination.total}
-      perPage={pagination.per_page}
-      onPageChange={handlePageChange}
-      showPerPageSelector={false}
-    />
-  {/if}
 
   {#if activeModal}
     <SourceConnectionModal
@@ -601,7 +661,10 @@
       {resolvedBranding}
       {isSubmitting}
       {user_oauth_accounts}
-      onClose={closeModal}
+      {initialProvider}
+      {initialProviderInstanceId}
+      {returnTo}
+      onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}
       onDeleteAuthorization={openDeleteModal}

@@ -81,11 +81,12 @@
   {/if}
 
   <!-- Page navigation -->
-  <nav class="flex items-center gap-1">
+  <nav class="flex items-center gap-1" aria-label="Pagination">
     <!-- Previous button -->
     <button
       class="cursor-pointer rounded-lg border border-(--panel-border) px-3 py-1.5 text-sm transition hover:bg-(--surface-muted) disabled:cursor-not-allowed disabled:opacity-50"
       disabled={!hasPreviousPages}
+      aria-label="Previous page"
       onclick={() => onPageChange(currentPage - 1)}
     >
       ←
@@ -103,6 +104,8 @@
           class:border={page !== currentPage}
           class:border-(--panel-border)={page !== currentPage}
           class:hover:bg-(--surface-muted)={page !== currentPage}
+          aria-label="Page {page}"
+          aria-current={page === currentPage ? "page" : undefined}
           onclick={() => onPageChange(page)}
         >
           {page}
@@ -114,6 +117,7 @@
     <button
       class="cursor-pointer rounded-lg border border-(--panel-border) px-3 py-1.5 text-sm transition hover:bg-(--surface-muted) disabled:cursor-not-allowed disabled:opacity-50"
       disabled={!hasMorePages}
+      aria-label="Next page"
       onclick={() => onPageChange(currentPage + 1)}
     >
       →

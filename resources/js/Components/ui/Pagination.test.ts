@@ -33,9 +33,11 @@ describe("Pagination", () => {
       "Showing 41 to 60 of 100 results",
     );
 
-    await fireEvent.click(screen.getByRole("button", { name: "2" }));
-    await fireEvent.click(screen.getByRole("button", { name: "→" }));
-    await fireEvent.click(screen.getByRole("button", { name: "←" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Page 2" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Next page" }));
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Previous page" }),
+    );
 
     expect(onPageChange).toHaveBeenNthCalledWith(1, 2);
     expect(onPageChange).toHaveBeenNthCalledWith(2, 4);
@@ -50,8 +52,25 @@ describe("Pagination", () => {
       hasPreviousPages: false,
     });
 
-    expect(screen.getByRole("button", { name: "←" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "→" })).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: "Previous page" }),
+    ).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+  });
+
+  it("labels the navigation and marks the current page", () => {
+    renderPagination();
+
+    expect(
+      screen.getByRole("navigation", { name: "Pagination" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Page 3" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    );
+    expect(screen.getByRole("button", { name: "Page 2" })).not.toHaveAttribute(
+      "aria-current",
+    );
   });
 
   it("emits per-page changes when selector is enabled", async () => {

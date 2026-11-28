@@ -78,6 +78,15 @@ final class WorkerJobSchedulerAdapterTest extends TestCase
         self::assertSame('job-3', new WorkerJobSchedulerAdapter($facade)->enqueueSourceSyncOnce('org-1', 'src-1', 'key', []));
     }
 
+    #[Test]
+    public function activeSourceSyncStatusDelegatesToFacade(): void
+    {
+        $facade = $this->createMock(JobApiFacadeInterface::class);
+        $facade->expects(self::once())->method('activeSourceSyncStatus')->with('org-1', 'src-1')->willReturn('pending');
+
+        self::assertSame('pending', new WorkerJobSchedulerAdapter($facade)->activeSourceSyncStatus('org-1', 'src-1'));
+    }
+
     private function job(string $id, string $status): JobDto
     {
         return new JobDto($id, 'org-1', 'source.delete', [], null, $status, 0, '2026-01-01 00:00:00', null, null, 0, 3, null, null, null, '2026-01-01 00:00:00', null);

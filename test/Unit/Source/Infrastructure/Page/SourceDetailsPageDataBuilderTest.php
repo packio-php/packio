@@ -314,6 +314,18 @@ final class SourceDetailsPageDataBuilderTest extends TestCase
         self::assertSame('', $result['source']['credentials']['masked_value']);
     }
 
+    public function testBuildIncludesActiveSyncJobStatus(): void
+    {
+        $this->packageApiFacade->method('packagesForOrganization')->willReturn([]);
+        $this->webhookApiFacade->method('recentEvents')->willReturn([]);
+        $this->auditApiFacade->method('recentBySource')->willReturn([]);
+        $this->sourceApiFacade->expects(self::once())->method('activeSourceSyncStatus')->with('source-01', self::ORG_ID)->willReturn('running');
+
+        $result = $this->createBuilder()->build($this->createOrganization(), $this->createMemberMembership(), $this->createSource());
+
+        self::assertSame('running', $result['source']['sync_job_status']);
+    }
+
     public function testAuditEntriesDoNotExposeContext(): void
     {
         $organizationDto       = $this->createOrganization();

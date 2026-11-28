@@ -1470,7 +1470,7 @@ final class SourceFeatureTest extends FeatureTestCase
             'X-Inertia' => 'true',
         ]);
         self::assertSame(
-            'Re-sync scheduled. Refresh this page to see the latest sync status.',
+            'Re-sync scheduled.',
             $testResponse->json()['flash']['success'] ?? null,
         );
 

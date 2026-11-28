@@ -171,7 +171,9 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Add source" }));
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Add source" })[0],
+    );
     await fireEvent.input(screen.getByLabelText("Repository URL"), {
       target: { value: "https://example.com/vendor/package.git" },
     });
@@ -224,10 +226,9 @@ describe("Sources index page", () => {
       screen.queryByRole("button", { name: "Add source" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByText(
-        "Owner membership is required to connect and synchronize organization sources.",
-      ),
-    ).toBeInTheDocument();
+      screen.queryByRole("button", { name: "Manage provider access" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/Owner membership/)).not.toBeInTheDocument();
   });
 
   it("renders source cards in the default grid view", () => {
@@ -244,9 +245,6 @@ describe("Sources index page", () => {
       screen.getByRole("button", { name: "Show as grid" }),
     ).toHaveAttribute("aria-pressed", "true");
     expect(screen.getByText("acme/app")).toBeInTheDocument();
-    expect(
-      screen.getByText("https://example.com/acme/app.git"),
-    ).toBeInTheDocument();
     expect(
       screen.queryByRole("table", { name: "Active sources" }),
     ).not.toBeInTheDocument();
@@ -270,19 +268,11 @@ describe("Sources index page", () => {
 
     expect(localStorage.getItem("packio-list-view-mode")).toBe("table");
     expect(
-      within(table).getByRole("columnheader", { name: "Retention" }),
+      within(table).getByRole("columnheader", { name: "State" }),
     ).toBeInTheDocument();
-    expect(within(table).getAllByText("keeps latest 3").length).toBeGreaterThan(
-      0,
-    );
-    expect(within(table).getByText("success")).toBeInTheDocument();
-    expect(within(table).queryByText(/^success /)).not.toBeInTheDocument();
-    expect(within(table).queryByText(/^failure /)).not.toBeInTheDocument();
-    expect(within(table).getByText("no failures").closest("p")).toHaveAttribute(
-      "title",
-      "Last failed sync",
-    );
-    expect(within(table).getByText("archived")).toBeInTheDocument();
+    expect(within(table).getAllByText("Synced").length).toBeGreaterThan(0);
+    expect(within(table).queryByText("keeps latest 3")).not.toBeInTheDocument();
+    expect(within(table).getByText("Archived")).toBeInTheDocument();
   });
 
   it("shows one filtered empty state for unified sources", () => {
@@ -297,8 +287,219 @@ describe("Sources index page", () => {
     });
 
     expect(
-      screen.getByText("No sources match current filters."),
+      screen.getByText("No sources match your search"),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Clear filters" }),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a hint and Add source for an empty catalog", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        source_stats: { active: 0, archived: 0, total: 0 },
+        can_manage_sources: true,
+      },
+    });
+
+    expect(screen.getByText("No sources yet")).toBeInTheDocument();
+    expect(screen.getAllByRole("button", { name: "Add source" })).toHaveLength(
+      2,
+    );
+    expect(screen.queryByText(/ready$/)).not.toBeInTheDocument();
+  });
+
+  it("shows a source counter and no pagination on a single page", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        sources: [activeSource],
+        pagination: { ...pagination, last_page: 1, total: 1 },
+        source_stats: { active: 1, archived: 0, total: 1 },
+      },
+    });
+
+    expect(screen.getByText("1 source")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Next page" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("renders top and bottom pagination and filter chips", () => {
+    render(SourcesIndex, {
+      props: {
+        organization,
+        filters: activeFilters,
+        pagination,
+        providers: [genericProvider],
+        source_filter_options: filterOptions,
+        sources: [activeSource],
+        source_stats: { active: 20, archived: 0, total: 20 },
+      },
+    });
+
+    expect(screen.getAllByRole("button", { name: "Next page" })).toHaveLength(
+      2,
+    );
+    expect(screen.getByText("Provider: Generic Git")).toBeInTheDocument();
+    expect(screen.getByLabelText("Search sources")).toHaveValue("acme");
+  });
+
+  it("opens the access modal for manage_access and strips the param", async () => {
+    window.history.replaceState(
+      {},
+      "",
+      "/organization/acme/sources?manage_access=1&page=2",
+    );
+    render(SourcesIndex, {
+      props: {
+        organization,
+        providers: [genericProvider],
+        source_stats: { active: 0, archived: 0, total: 0 },
+        can_manage_sources: true,
+      },
+    });
+
+    expect(
+      await screen.findByRole("dialog", { name: "Manage provider access" }),
+    ).toBeInTheDocument();
+    expect(window.location.search).toBe("?page=2");
+  });
+
+  describe("opened from a source page", () => {
+    const sourcePath =
+      "/organization/acme/sources/11111111-1111-4111-8111-111111111111";
+    const renderPage = () =>
+      render(SourcesIndex, {
+        props: {
+          organization,
+          providers: [githubProvider, genericProvider],
+          source_stats: { active: 0, archived: 0, total: 0 },
+          can_manage_sources: true,
+        },
+      });
+    const open = (query: string) =>
+      window.history.replaceState(
+        {},
+        "",
+        `/organization/acme/sources?manage_access=1&${query}`,
+      );
+
+    it("preselects the provider and strips the params", async () => {
+      open(
+        `provider=generic_git&return_to=${encodeURIComponent(`${sourcePath}?tab=activity`)}`,
+      );
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      expect(
+        within(dialog).getByLabelText(/Generic Git authorization token/),
+      ).toBeInTheDocument();
+      expect(window.location.search).toBe("");
+    });
+
+    it("visits returnTo on close", async () => {
+      vi.mocked(router.visit).mockClear();
+      open(
+        `provider=github&return_to=${encodeURIComponent(`${sourcePath}?tab=activity`)}`,
+      );
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(router.visit).toHaveBeenCalledWith(`${sourcePath}?tab=activity`),
+      );
+      expect(router.visit).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["external", "https://evil.test/organization/acme/sources/source-1"],
+      ["protocol-relative", "//evil.test/organization/acme/sources/x"],
+      ["other organization", "/organization/other/sources/source-1"],
+      ["list page", "/organization/acme/sources"],
+      ["path traversal", "/organization/acme/sources/../../x"],
+    ])("ignores a %s return_to", async (_name, target) => {
+      vi.mocked(router.visit).mockClear();
+      open(`provider=github&return_to=${encodeURIComponent(target)}`);
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      expect(within(dialog).queryByRole("button", { name: "Done" })).toBeNull();
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Manage provider access" }),
+        ).toBeNull(),
+      );
+      expect(router.visit).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("focus return", () => {
+    const renderPage = () =>
+      render(SourcesIndex, {
+        props: {
+          organization,
+          providers: [githubProvider],
+          source_stats: { active: 0, archived: 0, total: 0 },
+          can_manage_sources: true,
+        },
+      });
+
+    it.each([
+      ["Add source", "Add source"],
+      ["Manage provider access", "Manage provider access"],
+    ])("returns focus to %s after Cancel/Escape", async (name) => {
+      renderPage();
+      const opener = screen.getAllByRole("button", { name })[0];
+      opener.focus();
+      await fireEvent.click(opener);
+      const dialog = await screen.findByRole("dialog", { name });
+      await waitFor(() => expect(dialog).toHaveFocus());
+
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    it("returns focus via the close button", async () => {
+      renderPage();
+      const opener = screen.getAllByRole("button", { name: "Add source" })[0];
+      opener.focus();
+      await fireEvent.click(opener);
+      const dialog = await screen.findByRole("dialog", { name: "Add source" });
+      await fireEvent.click(
+        within(dialog).getAllByRole("button", { name: /close|cancel/i })[0],
+      );
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    it("falls back to the header button when opened by manage_access", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/organization/acme/sources?manage_access=1",
+      );
+      renderPage();
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Manage provider access" }),
+        ).toHaveFocus(),
+      );
+    });
   });
 
   it("submits source search with page reset", async () => {
@@ -312,14 +513,10 @@ describe("Sources index page", () => {
       },
     });
 
-    expect(screen.queryByLabelText("Search")).not.toBeInTheDocument();
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
-    await fireEvent.input(screen.getByLabelText("Search"), {
+    await fireEvent.input(screen.getByLabelText("Search sources"), {
       target: { value: "acme" },
     });
-    await fireEvent.click(
-      screen.getByRole("button", { name: "Apply filters" }),
-    );
+    await fireEvent.click(screen.getByRole("button", { name: "Search" }));
 
     expect(router.get).toHaveBeenCalledWith(
       "/organization/acme/sources",
@@ -339,7 +536,7 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: "Show filters" }));
+    await fireEvent.click(screen.getByRole("button", { name: "Filters" }));
     await fireEvent.click(screen.getByLabelText("Generic Git"));
     await fireEvent.click(screen.getByLabelText("private"));
     await fireEvent.click(screen.getByLabelText("active"));
@@ -398,7 +595,9 @@ describe("Sources index page", () => {
       },
     });
 
-    await fireEvent.click(screen.getAllByText("→")[0]);
+    await fireEvent.click(
+      screen.getAllByRole("button", { name: "Next page" })[0],
+    );
 
     expect(router.get).toHaveBeenCalledWith(
       "/organization/acme/sources",

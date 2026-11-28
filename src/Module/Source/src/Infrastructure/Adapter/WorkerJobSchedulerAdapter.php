@@ -53,6 +53,11 @@ final readonly class WorkerJobSchedulerAdapter implements JobSchedulerPort
         return $this->jobApiFacade->enqueueSourceSyncOnce($organizationId, $sourceId, $idempotencyKey, $payload, $priority)->id;
     }
 
+    public function activeSourceSyncStatus(string $organizationId, string $sourceId): ?string
+    {
+        return $this->jobApiFacade->activeSourceSyncStatus($organizationId, $sourceId);
+    }
+
     public function publishAfterAudit(string $jobId, string $organizationId): bool
     {
         return $this->jobApiFacade->publishAfterAudit($jobId, $organizationId);

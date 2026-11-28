@@ -43,6 +43,7 @@ const responseHandlers = new SvelteSet<HttpResponseHandler>();
 
 export const router = {
   get: vi.fn(),
+  visit: vi.fn(),
   post: vi.fn(),
   put: vi.fn(),
   patch: vi.fn(),
@@ -120,7 +121,7 @@ export function emitRouterEvent(
 
 export function resetInertiaMocks(): void {
   for (const method of Object.values(router)) {
-    method.mockClear();
+    method.mockReset();
   }
   http.onRequest.mockClear();
   http.onResponse.mockClear();

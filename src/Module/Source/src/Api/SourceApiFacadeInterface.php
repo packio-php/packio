@@ -243,6 +243,11 @@ interface SourceApiFacadeInterface
 
     public function scheduleSourceSync(string $sourceId, string $organizationId, int $priority = 0): void;
 
+    /**
+     * @return null|'pending'|'running'
+     */
+    public function activeSourceSyncStatus(string $sourceId, string $organizationId): ?string;
+
     public function scheduleSourceSyncOnce(string $sourceId, string $organizationId, string $idempotencyKey, int $priority = 0): string;
 
     /**

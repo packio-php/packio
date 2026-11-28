@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Trash2, X } from "@lucide/svelte";
+  import { router } from "@inertiajs/svelte";
   import { onMount, tick } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -20,6 +21,38 @@
   } from "@/types/pages";
   import type { OrganizationSummary } from "@/types/organization";
 
+  let dialog: HTMLElement | undefined = $state();
+
+  // Keeps Tab inside the dialog: the page behind it is not reachable while it is open.
+  function trapTab(event: KeyboardEvent): void {
+    const focusable = [
+      ...(dialog?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []),
+    ];
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) {
+      return;
+    }
+
+    const active = document.activeElement;
+    const leaving =
+      !dialog?.contains(active) || active === (event.shiftKey ? first : last);
+    if (leaving) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  }
+
+  function handleDialogKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      onClose();
+    } else if (event.key === "Tab") {
+      trapTab(event);
+    }
+  }
+
   function handleClose(): void {
     hasClickedLoad = false;
     onClose();
@@ -36,6 +69,9 @@
     resolvedBranding: { name: string };
     isSubmitting: boolean;
     user_oauth_accounts?: UserOAuthAccountPayload[];
+    initialProvider?: string;
+    initialProviderInstanceId?: string;
+    returnTo?: string;
     onClose: () => void;
     onConnectSubmit: (
       event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -62,6 +98,9 @@
     resolvedBranding,
     isSubmitting,
     user_oauth_accounts = [],
+    initialProvider = "",
+    initialProviderInstanceId = "",
+    returnTo = "",
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -250,6 +289,7 @@
   // Restore state from sessionStorage if available
   onMount(() => {
     window.addEventListener("message", handleSourceOAuthMessage);
+    dialog?.focus();
 
     const savedModalState = sessionStorage.getItem("sources_modal_state");
     const connectSuccess = sessionStorage.getItem("sources_connect_success");
@@ -276,6 +316,10 @@
       sessionStorage.removeItem("sources_modal_state");
     } else {
       hasClickedLoad = false;
+      if (providers.some((p) => p.key === initialProvider)) {
+        selectedProvider = initialProvider;
+        selectedProviderInstanceId = initialProviderInstanceId;
+      }
     }
 
     return () => {
@@ -341,6 +385,11 @@
       }
 
       providerAuthorizationsAll = [...providerAuthorizationsAll, authorization];
+      if (returnTo && activeModal === "access") {
+        onAuthorizationCreated(authorization);
+        router.visit(returnTo);
+        return;
+      }
       selectedAuthorizationId = authorization.id;
       sessionStorage.setItem(
         "sources_modal_state",
@@ -422,7 +471,10 @@
       return;
     }
 
-    activeModal = "connect";
+    // Opened from a source page: stay in access mode; the authorization step returns there.
+    if (!(returnTo && activeModal === "access")) {
+      activeModal = "connect";
+    }
 
     await createAuthorizationFromOAuth(data.provider, {
       sourceOauthAccountId: data.sourceOAuthAccountId,
@@ -758,8 +810,9 @@
 >
   <div class="container mx-auto min-h-full px-4 py-6 md:py-10">
     <div
+      bind:this={dialog}
       onclick={(event) => event.stopPropagation()}
-      onkeydown={(event) => event.key === "Escape" && onClose()}
+      onkeydown={handleDialogKeydown}
       role="dialog"
       aria-modal="true"
       aria-label={activeModal === "connect"
@@ -1024,6 +1077,9 @@
                     name="provider"
                     value={selectedProvider}
                   />
+                  {#if returnTo}
+                    <input type="hidden" name="return_to" value={returnTo} />
+                  {/if}
                   {#if providerNeedsInstance}
                     <input
                       type="hidden"
@@ -1085,14 +1141,16 @@
                     >
                       Save provider access
                     </Button>
-                    <Button
-                      className="rounded-full px-5"
-                      type="button"
-                      variant="secondary"
-                      onclick={() => (activeModal = "connect")}
-                    >
-                      Continue to add source
-                    </Button>
+                    {#if !returnTo}
+                      <Button
+                        className="rounded-full px-5"
+                        type="button"
+                        variant="secondary"
+                        onclick={() => (activeModal = "connect")}
+                      >
+                        Continue to add source
+                      </Button>
+                    {/if}
                   </div>
                 </form>
               {:else}
@@ -1102,6 +1160,22 @@
                     This {selectedProviderNoun} instance is configured for OAuth only.
                   </p>
                 </InsetCard>
+              {/if}
+              {#if returnTo}
+                <p class="text-sm ui-muted">
+                  Access is saved for the whole organization and can be used by
+                  other sources.
+                </p>
+                <div>
+                  <Button
+                    className="rounded-full px-5"
+                    type="button"
+                    variant="secondary"
+                    onclick={handleClose}
+                  >
+                    Done
+                  </Button>
+                </div>
               {/if}
             </div>
           {:else}

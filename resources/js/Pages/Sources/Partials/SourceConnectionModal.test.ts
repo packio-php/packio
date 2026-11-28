@@ -1,6 +1,13 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/svelte";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api";
+import { router } from "@/test/inertia";
 import SourceConnectionModal from "./SourceConnectionModal.svelte";
 import type {
   ProviderAuthorizationPayload,
@@ -101,6 +108,9 @@ type ModalTestProps = {
   resolvedBranding: { name: string };
   isSubmitting: boolean;
   user_oauth_accounts: UserOAuthAccountPayload[];
+  initialProvider: string;
+  initialProviderInstanceId: string;
+  returnTo: string;
   onClose: () => void;
   onConnectSubmit: (
     event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -131,6 +141,9 @@ function renderModal(overrides: Partial<ModalTestProps> = {}) {
     resolvedBranding: { name: "Packio" },
     isSubmitting: false,
     user_oauth_accounts: [],
+    initialProvider: "",
+    initialProviderInstanceId: "",
+    returnTo: "",
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -156,6 +169,25 @@ describe("SourceConnectionModal", () => {
   beforeEach(() => {
     vi.spyOn(apiClient, "get").mockReset();
     vi.spyOn(apiClient, "post").mockReset();
+  });
+
+  it("keeps Tab focus inside the dialog", async () => {
+    renderModal();
+    const dialog = screen.getByRole("dialog");
+    const focusable = [
+      ...dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+
+    last.focus();
+    await fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(first);
+
+    await fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
   });
 
   it("filters providers, loads resources, and submits selected modal state", async () => {
@@ -593,6 +625,100 @@ describe("SourceConnectionModal", () => {
     });
 
     expect(screen.getByLabelText("GitLab instance")).toBeInTheDocument();
+  });
+
+  describe("opened from a source page", () => {
+    const returnTo = "/organization/acme/sources/source-1?tab=activity";
+
+    it("preselects the initial provider and instance", () => {
+      renderModal({
+        activeModal: "access",
+        providers: [githubProvider, gitlabProvider],
+        sourceProviderInstances: [gitlabInstance],
+        initialProvider: "gitlab_self_hosted",
+        initialProviderInstanceId: gitlabInstance.id,
+      });
+
+      expect(screen.getByLabelText("GitLab instance")).toHaveValue(
+        gitlabInstance.id,
+      );
+    });
+
+    it("ignores an initial provider that does not exist", () => {
+      renderModal({
+        activeModal: "access",
+        initialProvider: "missing",
+      });
+
+      expect(
+        screen.getByRole("button", { name: /Connect with GitHub/ }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows Done and the note only with returnTo, and Done closes", async () => {
+      const without = renderModal({ activeModal: "access" });
+      expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Continue to add source" }),
+      ).toBeInTheDocument();
+      cleanup();
+
+      const modal = renderModal({ activeModal: "access", returnTo });
+      expect(
+        screen.getByText(/Access is saved for the whole organization/),
+      ).toBeInTheDocument();
+      await fireEvent.click(screen.getByRole("button", { name: "Done" }));
+      expect(modal.onClose).toHaveBeenCalledOnce();
+      expect(without.onClose).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: "Continue to add source" }),
+      ).toBeNull();
+    });
+
+    it("sends return_to with the token form", () => {
+      renderModal({
+        activeModal: "access",
+        providers: [{ ...forgejoProvider, name: "Forgejo Self-Hosted" }],
+        sourceProviderInstances: [{ ...forgejoInstance, auth_mode: "token" }],
+        providerAuthorizationsAll: [],
+        returnTo,
+      });
+
+      const form = document
+        .querySelector<HTMLInputElement>('input[name="authorization_token"]')!
+        .closest("form")!;
+      expect(new FormData(form).get("return_to")).toBe(returnTo);
+    });
+
+    it("visits returnTo after OAuth success instead of opening the connect wizard", async () => {
+      vi.mocked(router.visit).mockClear();
+      vi.mocked(apiClient.post).mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { authorization: { ...authorization, id: "auth-new" } },
+      });
+      const modal = renderModal({ activeModal: "access", returnTo });
+
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          data: {
+            type: "packio:source-oauth",
+            success: true,
+            provider: "github",
+            sourceOAuthAccountId: "oauth-1",
+          },
+        }),
+      );
+
+      await waitFor(() => expect(router.visit).toHaveBeenCalledWith(returnTo));
+      expect(apiClient.get).not.toHaveBeenCalled();
+      expect(modal.onAuthorizationCreated).toHaveBeenCalled();
+      expect(
+        screen.getByRole("dialog", { name: "Manage provider access" }),
+      ).toBeInTheDocument();
+      expect(sessionStorage.getItem("sources_modal_state")).toBeNull();
+    });
   });
 
   it("submits the Forgejo token form with the selected instance", async () => {

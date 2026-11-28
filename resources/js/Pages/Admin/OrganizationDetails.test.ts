@@ -166,7 +166,7 @@ describe("Admin organization details page", () => {
       props: { organization_record: organizationRecord },
     });
 
-    await user.click(screen.getByRole("button", { name: "2" }));
+    await user.click(screen.getByRole("button", { name: "Page 2" }));
 
     expect(router.get).toHaveBeenCalledWith(
       "/admin/organizations/org-1",

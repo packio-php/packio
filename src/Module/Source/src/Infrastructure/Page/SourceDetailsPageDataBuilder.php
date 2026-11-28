@@ -173,6 +173,7 @@ final readonly class SourceDetailsPageDataBuilder
                 'provider_label'          => $this->sourceProviderLabelResolver->resolve(
                     $sourceDto->provider,
                 ),
+                'provider_instance_id'    => $sourceDto->providerConfig['provider_instance_id'] ?? null,
                 'name'                    => $sourceName,
                 'type'                    => $sourceDto->type,
                 'url'                     => $sourceDto->url,
@@ -201,6 +202,7 @@ final readonly class SourceDetailsPageDataBuilder
                     ]
                     : []),
                 'last_sync_status'        => $sourceDto->lastSyncStatus,
+                'sync_job_status'         => $this->sourceApiFacade->activeSourceSyncStatus($sourceDto->id, $organizationDto->id),
                 'last_successful_sync_at' => $sourceDto->lastSuccessfulSyncAt,
                 'last_failed_sync_at'     => $sourceDto->lastFailedSyncAt,
                 'last_sync_error'         => $sourceDto->lastSyncError,

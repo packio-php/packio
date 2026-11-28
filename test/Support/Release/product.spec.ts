@@ -209,6 +209,10 @@ test.describe("signed in", () => {
   test("re-sync from the source page @resync", async ({ page }) => {
     const path = `/organization/${slug}/sources/${load("sources").private}`;
     await open(page, app + path);
+    // While the initial sync is queued or running the button reads "Sync queued…"/"Syncing…".
+    await expect(
+      page.getByRole("button", { name: "Re-sync source", exact: true }),
+    ).toBeEnabled({ timeout: 60_000 });
     const [response] = await Promise.all([
       page.waitForResponse(
         (candidate) => candidate.url() === `${app}${path}/resync`,
@@ -216,11 +220,7 @@ test.describe("signed in", () => {
       page.getByRole("button", { name: "Re-sync source" }).click(),
     ]);
     expect(response.status()).toBe(302);
-    await expect(
-      page.getByText(
-        "Re-sync scheduled. Refresh this page to see the latest sync status.",
-      ),
-    ).toBeVisible();
+    await expect(page.getByText("Re-sync scheduled.")).toBeVisible();
     expect(new URL(page.url()).pathname).toBe(path);
   });
 

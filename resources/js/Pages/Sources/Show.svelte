@@ -1,8 +1,10 @@
 <script lang="ts">
   import { usePage } from "@inertiajs/svelte";
+  import { SvelteURLSearchParams } from "svelte/reactivity";
   import { router } from "@inertiajs/svelte";
 
   import AppShell from "@/Layouts/AppShell.svelte";
+  import Badge from "@/Components/ui/Badge.svelte";
   import Button from "@/Components/ui/Button.svelte";
   import BackButton from "@/Components/ui/BackButton.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -16,6 +18,12 @@
   import { mergeBranding } from "@/lib/branding";
   import { formatDate } from "@/lib/date";
   import type { AppPageProps } from "@/types/app";
+  import { auditEventLabel } from "./auditEventLabel";
+  import {
+    sourceStateLabel,
+    sourceStateTone,
+    syncSummary,
+  } from "./sourceStatus";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
   import type {
@@ -53,7 +61,98 @@
   let resolvedBranding = $derived(mergeBranding(branding ?? {}));
   let sourceDeleteConfirmOpen = $state(false);
   let sourceDeleting = $state(false);
+  let pendingAction = $state<"hide" | "archive" | null>(null);
+  let actionSubmitting = $state(false);
+  let editingSettings = $state(false);
+  // Copied on Edit so refreshes of `source` (poll, failed save) do not overwrite typed values.
+  let draft = $state({ visibility: "public", active: true, keep: 0 });
+
+  function startEditing(): void {
+    draft = {
+      visibility: source.visibility,
+      active: source.active,
+      keep: source.keep_last_releases,
+    };
+    editingSettings = true;
+  }
+  let rotateConfirmOpen = $state(false);
+  let rotating = $state(false);
+  let lastDelivery = $derived(webhook_events[0] ?? null);
   let supportsWebhookProcessing = $derived(source.provider !== "generic_git");
+  type ActivityTab = "deliveries" | "audit";
+  // Local state, so it survives the polling reload; generic Git has no deliveries tab.
+  let chosenTab = $state<ActivityTab>("deliveries");
+  let activeTab = $derived<ActivityTab>(
+    supportsWebhookProcessing ? chosenTab : "audit",
+  );
+  const activityTabs: ActivityTab[] = ["deliveries", "audit"];
+  let tabButtons = $state<Record<ActivityTab, HTMLButtonElement | undefined>>({
+    deliveries: undefined,
+    audit: undefined,
+  });
+
+  function onTabKeydown(event: KeyboardEvent): void {
+    const index = activityTabs.indexOf(activeTab);
+    const next =
+      event.key === "ArrowRight"
+        ? (index + 1) % activityTabs.length
+        : event.key === "ArrowLeft"
+          ? (index - 1 + activityTabs.length) % activityTabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? activityTabs.length - 1
+              : -1;
+
+    if (next < 0) {
+      return;
+    }
+
+    event.preventDefault();
+    chosenTab = activityTabs[next];
+    tabButtons[chosenTab]?.focus();
+  }
+  let sync = $derived(syncSummary(source));
+  let syncing = $derived(source.sync_job_status != null);
+  // Mirrors SourceResyncHandler: only active sources can be re-synced; archiving deactivates.
+  let resyncUnavailableReason = $derived(
+    source.archived
+      ? "Source is archived. Restore it before running a manual re-sync."
+      : !source.active
+        ? "Source is inactive. Enable it before running a manual re-sync."
+        : "",
+  );
+  let showManageAccess = $derived(
+    can_manage_sources &&
+      !syncing &&
+      source.last_sync_status === "failed" &&
+      (source.credentials?.auth_health === "reauthorization_required" ||
+        (!source.credentials?.configured && source.visibility === "private")),
+  );
+
+  // Poll while a sync job is queued or running; $effect never runs during SSR.
+  $effect(() => {
+    if (!syncing) {
+      return;
+    }
+
+    let reloading = false;
+    const timer = setInterval(() => {
+      if (reloading) {
+        return;
+      }
+
+      reloading = true;
+      router.reload({
+        only: ["source", "stats", "packages", "webhook_events", "audit"],
+        onFinish: () => {
+          reloading = false;
+        },
+      });
+    }, 5000);
+
+    return () => clearInterval(timer);
+  });
 
   function withOrganization(path: string): string {
     if (!organization?.slug) {
@@ -90,7 +189,29 @@
     return fallback;
   }
 
-  let backUrl = $derived(safeBackUrl(usePage<AppPageProps>().url ?? ""));
+  const page = usePage<AppPageProps>();
+  let backUrl = $derived(safeBackUrl(page.url ?? ""));
+
+  // Opens the access dialog on the list for this source's provider and returns here when done.
+  let manageAccessHref = $derived.by(() => {
+    const detailsPath = withOrganization(`/sources/${source.id}`);
+    const here = page.url ?? "";
+    const params = new SvelteURLSearchParams({ manage_access: "1" });
+    if (source.provider) {
+      params.set("provider", source.provider);
+    }
+    if (source.provider_instance_id) {
+      params.set("provider_instance_id", source.provider_instance_id);
+    }
+    params.set(
+      "return_to",
+      here === detailsPath || here.startsWith(`${detailsPath}?`)
+        ? here
+        : detailsPath,
+    );
+
+    return withOrganization(`/sources?${params}`);
+  });
 
   function maskedSecret(secret: string): string {
     if (!secret) {
@@ -117,6 +238,74 @@
 
     router.post(form.action, Object.fromEntries(new FormData(form)), {
       preserveScroll: true,
+    });
+  }
+
+  // Close the form only on success; on error it stays mounted with entered values.
+  function submitSettings(
+    event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
+  ): void {
+    const form = event.currentTarget;
+
+    router.post(form.action, Object.fromEntries(new FormData(form)), {
+      preserveScroll: true,
+      preserveState: true,
+      onSuccess: () => {
+        editingSettings = false;
+      },
+    });
+  }
+
+  function confirmRotate(): void {
+    if (rotating) {
+      return;
+    }
+
+    rotating = true;
+    router.post(
+      withOrganization(`/sources/${source.id}/webhook/rotate`),
+      {},
+      {
+        preserveScroll: true,
+        onFinish: () => {
+          rotating = false;
+          rotateConfirmOpen = false;
+        },
+      },
+    );
+  }
+
+  function confirmAction(): void {
+    if (actionSubmitting || !pendingAction) {
+      return;
+    }
+
+    const hide = pendingAction === "hide";
+    actionSubmitting = true;
+    router.post(
+      withOrganization(
+        `/sources/${source.id}/${hide ? "packages/activity" : "archive"}`,
+      ),
+      hide ? { active: "0" } : { archived: "1" },
+      {
+        preserveScroll: true,
+        onFinish: () => {
+          actionSubmitting = false;
+          pendingAction = null;
+        },
+      },
+    );
+  }
+
+  function postNow(path: string, data: Record<string, string>): void {
+    if (actionSubmitting) {
+      return;
+    }
+
+    actionSubmitting = true;
+    router.post(withOrganization(`/sources/${source.id}/${path}`), data, {
+      preserveScroll: true,
+      onFinish: () => (actionSubmitting = false),
     });
   }
 
@@ -149,111 +338,74 @@
     <BackButton label="Back to sources" href={backUrl} />
 
     <Card className="rounded-[1.75rem] p-6">
-      <div class="flex items-start justify-between gap-4">
-        <SectionHeading
-          eyebrow={`${resolvedBranding.name} source`}
-          title={source.name}
-          description={source.url}
-        />
-      </div>
-      <div class="mt-4 flex flex-wrap gap-2">
-        <span
-          class={`rounded-full px-3 py-1 text-xs font-medium ${
-            source.active ? "ui-badge-accent" : "ui-badge-muted"
-          }`}
-        >
-          {source.active ? "active" : "inactive"}
-        </span>
-        {#if source.archived}
-          <span
-            class="rounded-full ui-badge-muted px-3 py-1 text-xs font-medium"
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div class="min-w-0">
+          <p class="ui-eyebrow">{resolvedBranding.name} source</p>
+          <h2 class="ui-title mt-1 text-2xl font-semibold break-all">
+            {source.name}
+          </h2>
+          <a
+            class="ui-link-accent mt-1 block text-sm break-all"
+            href={source.url}
+            rel="noopener noreferrer"
+            target="_blank"
           >
-            archived
-          </span>
+            {source.url}
+          </a>
+        </div>
+        {#if can_manage_sources}
+          <form
+            method="POST"
+            action={withOrganization(`/sources/${source.id}/resync`)}
+            onsubmit={(event) => {
+              event.preventDefault();
+              submit(
+                event as SubmitEvent & {
+                  currentTarget: EventTarget & HTMLFormElement;
+                },
+              );
+            }}
+          >
+            <Button
+              className="rounded-full px-4 py-2 text-sm"
+              disabled={!source.active || syncing}
+              type="submit"
+              variant="primary"
+            >
+              {source.sync_job_status === "running"
+                ? "Syncing…"
+                : source.sync_job_status === "pending"
+                  ? "Sync queued…"
+                  : "Re-sync source"}
+            </Button>
+          </form>
         {/if}
-        <span
-          class={`rounded-full px-3 py-1 text-xs font-medium ${
-            source.visibility === "private"
-              ? "ui-badge-danger"
-              : "ui-badge-accent"
-          }`}
-        >
-          {source.visibility}
-        </span>
       </div>
 
-      <div class="mt-6 grid gap-4 md:grid-cols-3">
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Packages</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.packages_count ?? 0}
-          </p>
-        </InsetCard>
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Releases</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.releases_count ?? 0}
-          </p>
-        </InsetCard>
-        <InsetCard className="p-4">
-          <p class="ui-eyebrow">Deliveries</p>
-          <p class="ui-title mt-2 text-3xl font-semibold">
-            {stats.deliveries_count ?? 0}
-          </p>
-        </InsetCard>
-      </div>
-
-      <div class="mt-6 grid gap-2 text-sm ui-muted">
-        <p>
-          <span class="font-medium ui-title">Provider:</span>
+      <div class="mt-4 flex flex-wrap items-center gap-2">
+        <Badge tone="neutral">
           {source.provider_label ?? source.provider ?? source.type}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Type:</span>
-          {source.type}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Default ref:</span>
-          {source.default_ref}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Visibility:</span>
+        </Badge>
+        <Badge tone={source.visibility === "private" ? "danger" : "accent"}>
           {source.visibility}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Release retention:</span>
-          {source.keep_last_releases > 0
-            ? `latest ${source.keep_last_releases} releases`
-            : "all releases"}
-        </p>
-        <p>
-          <span class="font-medium ui-title">State:</span>
-          {source.active ? "active" : "inactive"}
-        </p>
-        {#if source.archived_at}
-          <p>
-            <span class="font-medium ui-title">Archived at:</span>
-            {formatDate(source.archived_at)}
-          </p>
+        </Badge>
+        <Badge tone={sourceStateTone(source)}>{sourceStateLabel(source)}</Badge>
+        {#if source.sync_job_status}
+          <Badge tone="gold">
+            {source.sync_job_status === "running"
+              ? "Sync running"
+              : "Sync queued"}
+          </Badge>
+        {:else}
+          <Badge tone={sync.tone}>{sync.label}</Badge>
         {/if}
-        <p>
-          <span class="font-medium ui-title">Created at:</span>
-          {formatDate(source.created_at)}
-        </p>
-        <p>
-          <span class="font-medium ui-title">Sync status:</span>
-          <span
-            class={`ml-2 rounded-full px-2.5 py-1 text-xs font-medium ${
-              source.last_sync_status === "failed"
-                ? "ui-badge-danger"
-                : source.last_sync_status === "success"
-                  ? "ui-badge-accent"
-                  : "ui-badge-gold"
-            }`}
-          >
-            {source.last_sync_status}
-          </span>
-        </p>
+      </div>
+
+      {#if resyncUnavailableReason}
+        <p class="mt-3 text-sm ui-muted">{resyncUnavailableReason}</p>
+      {/if}
+
+      <div class="mt-3 grid gap-1 text-sm ui-muted">
         {#if source.last_successful_sync_at}
           <p>
             <span class="font-medium ui-title">Last success:</span>
@@ -267,368 +419,239 @@
           </p>
         {/if}
         {#if source.last_sync_error}
-          <p style="color: var(--flash-error-text);">
+          <p class="break-words" style="color: var(--flash-error-text);">
             <span class="font-medium ui-title">Last error:</span>
             {source.last_sync_error}
           </p>
         {/if}
+        {#if showManageAccess}
+          <p>
+            <Link class="ui-link-accent font-medium" href={manageAccessHref}>
+              Manage provider access
+            </Link>
+            {#if source.credentials?.auth_failure_reason}
+              <span class="break-words" style="color: var(--flash-error-text);">
+                {source.credentials.auth_failure_reason}
+              </span>
+            {/if}
+          </p>
+        {/if}
+        <p>
+          {stats.packages_count ?? 0} packages · {stats.releases_count ?? 0} releases
+        </p>
       </div>
+
+      <p class="mt-3 text-xs ui-muted">
+        Type: {source.type} · Default ref: {source.default_ref} · Release retention:
+        {source.keep_last_releases > 0
+          ? `latest ${source.keep_last_releases} releases`
+          : "all releases"} · Created at: {formatDate(source.created_at)}
+        {#if source.archived_at}
+          · Archived at: {formatDate(source.archived_at)}
+        {/if}
+      </p>
     </Card>
   </section>
 
-  <section class="grid gap-6 xl:grid-cols-2">
-    <Card className="rounded-[1.75rem] p-6">
-      <SectionHeading
-        eyebrow={`${resolvedBranding.name} controls`}
-        className="mb-4"
-      />
+  <section class="grid gap-6 lg:grid-cols-2">
+    <Card className="h-full min-w-0 rounded-[1.75rem] p-6">
+      <SectionHeading eyebrow="Source settings" className="mb-4" />
       <div class="mt-4 grid gap-4">
-        <InsetCard className="p-4 text-sm ui-muted">
-          <p class="font-medium ui-title">Source visibility</p>
-          <p class="mt-3">
-            Current visibility: {source.visibility}
+        <InsetCard className="grid gap-2 p-4 text-sm ui-muted">
+          <p>
+            <span class="font-medium ui-title">Default branch:</span>
+            <code class="ui-code break-all">{source.default_ref}</code>
           </p>
-          <p class="mt-2">
-            Synchronization: {source.active ? "active" : "inactive"}
+          <p>
+            <span class="font-medium ui-title">Release retention:</span>
+            {source.keep_last_releases > 0
+              ? `latest ${source.keep_last_releases} releases`
+              : "all releases"}
           </p>
-          <div
-            class="mt-4 rounded-2xl border border-[color:var(--line)] bg-[color:var(--surface-2)]/80 p-4"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div>
-                <p class="font-medium ui-title">Provider authorization</p>
-                <p class="mt-1 text-xs ui-muted">
-                  {source.credentials?.status_label ?? "Not configured"}
-                </p>
-              </div>
-              <span
-                class={`rounded-full px-3 py-1 text-xs font-medium ${
-                  source.credentials?.configured
-                    ? "ui-badge-accent"
-                    : "ui-badge-muted"
-                }`}
-              >
-                {source.credentials?.configured ? "configured" : "missing"}
-              </span>
-            </div>
-            {#if source.credentials?.masked_value}
-              <code
-                class="ui-code mt-3 block overflow-x-auto rounded-xl px-3 py-2 text-xs"
-              >
-                {source.credentials.masked_value}
-              </code>
-            {/if}
-            {#if source.credentials?.auth_health}
-              <div class="mt-3 grid gap-2 text-xs">
-                <div class="flex items-center gap-2">
-                  <span class="ui-muted">Authorization health</span>
-                  <span
-                    class={`rounded-full px-2.5 py-1 font-medium ${
-                      source.credentials.auth_health ===
-                      "reauthorization_required"
-                        ? "ui-badge-danger"
-                        : "ui-badge-accent"
-                    }`}
-                  >
-                    {source.credentials.auth_health}
-                  </span>
-                </div>
-                {#if source.credentials?.auth_failure_reason}
-                  <p style="color: var(--flash-error-text);">
-                    {source.credentials.auth_failure_reason}
-                  </p>
-                {/if}
-                {#if source.credentials?.last_token_refresh_at}
-                  <p class="ui-muted">
-                    Last token refresh: {formatDate(
-                      source.credentials?.last_token_refresh_at,
-                    )}
-                  </p>
-                {/if}
-              </div>
-            {/if}
+          <p>
+            <span class="font-medium ui-title">Visibility:</span>
+            {source.visibility} ·
+            <span class="font-medium ui-title">Synchronization:</span>
+            {source.active ? "active" : "inactive"}
+          </p>
+          <div class="flex flex-wrap items-center gap-2">
+            <span class="font-medium ui-title">Provider access:</span>
+            <span>{source.credentials?.status_label ?? "Not configured"}</span>
+            <Badge tone={source.credentials?.configured ? "accent" : "neutral"}>
+              {source.credentials?.configured ? "configured" : "missing"}
+            </Badge>
           </div>
+          {#if source.credentials?.masked_value}
+            <code class="ui-code block break-all rounded-xl px-3 py-2 text-xs">
+              {source.credentials.masked_value}
+            </code>
+          {/if}
+          {#if source.credentials?.auth_failure_reason}
+            <p class="break-words" style="color: var(--flash-error-text);">
+              {source.credentials.auth_failure_reason}
+            </p>
+          {/if}
+          {#if source.credentials?.last_token_refresh_at}
+            <p class="text-xs">
+              Last token refresh: {formatDate(
+                source.credentials.last_token_refresh_at,
+              )}
+            </p>
+          {/if}
         </InsetCard>
 
         {#if can_manage_sources}
-          <form
-            method="POST"
-            action={withOrganization(`/sources/${source.id}/settings`)}
-            onsubmit={(event) => {
-              event.preventDefault();
-              submit(
-                event as SubmitEvent & {
-                  currentTarget: EventTarget & HTMLFormElement;
-                },
-              );
-            }}
-          >
-            <InsetCard className="p-4 text-sm ui-muted">
-              <p class="font-medium ui-title">Update source settings</p>
-              <Select
-                className="mt-3 w-full rounded-xl px-3 py-2 text-sm"
-                name="visibility"
-              >
-                <option
-                  value="public"
-                  selected={source.visibility === "public"}
-                >
-                  Public
-                </option>
-                <option
-                  value="private"
-                  selected={source.visibility === "private"}
-                >
-                  Private
-                </option>
-              </Select>
-              <label
-                class="ui-code mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm"
-              >
-                <input type="hidden" name="active" value="0" />
-                <input type="checkbox" name="active" checked={source.active} />
-                <span>
-                  Source is active and {resolvedBranding.name} may synchronize it
-                </span>
-              </label>
-              <label class="mt-4 grid gap-2">
-                <span class="text-sm font-medium ui-title">
-                  Keep last releases
-                </span>
-                <Input
-                  className="w-full"
-                  name="keep_last_releases"
-                  type="number"
-                  min="0"
-                  step="1"
-                  value={source.keep_last_releases}
-                />
-                <span class="text-xs ui-muted">
-                  Limits active release versions, keeping the highest version
-                  numbers. Older versions are hidden from the registry and
-                  remain in package history. Dev versions do not count toward
-                  the limit. 0 disables the limit. Changes apply on next sync;
-                  previously hidden versions are not automatically restored.
-                </span>
-              </label>
-              <p class="mt-2 text-xs ui-muted">
-                Provider authorization is managed separately from source
-                settings through the organization sources authorization flow.
-              </p>
+          {#if !editingSettings}
+            <div class="flex flex-wrap gap-3">
               <Button
-                className="mt-3 rounded-full px-4 py-2 text-sm"
-                type="submit"
-                variant="primary"
+                className="rounded-full px-4 py-2 text-sm"
+                type="button"
+                variant="secondary"
+                onclick={startEditing}
               >
-                Save {resolvedBranding.name} settings
+                Edit settings
               </Button>
-            </InsetCard>
-          </form>
+              <Link
+                class="ui-link-accent self-center text-sm font-medium"
+                href={manageAccessHref}
+              >
+                Manage provider access
+              </Link>
+            </div>
+          {:else}
+            <form
+              method="POST"
+              action={withOrganization(`/sources/${source.id}/settings`)}
+              onsubmit={(event) => {
+                event.preventDefault();
+                submitSettings(
+                  event as SubmitEvent & {
+                    currentTarget: EventTarget & HTMLFormElement;
+                  },
+                );
+              }}
+            >
+              <InsetCard className="p-4 text-sm ui-muted">
+                <p class="font-medium ui-title">Update source settings</p>
+                <Select
+                  className="mt-3 w-full rounded-xl px-3 py-2 text-sm"
+                  name="visibility"
+                  bind:value={draft.visibility}
+                >
+                  <option value="public">Public</option>
+                  <option value="private">Private</option>
+                </Select>
+                <label
+                  class="ui-code mt-4 flex items-center gap-3 rounded-xl px-3 py-2 text-sm"
+                >
+                  <input type="hidden" name="active" value="0" />
+                  <input
+                    type="checkbox"
+                    name="active"
+                    bind:checked={draft.active}
+                  />
+                  <span>
+                    Source is active and {resolvedBranding.name} may synchronize it
+                  </span>
+                </label>
+                <label class="mt-4 grid gap-2">
+                  <span class="text-sm font-medium ui-title">
+                    Keep last releases
+                  </span>
+                  <Input
+                    className="w-full"
+                    name="keep_last_releases"
+                    type="number"
+                    min="0"
+                    step="1"
+                    bind:value={draft.keep}
+                  />
+                  <span class="text-xs ui-muted">
+                    Limits active release versions, keeping the highest version
+                    numbers. Older versions are hidden from the registry and
+                    remain in package history. Dev versions do not count toward
+                    the limit. 0 disables the limit. Changes apply on next sync;
+                    previously hidden versions are not automatically restored.
+                  </span>
+                </label>
+                <div class="mt-4 flex flex-wrap gap-3">
+                  <Button
+                    className="rounded-full px-4 py-2 text-sm"
+                    type="submit"
+                    variant="primary"
+                  >
+                    Save
+                  </Button>
+                  <Button
+                    className="rounded-full px-4 py-2 text-sm"
+                    type="button"
+                    variant="secondary"
+                    onclick={() => (editingSettings = false)}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </InsetCard>
+            </form>
+          {/if}
         {:else}
           <InsetCard className="p-4 text-sm ui-muted">
             Owner membership is required to modify source visibility,
             credentials, and synchronization controls.
           </InsetCard>
         {/if}
-
-        {#if can_manage_sources}
-          <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <form
-              method="POST"
-              action={withOrganization(`/sources/${source.id}/resync`)}
-              onsubmit={(event) => {
-                event.preventDefault();
-                submit(
-                  event as SubmitEvent & {
-                    currentTarget: EventTarget & HTMLFormElement;
-                  },
-                );
-              }}
-            >
-              <Button
-                className="w-full rounded-full px-4 py-2 text-sm"
-                disabled={!source.active}
-                type="submit"
-                variant="primary"
-              >
-                Re-sync source
-              </Button>
-            </form>
-            <form
-              method="POST"
-              action={withOrganization(
-                `/sources/${source.id}/packages/activity`,
-              )}
-              onsubmit={(event) => {
-                event.preventDefault();
-                submit(
-                  event as SubmitEvent & {
-                    currentTarget: EventTarget & HTMLFormElement;
-                  },
-                );
-              }}
-            >
-              <input
-                type="hidden"
-                name="active"
-                value={source.packages_active ? "0" : "1"}
-              />
-              <Button
-                className="w-full rounded-full px-4 py-2 text-sm"
-                type="submit"
-                variant="secondary"
-              >
-                {source.packages_active
-                  ? `Hide packages from ${resolvedBranding.name}`
-                  : `Show packages in ${resolvedBranding.name}`}
-              </Button>
-            </form>
-            <form
-              method="POST"
-              action={withOrganization(`/sources/${source.id}/archive`)}
-              onsubmit={(event) => {
-                event.preventDefault();
-                submit(
-                  event as SubmitEvent & {
-                    currentTarget: EventTarget & HTMLFormElement;
-                  },
-                );
-              }}
-            >
-              <input
-                type="hidden"
-                name="archived"
-                value={source.archived ? "0" : "1"}
-              />
-              <Button
-                className="w-full rounded-full px-4 py-2 text-sm"
-                type="submit"
-                variant="secondary"
-              >
-                {source.archived ? "Restore source" : "Archive source"}
-              </Button>
-            </form>
-            <Button
-              className="w-full rounded-full px-4 py-2 text-sm"
-              type="button"
-              variant="danger"
-              onclick={() => (sourceDeleteConfirmOpen = true)}
-            >
-              Delete source
-            </Button>
-          </div>
-        {/if}
       </div>
     </Card>
 
-    <Card className="rounded-[1.75rem] p-6">
+    <Card className="h-full min-w-0 rounded-[1.75rem] p-6">
       <SectionHeading eyebrow="Webhook" className="mb-4" />
       <div class="mt-4 grid gap-4">
         {#if supportsWebhookProcessing}
-          <InsetCard className="p-4 text-sm ui-muted">
-            <div class="flex items-center justify-between gap-3">
-              <p class="font-medium ui-title">Webhook URL</p>
-              <CopyButton
-                label="Copy webhook URL"
-                value={source.webhook_url ?? ""}
-              />
-            </div>
-            <code
-              class="ui-code mt-3 block overflow-x-auto rounded-xl px-3 py-2 text-xs"
-            >
-              {source.webhook_url}
-            </code>
-          </InsetCard>
-
-          {#if can_manage_sources}
-            <InsetCard className="p-4 text-sm ui-muted">
-              <div class="flex items-start justify-between gap-3">
-                <div>
-                  <p class="font-medium ui-title">Upstream webhook status</p>
-                  <p class="mt-1 text-xs ui-muted">
-                    {#if source.supports_auto_registration}
-                      {#if source.webhook_registered}
-                        Registered at the upstream provider
-                        {#if source.webhook_external_id}
-                          <br />
-                          External ID:
-                          <code class="ui-code">
-                            {source.webhook_external_id}
-                          </code>
-                        {/if}
-                      {:else}
-                        Not yet registered at the upstream provider
-                      {/if}
-                    {:else}
-                      Automatic registration is not supported for this provider
-                    {/if}
-                  </p>
-                </div>
+          <InsetCard className="grid gap-2 p-4 text-sm ui-muted">
+            <!-- registration data is only sent to managers; viewers see no badge -->
+            {#if can_manage_sources}
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="font-medium ui-title">Registration:</span>
                 {#if source.supports_auto_registration}
-                  <span
-                    class={`rounded-full px-3 py-1 text-xs font-medium ${
-                      source.webhook_registered
-                        ? "ui-badge-accent"
-                        : "ui-badge-muted"
-                    }`}
+                  <Badge
+                    tone={source.webhook_registered ? "accent" : "neutral"}
                   >
                     {source.webhook_registered
-                      ? "registered"
-                      : "not registered"}
-                  </span>
+                      ? "Registered at provider"
+                      : "Not registered at provider"}
+                  </Badge>
+                {:else}
+                  <Badge tone="neutral">Manual registration</Badge>
                 {/if}
               </div>
-            </InsetCard>
-
-            {#if source.supports_auto_registration && !source.webhook_registered}
-              <div class="flex flex-wrap gap-3">
-                <form
-                  method="POST"
-                  action={withOrganization(
-                    `/sources/${source.id}/webhook/register`,
-                  )}
-                  onsubmit={(event) => {
-                    event.preventDefault();
-                    submit(
-                      event as SubmitEvent & {
-                        currentTarget: EventTarget & HTMLFormElement;
-                      },
-                    );
-                  }}
-                >
-                  <Button
-                    className="rounded-full px-4 py-2 text-sm"
-                    type="submit"
-                    variant="primary"
-                  >
-                    Register webhook at provider
-                  </Button>
-                </form>
-              </div>
             {/if}
-          {/if}
-
-          {#if can_manage_sources && source.webhook_secret}
-            <InsetCard className="p-4 text-sm ui-muted">
-              <div class="flex items-center justify-between gap-3">
-                <p class="font-medium ui-title">Webhook secret</p>
-                <CopyButton
-                  label="Copy webhook secret"
-                  value={source.webhook_secret}
-                />
-              </div>
-              <code
-                class="ui-code mt-3 block overflow-x-auto rounded-xl px-3 py-2 text-xs"
-              >
-                {maskedSecret(source.webhook_secret ?? "")}
-              </code>
-            </InsetCard>
-
-            <div class="flex flex-wrap gap-3">
+            {#if can_manage_sources && source.supports_auto_registration && source.webhook_registered && source.webhook_external_id}
+              <p class="text-xs">
+                External ID:
+                <code class="ui-code break-all">
+                  {source.webhook_external_id}
+                </code>
+              </p>
+            {/if}
+            {#if can_manage_sources && !source.supports_auto_registration}
+              <p>
+                This provider cannot register webhooks automatically. Add a
+                webhook in the provider yourself: open Connection details, copy
+                the URL and the secret and paste them into the provider webhook
+                settings.
+              </p>
+            {/if}
+            {#if lastDelivery}
+              <p>
+                <span class="font-medium ui-title">Last delivery:</span>
+                {lastDelivery.status} at {formatDate(lastDelivery.created_at)}
+              </p>
+            {/if}
+            {#if can_manage_sources && source.supports_auto_registration && !source.webhook_registered}
               <form
                 method="POST"
                 action={withOrganization(
-                  `/sources/${source.id}/webhook/rotate`,
+                  `/sources/${source.id}/webhook/register`,
                 )}
                 onsubmit={(event) => {
                   event.preventDefault();
@@ -642,27 +665,171 @@
                 <Button
                   className="rounded-full px-4 py-2 text-sm"
                   type="submit"
-                  variant="secondary"
+                  variant="primary"
                 >
-                  Rotate secret
+                  Register webhook at provider
                 </Button>
               </form>
+            {/if}
+          </InsetCard>
+
+          <details
+            class="ui-inset min-w-0 rounded-xl border p-4 text-sm ui-muted"
+          >
+            <summary class="cursor-pointer font-medium ui-title">
+              Connection details
+            </summary>
+            <div class="mt-3 grid gap-3">
+              <div>
+                <div class="flex items-center justify-between gap-3">
+                  <p class="font-medium ui-title">Webhook URL</p>
+                  <CopyButton
+                    label="Copy webhook URL"
+                    value={source.webhook_url ?? ""}
+                  />
+                </div>
+                <code
+                  class="ui-code mt-2 block break-all rounded-xl px-3 py-2 text-xs"
+                >
+                  {source.webhook_url}
+                </code>
+              </div>
+              {#if can_manage_sources && source.webhook_secret}
+                <div>
+                  <div class="flex items-center justify-between gap-3">
+                    <p class="font-medium ui-title">Webhook secret</p>
+                    <CopyButton
+                      label="Copy webhook secret"
+                      value={source.webhook_secret}
+                    />
+                  </div>
+                  <code
+                    class="ui-code mt-2 block break-all rounded-xl px-3 py-2 text-xs"
+                  >
+                    {maskedSecret(source.webhook_secret ?? "")}
+                  </code>
+                </div>
+                <div>
+                  <Button
+                    className="rounded-full px-4 py-2 text-sm"
+                    type="button"
+                    variant="secondary"
+                    onclick={() => (rotateConfirmOpen = true)}
+                  >
+                    Rotate secret
+                  </Button>
+                </div>
+              {/if}
             </div>
-          {/if}
+          </details>
+        {:else}
           <InsetCard className="p-4 text-sm ui-muted">
-            <p class="font-medium ui-title">Recent deliveries</p>
-            <div class="mt-4 grid gap-3 max-h-[33rem] overflow-y-auto">
-              {#if webhook_events.length === 0}
-                <p class="text-sm ui-muted">No webhook deliveries yet.</p>
-              {:else}
-                {#each webhook_events as event (event.delivery_id)}
-                  <div class="ui-code rounded-xl p-3">
+            <p class="font-medium ui-title">Webhooks are not supported</p>
+            <p class="mt-2 leading-6">
+              Generic Git sources do not support webhook processing. Use manual
+              resync to update packages from this repository.
+            </p>
+          </InsetCard>
+        {/if}
+      </div>
+    </Card>
+  </section>
+
+  <section class="grid gap-6">
+    <Card className="min-w-0 rounded-[1.75rem] p-6">
+      <SectionHeading eyebrow="Packages" className="mb-4" />
+      {#if packages.length === 0}
+        <p class="text-sm ui-muted">No packages synchronized yet.</p>
+      {:else}
+        <ul class="grid gap-2">
+          {#each packages as pkg (pkg.name)}
+            <li>
+              <InsetCard
+                className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+              >
+                <Link
+                  class="ui-link-accent min-w-0 font-medium break-all"
+                  href={withOrganization(`/packages/${pkg.name}`)}
+                >
+                  {pkg.name}
+                </Link>
+                <span class="ui-muted">
+                  {pkg.visibility} · {pkg.active ? "listed" : "hidden"} · {pkg.release_count}
+                  {pkg.release_count === 1 ? "release" : "releases"}
+                </span>
+              </InsetCard>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </Card>
+
+    <Card className="min-w-0 rounded-[1.75rem] p-6">
+      <SectionHeading eyebrow="Activity" className="mb-4" />
+      {#if supportsWebhookProcessing}
+        {@const tabClass = (tab: ActivityTab) =>
+          `cursor-pointer rounded-lg border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_60%,transparent)] ${
+            activeTab === tab
+              ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-ink)]"
+              : "border-transparent text-[var(--page-muted)] hover:bg-[var(--surface-strong)] hover:text-[var(--accent-ink)]"
+          }`}
+        <div
+          class="mb-4 inline-flex flex-wrap items-center gap-1 rounded-xl border theme-border theme-surface-muted p-1"
+          role="tablist"
+          aria-label="Activity"
+          tabindex="-1"
+          onkeydown={onTabKeydown}
+        >
+          <button
+            bind:this={tabButtons.deliveries}
+            type="button"
+            role="tab"
+            id="activity-tab-deliveries"
+            aria-selected={activeTab === "deliveries"}
+            aria-controls="activity-panel-deliveries"
+            tabindex={activeTab === "deliveries" ? 0 : -1}
+            class={tabClass("deliveries")}
+            onclick={() => (chosenTab = "deliveries")}
+          >
+            Webhook deliveries
+          </button>
+          <button
+            bind:this={tabButtons.audit}
+            type="button"
+            role="tab"
+            id="activity-tab-audit"
+            aria-selected={activeTab === "audit"}
+            aria-controls="activity-panel-audit"
+            tabindex={activeTab === "audit" ? 0 : -1}
+            class={tabClass("audit")}
+            onclick={() => (chosenTab = "audit")}
+          >
+            Audit log
+          </button>
+        </div>
+      {/if}
+
+      {#if supportsWebhookProcessing}
+        <div
+          role="tabpanel"
+          id="activity-panel-deliveries"
+          aria-labelledby="activity-tab-deliveries"
+          tabindex="0"
+          hidden={activeTab !== "deliveries"}
+        >
+          {#if webhook_events.length === 0}
+            <p class="text-sm ui-muted">No deliveries yet</p>
+          {:else}
+            <ul class="grid max-h-[33rem] gap-2 overflow-y-auto">
+              {#each webhook_events as event (event.delivery_id)}
+                <li>
+                  <InsetCard className="px-4 py-2.5 text-sm">
                     <div class="flex items-start justify-between gap-3">
-                      <div>
-                        <p class="text-sm font-medium ui-title">
+                      <div class="min-w-0">
+                        <p class="font-medium ui-title">
                           {event.event} · {event.status}
                         </p>
-                        <p class="ui-muted mt-1 text-xs">
+                        <p class="ui-muted mt-1 text-xs break-all">
                           {event.delivery_id}
                         </p>
                       </div>
@@ -692,105 +859,152 @@
                       {/if}
                     </div>
                     {#if event.message}
-                      <p class="ui-muted mt-2 text-sm">
-                        {event.message}
-                      </p>
+                      <p class="ui-muted mt-2 break-words">{event.message}</p>
                     {/if}
                     <p class="ui-muted mt-2 text-xs">
                       received {formatDate(event.created_at)}
                     </p>
-                  </div>
-                {/each}
-              {/if}
-            </div>
-          </InsetCard>
-        {:else}
-          <InsetCard className="p-4 text-sm ui-muted">
-            <p class="font-medium ui-title">Webhooks are not supported</p>
-            <p class="mt-2 leading-6">
-              Generic Git sources do not support webhook processing. Use manual
-              resync to update packages from this repository.
-            </p>
-          </InsetCard>
-        {/if}
-      </div>
-    </Card>
-  </section>
-
-  <section class="grid gap-6 xl:grid-cols-2">
-    <Card className="rounded-[1.75rem] p-6">
-      <SectionHeading eyebrow="Packages and releases" className="mb-4" />
-      <div class="mt-4 grid gap-4">
-        {#if packages.length === 0}
-          <p class="text-sm ui-muted">No packages synchronized yet.</p>
-        {:else}
-          {#each packages as pkg (pkg.name)}
-            <InsetCard as="article" className="p-5">
-              <div class="flex items-start justify-between gap-4">
-                <div>
-                  <p class="ui-title text-lg font-semibold">
-                    <Link
-                      class="ui-link-accent"
-                      href={withOrganization(`/packages/${pkg.name}`)}
-                    >
-                      {pkg.name}
-                    </Link>
-                  </p>
-                  <p class="ui-muted mt-2 text-sm leading-6">
-                    {pkg.description || "No description"}
-                  </p>
-                </div>
-                <div class="text-right text-sm ui-muted">
-                  <p>{pkg.release_count} releases</p>
-                  <p class="mt-1">{pkg.visibility}</p>
-                  <p class="mt-1">
-                    {pkg.active ? "listed" : "hidden"}
-                  </p>
-                </div>
-              </div>
-              <div class="mt-4 flex flex-wrap gap-2">
-                {#each pkg.releases as release (release.version)}
-                  <span
-                    class="ui-code rounded-full px-3 py-1.5 text-xs font-medium"
-                  >
-                    {release.version}
-                  </span>
-                {/each}
-              </div>
-            </InsetCard>
-          {/each}
-        {/if}
-      </div>
-    </Card>
-
-    <Card className="rounded-[1.75rem] p-6">
-      <SectionHeading eyebrow="Audit trail" className="mb-4" />
-      <div class="mt-4 grid gap-3">
+                  </InsetCard>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
+      <div
+        role={supportsWebhookProcessing ? "tabpanel" : undefined}
+        id="activity-panel-audit"
+        aria-labelledby={supportsWebhookProcessing
+          ? "activity-tab-audit"
+          : undefined}
+        hidden={activeTab !== "audit"}
+      >
         {#if audit.length === 0}
-          <p class="text-sm ui-muted">
-            No {resolvedBranding.name} audit entries for this source yet.
-          </p>
+          <p class="text-sm ui-muted">No audit entries for this source yet.</p>
         {:else}
-          {#each audit as entry (entry.id)}
-            <InsetCard className="p-4">
-              <p class="font-medium ui-title">
-                {entry.event}
-              </p>
-              <p class="ui-muted mt-2 text-sm">
-                {formatDate(entry.occurred_at)}
-              </p>
-            </InsetCard>
-          {/each}
+          <ul class="grid gap-2">
+            {#each audit as entry (entry.id)}
+              <li>
+                <InsetCard
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+                >
+                  <span class="min-w-0">
+                    <span class="font-medium ui-title">
+                      {auditEventLabel(entry.event)}
+                    </span>
+                    <span class="ui-muted ml-2 text-xs break-all">
+                      {entry.event}
+                    </span>
+                  </span>
+                  <span class="ui-muted">
+                    {formatDate(entry.occurred_at)}
+                  </span>
+                </InsetCard>
+              </li>
+            {/each}
+          </ul>
         {/if}
       </div>
     </Card>
+
+    {#if can_manage_sources}
+      <Card className="min-w-0 rounded-[1.75rem] border-red-500/40 p-6">
+        <SectionHeading eyebrow="Source actions" className="mb-4" />
+        <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          {#if source.packages_active}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => (pendingAction = "hide")}
+            >
+              Hide packages from {resolvedBranding.name}
+            </Button>
+          {:else}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              disabled={actionSubmitting}
+              onclick={() => postNow("packages/activity", { active: "1" })}
+            >
+              Show packages in {resolvedBranding.name}
+            </Button>
+          {/if}
+          {#if source.archived}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              disabled={actionSubmitting}
+              onclick={() => postNow("archive", { archived: "0" })}
+            >
+              Restore source
+            </Button>
+          {:else}
+            <Button
+              className="w-full rounded-full px-4 py-2 text-sm"
+              type="button"
+              variant="secondary"
+              onclick={() => (pendingAction = "archive")}
+            >
+              Archive source
+            </Button>
+          {/if}
+          <Button
+            className="w-full rounded-full px-4 py-2 text-sm"
+            type="button"
+            variant="danger"
+            onclick={() => (sourceDeleteConfirmOpen = true)}
+          >
+            Delete source
+          </Button>
+        </div>
+      </Card>
+    {/if}
   </section>
+
+  <ConfirmationModal
+    open={pendingAction === "hide"}
+    eyebrow="Source actions"
+    title={`Hide packages from ${resolvedBranding.name}?`}
+    description={`All packages of this source are hidden from the ${resolvedBranding.name} registry, so Composer can no longer install or update them until they are shown again. Releases, webhooks and sync settings are not changed. Use "Show packages in ${resolvedBranding.name}" to list them again.`}
+    confirmLabel="Hide packages"
+    cancelLabel="Keep packages listed"
+    confirming={actionSubmitting}
+    onCancel={() => (pendingAction = null)}
+    onConfirm={confirmAction}
+  />
+
+  <ConfirmationModal
+    open={pendingAction === "archive"}
+    eyebrow="Source actions"
+    title="Archive source?"
+    description={`Archiving deactivates the source, so syncing and manual re-sync stop, and hides all its packages from the ${resolvedBranding.name} registry, so Composer can no longer install or update them. Releases and settings are kept. Restore source re-activates it and lists its packages again, including any you hid separately.`}
+    confirmLabel="Archive source"
+    cancelLabel="Keep source active"
+    confirming={actionSubmitting}
+    onCancel={() => (pendingAction = null)}
+    onConfirm={confirmAction}
+  />
+
+  <ConfirmationModal
+    open={rotateConfirmOpen}
+    eyebrow="Webhook"
+    title="Rotate webhook secret?"
+    description={`Rotating generates a new secret and the old one stops working at once. ${resolvedBranding.name} does not update the webhook at the provider, not even an automatically registered one: replace the secret in the provider webhook settings yourself, otherwise deliveries will be rejected.`}
+    confirmLabel="Rotate secret"
+    cancelLabel="Keep current secret"
+    confirming={rotating}
+    onCancel={() => (rotateConfirmOpen = false)}
+    onConfirm={confirmRotate}
+  />
 
   <ConfirmationModal
     open={sourceDeleteConfirmOpen}
     eyebrow="Source"
     title="Delete source?"
-    description="This removes the source and its synchronized package data from the organization."
+    description={`Deletion runs in the background and cannot be undone. It permanently removes the source, all its packages and releases, their stored archives and its webhook data from ${resolvedBranding.name}. An automatically registered webhook is also removed at the provider; the repository itself is not touched.`}
     confirmLabel="Delete source"
     cancelLabel="Keep source"
     confirming={sourceDeleting}

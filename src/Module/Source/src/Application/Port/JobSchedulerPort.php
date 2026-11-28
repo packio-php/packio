@@ -50,6 +50,11 @@ interface JobSchedulerPort
         int $priority = 0
     ): string;
 
+    /**
+     * @return null|'pending'|'running'
+     */
+    public function activeSourceSyncStatus(string $organizationId, string $sourceId): ?string;
+
     public function publishAfterAudit(string $jobId, string $organizationId): bool;
 
     public function confirmAudit(string $jobId, string $organizationId): bool;

@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace Packio\Source\Infrastructure\Handler;
 
+use Common\Exception\PublicValidationException;
 use Common\Logging\SafeExceptionContext;
 use Common\Provider\SourceProviderMetadataCatalog;
 use Laminas\Diactoros\Response\RedirectResponse;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
@@ -52,6 +54,7 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
         private SourceAuthorizationStrategyResolver $sourceAuthorizationStrategyResolver,
         private InertiaNotificationMessenger $inertiaNotificationMessenger,
         private SourceProviderMetadataCatalog $sourceProviderMetadataCatalog,
+        private ValidationRedirectState $validationRedirectState,
         private ?LoggerInterface $logger = null,
     ) {}
 
@@ -64,6 +67,8 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
         $form = $request->getAttribute(ProviderAuthorizationRequest::class);
 
         $isSelfHosted = $this->sourceProviderMetadataCatalog->isSelfHosted($form->provider);
+
+        $failed = false;
 
         try {
             $this->sourceApiFacade->authorizeProviderInContext(
@@ -95,14 +100,22 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
 
             $this->inertiaNotificationMessenger->toast($request, 'success', 'Provider authorization saved. Available resources were refreshed.');
         } catch (Throwable $exception) {
+            $failed = true;
             $this->logger?->error('Provider authorization failed.', SafeExceptionContext::forRequest($exception, $request));
-            $this->inertiaNotificationMessenger->toast($request, 'error', 'Provider authorization failed.');
+            $this->validationRedirectState->errors($request, [
+                'authorization_token' => [
+                    $exception instanceof PublicValidationException
+                        ? $exception->getMessage()
+                        : 'Packio could not verify this token. Check that it is valid and has repository read access.',
+                ],
+            ]);
         }
 
+        // A failed save returns to the list so the dialog stays open on the form with the error.
         $base = '/organization/' . $organizationDto->slug . '/sources';
 
         return new RedirectResponse(
-            1 === preg_match('#\A' . preg_quote($base, '#') . '/[0-9a-fA-F-]{36}(\?[A-Za-z0-9_=&%.\-]*)?\z#', $form->returnTo)
+            ! $failed && 1 === preg_match('#\A' . preg_quote($base, '#') . '/[0-9a-fA-F-]{36}(\?[A-Za-z0-9_=&%.\-]*)?\z#', $form->returnTo)
                 ? $form->returnTo
                 : $base,
         );

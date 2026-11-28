@@ -12,16 +12,20 @@ use Packio\Application\Routing\Attribute\ValidateMappedRequest;
 use Packio\Application\Routing\Attribute\ValidationFailed;
 use Packio\Application\Routing\Attribute\ValidationNotify;
 use Packio\Publication\Application\Command\ConnectSourcesUseCase;
+use Packio\Publication\Application\Dto\ConnectSourceOutcome;
 use Packio\Publication\Infrastructure\Request\ConnectSourcesCommandFactory;
 use Packio\Publication\Infrastructure\Request\SourceConnectRequest;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
+use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
+use Sirix\InertiaPsr15\Service\InertiaInterface;
 use Sirix\Mezzio\Authentication\Attribute\Authenticated;
 use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 use Sirix\Mezzio\Valinor\Attribute\MapRequest;
 
+use function array_map;
 use function count;
 use function sprintf;
 
@@ -67,6 +71,20 @@ final readonly class SourceConnectHandler implements RequestHandlerInterface
                 default                                 => sprintf('%d source(s) queued for import. You can leave this page.', $queued),
             };
             $this->inertiaNotificationMessenger->toast($request, $type, $message);
+            $inertia = $request->getAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE);
+            if ($inertia instanceof InertiaInterface) {
+                $inertia->flash('source_connect_result', [
+                    'queued'  => array_map(static fn (ConnectSourceOutcome $o): string => $o->repository, $result->queued),
+                    'skipped' => array_map(static fn (ConnectSourceOutcome $o): string => $o->repository, $result->skipped),
+                    'failed'  => array_map(
+                        static fn (ConnectSourceOutcome $o): array => [
+                            'repository' => $o->repository,
+                            'message'    => $o->message,
+                        ],
+                        $result->failed,
+                    ),
+                ]);
+            }
         } catch (InvalidArgumentException) {
             $this->inertiaNotificationMessenger->toast($request, 'error', 'Please select at least one valid repository.');
         }

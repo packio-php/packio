@@ -4,12 +4,17 @@ declare(strict_types=1);
 
 namespace PackioTest\Unit\Source\Infrastructure\Handler;
 
+use Common\Exception\PublicValidationException;
 use Common\Provider\SourceProviderMetadataCatalog;
 use Laminas\Diactoros\ServerRequest;
+use Mezzio\Session\Session;
+use Mezzio\Session\SessionMiddleware;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Shared\Api\Dto\OrganizationDto;
 use Packio\Shared\Domain\Organization\ActorContext;
+use Packio\Source\Api\Dto\ProviderAuthorizationDto;
 use Packio\Source\Api\SourceApiFacadeInterface;
 use Packio\Source\Domain\Service\SourceAuthorizationStrategyResolver;
 use Packio\Source\Infrastructure\Handler\SourceAuthorizationStoreHandler;
@@ -20,7 +25,9 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+use RuntimeException;
 use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
+use Throwable;
 
 #[CoversClass(SourceAuthorizationStoreHandler::class)]
 #[AllowMockObjectsWithoutExpectations]
@@ -78,23 +85,65 @@ final class SourceAuthorizationStoreHandlerTest extends TestCase
         yield 'trailing newline' => [self::SOURCE_PATH . "\n"];
     }
 
-    private function redirectFor(string $returnTo): string
+    #[Test]
+    #[DataProvider('failures')]
+    public function failureSetsFieldErrorWithoutErrorToast(Throwable $exception, string $message): void
     {
-        $request = new ServerRequest()
+        $facade = $this->createStub(SourceApiFacadeInterface::class);
+        $facade->method('authorizeProviderInContext')->willThrowException($exception);
+        $session = new Session([]);
+        $inertia = new TestInertia();
+        $request = $this->request(self::SOURCE_PATH)->withAttribute(SessionMiddleware::SESSION_ATTRIBUTE, $session)->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia);
+
+        $response = $this->handler($facade)->handle($request);
+
+        self::assertSame('/organization/my-org/sources', $response->getHeaderLine('Location'));
+        self::assertSame([
+            'authorization_token' => [$message],
+        ], new ValidationRedirectState()->consumeErrors($request));
+        self::assertArrayNotHasKey('toasts', $inertia->flash);
+    }
+
+    /**
+     * @return iterable<string, array{Throwable, string}>
+     */
+    public static function failures(): iterable
+    {
+        yield 'generic' => [new RuntimeException('secret detail'), 'Packio could not verify this token. Check that it is valid and has repository read access.'];
+
+        yield 'public' => [new PublicValidationException('Token is expired.'), 'Token is expired.'];
+    }
+
+    private function request(string $returnTo): ServerRequest
+    {
+        return new ServerRequest()
             ->withAttribute(RequestContextAttributes::CURRENT_ORGANIZATION, new OrganizationDto('org-1', 'my-org', 'My Org'))
             ->withAttribute(RequestContextAttributes::ORGANIZATION_ACTOR_CONTEXT, new ActorContext('org-1', 'user-1', 'owner'))
             ->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, new TestInertia())
+            ->withAttribute(SessionMiddleware::SESSION_ATTRIBUTE, new Session([]))
             ->withAttribute(
                 ProviderAuthorizationRequest::class,
                 new ProviderAuthorizationRequest(provider: 'github', authorizationToken: 't', returnTo: $returnTo),
             )
         ;
+    }
 
+    private function handler(SourceApiFacadeInterface $facade): SourceAuthorizationStoreHandler
+    {
         return new SourceAuthorizationStoreHandler(
-            $this->createStub(SourceApiFacadeInterface::class),
+            $facade,
             new SourceAuthorizationStrategyResolver(),
             new InertiaNotificationMessenger(),
             new SourceProviderMetadataCatalog(),
-        )->handle($request)->getHeaderLine('Location');
+            new ValidationRedirectState(),
+        );
+    }
+
+    private function redirectFor(string $returnTo): string
+    {
+        $facade = $this->createStub(SourceApiFacadeInterface::class);
+        $facade->method('authorizeProviderInContext')->willReturn(new ProviderAuthorizationDto('auth-1', 'org-1', 'github', 'token', 'active'));
+
+        return $this->handler($facade)->handle($this->request($returnTo))->getHeaderLine('Location');
     }
 }

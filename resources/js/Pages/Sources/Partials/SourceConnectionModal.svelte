@@ -1,13 +1,9 @@
 <script lang="ts">
-  import { Trash2, X } from "@lucide/svelte";
+  import { X } from "@lucide/svelte";
   import { router } from "@inertiajs/svelte";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
-  import Input from "@/Components/ui/Input.svelte";
-  import InsetCard from "@/Components/ui/InsetCard.svelte";
-  import OAuthIcon from "@/Components/ui/OAuthIcon.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import Select from "@/Components/ui/Select.svelte";
   import { toast } from "@/lib/toast";
   import { apiClient } from "@/lib/api";
@@ -18,8 +14,19 @@
     ProviderAuthorizationPayload,
     ProviderResourcePayload,
     UserOAuthAccountPayload,
+    ValidationErrors,
   } from "@/types/pages";
   import type { OrganizationSummary } from "@/types/organization";
+  import type { PackioFlashPayload } from "@/types/flash";
+  import AddSourceForm from "./AddSourceForm.svelte";
+  import ProviderAccessPanel from "./ProviderAccessPanel.svelte";
+  import { isAuthorizationReconnectRequired } from "./authorizationStatus";
+
+  const connectFormId = "add-source-form";
+  const accessFormId = "provider-access-form";
+  let accessTokenFormOpen = $state(false);
+  const authorizationRejectedMessage =
+    "The provider rejected this access. Reconnect it to load repositories.";
 
   let dialog: HTMLElement | undefined = $state();
 
@@ -45,7 +52,14 @@
     }
   }
 
+  // On the window, not the dialog: when the focused control unmounts, focus falls to <body>.
   function handleDialogKeydown(event: KeyboardEvent): void {
+    // A dialog stacked on top (delete confirmation) handles its own keys.
+    const target = event.target instanceof Element ? event.target : null;
+    const owner = target?.closest('[role="dialog"]');
+    if (owner && owner !== dialog) {
+      return;
+    }
     if (event.key === "Escape") {
       onClose();
     } else if (event.key === "Tab") {
@@ -66,12 +80,15 @@
     sourceProviderInstances?: SourceProviderInstancePayload[];
     existingSourceUrls: Set<string>;
     organization: OrganizationSummary | null;
-    resolvedBranding: { name: string };
     isSubmitting: boolean;
     user_oauth_accounts?: UserOAuthAccountPayload[];
     initialProvider?: string;
     initialProviderInstanceId?: string;
     returnTo?: string;
+    connectResult?: PackioFlashPayload["source_connect_result"] | null;
+    // Access-form feedback from the page: validation errors of the last failed save, and a counter bumped on each success.
+    accessErrors?: ValidationErrors;
+    accessSaved?: number;
     onClose: () => void;
     onConnectSubmit: (
       event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -95,12 +112,14 @@
     sourceProviderInstances = [],
     existingSourceUrls,
     organization,
-    resolvedBranding,
     isSubmitting,
     user_oauth_accounts = [],
     initialProvider = "",
     initialProviderInstanceId = "",
     returnTo = "",
+    connectResult = null,
+    accessErrors = {},
+    accessSaved = 0,
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -109,6 +128,8 @@
     withOrganization,
   }: Props = $props();
 
+  // Connect-mode state lives here: it survives switching to access mode and back,
+  // and the sessionStorage restore, OAuth flow and provider reset write it.
   let selectedProvider = $state("github");
   let selectedAuthorizationId = $state("");
   let selectedProviderInstanceId = $state("");
@@ -117,9 +138,37 @@
   let connectVisibility = $state<"private" | "public">("private");
   let keepLastReleases = $state("0");
   let showAdvancedConnect = $state(false);
-  let instanceUrl = $state("");
   let oauthPopup: Window | null = null;
   let hasClickedLoad = $state(false);
+  let showManualUrl = $state(false);
+  // Where access mode was entered from; the connect wizard resumes after a successful authorization.
+  let accessOrigin: "connect" | null = $state(null);
+  let result = $state<PackioFlashPayload["source_connect_result"] | null>(null);
+  // Bumped when OAuth saves access while staying in access mode.
+  let oauthSaved = $state(0);
+  let lastAccessSaved = untrack(() => accessSaved);
+
+  // A saved token returns to the wizard it came from.
+  $effect(() => {
+    if (accessSaved !== lastAccessSaved) {
+      lastAccessSaved = accessSaved;
+      if (accessOrigin === "connect" && !returnTo) {
+        accessOrigin = null;
+        activeModal = "connect";
+      }
+    }
+  });
+
+  // After a partial connect only the failed repositories stay selected.
+  $effect(() => {
+    const latest = connectResult;
+    untrack(() => {
+      result = latest;
+      if (latest && latest.failed.length > 0 && !showManualUrl) {
+        selectedResources = latest.failed.map((item) => item.repository);
+      }
+    });
+  });
 
   type BackendToastPayload = {
     type?: ToastType | null;
@@ -239,57 +288,22 @@
     return false;
   }
 
-  async function fetchResourcesForAuth(
-    authorizationId: string,
-    provider: string,
-  ): Promise<void> {
-    const authorization = providerAuthorizationsAll.find(
-      (item) => item.id === authorizationId,
-    );
-    if (isAuthorizationReconnectRequired(authorization)) {
-      selectedResources = [];
-      if (authorization?.auth_failure_reason) {
-        toast.error(authorization.auth_failure_reason);
-      }
+  // Focus must not stay on a control that the mode switch removed.
+  let shownMode = untrack(() => activeModal);
+  $effect(() => {
+    if (activeModal === shownMode) {
       return;
     }
-
-    const org = organization?.slug ?? "";
-    const result = await apiClient.get<{
-      resources: ProviderResourcePayload[];
-    }>(
-      `/organization/${org}/sources/authorizations/${authorizationId}/resources?provider=${encodeURIComponent(provider)}`,
+    shownMode = activeModal;
+    void tick().then(() =>
+      dialog?.querySelector<HTMLElement>("#source-provider")?.focus(),
     );
-
-    if (result.ok) {
-      providerResourcesAll = {
-        ...providerResourcesAll,
-        [authorizationId]: result.data.resources,
-      };
-    } else if (result.status === 401) {
-      // For 401 we need the full errorBody; keep fallback behavior here,
-      // because apiClient already returns a parsed error string.
-      // Use applyAuthorizationFailureState with null when extra details are unavailable.
-      const errorMessage = applyAuthorizationFailureState(
-        authorizationId,
-        null,
-      );
-      if (errorMessage) {
-        toast.error(errorMessage);
-      }
-    } else {
-      toast.error(result.error);
-      providerResourcesAll = {
-        ...providerResourcesAll,
-        [authorizationId]: [],
-      };
-    }
-  }
+  });
 
   // Restore state from sessionStorage if available
   onMount(() => {
     window.addEventListener("message", handleSourceOAuthMessage);
-    dialog?.focus();
+    (dialog?.querySelector<HTMLElement>("#source-provider") ?? dialog)?.focus();
 
     const savedModalState = sessionStorage.getItem("sources_modal_state");
     const connectSuccess = sessionStorage.getItem("sources_connect_success");
@@ -336,18 +350,9 @@
     connectVisibility = "private";
     keepLastReleases = "0";
     showAdvancedConnect = false;
+    showManualUrl = false;
     hasClickedLoad = false;
-  }
-
-  function selectAuthorization(authorizationId: string): void {
-    if (selectedAuthorizationId === authorizationId) {
-      return;
-    }
-
-    selectedAuthorizationId = authorizationId;
-    selectedResources = [];
-    selectedRepositoryUrl = "";
-    hasClickedLoad = false;
+    result = null;
   }
 
   function selectProviderInstance(providerInstanceId: string): void {
@@ -360,6 +365,7 @@
     selectedResources = [];
     selectedRepositoryUrl = "";
     hasClickedLoad = false;
+    result = null;
   }
 
   async function createAuthorizationFromOAuth(
@@ -388,6 +394,11 @@
       if (returnTo && activeModal === "access") {
         onAuthorizationCreated(authorization);
         router.visit(returnTo);
+        return;
+      }
+      if (activeModal === "access") {
+        oauthSaved += 1;
+        onAuthorizationCreated(authorization);
         return;
       }
       selectedAuthorizationId = authorization.id;
@@ -419,6 +430,7 @@
         const errorMessage = applyAuthorizationFailureState(
           authorization.id,
           null,
+          authorizationRejectedMessage,
         );
         if (errorMessage) {
           toast.error(errorMessage);
@@ -471,8 +483,9 @@
       return;
     }
 
-    // Opened from a source page: stay in access mode; the authorization step returns there.
-    if (!(returnTo && activeModal === "access")) {
+    // Access mode stays put unless it was opened from the wizard, which resumes.
+    if (activeModal === "access" && accessOrigin === "connect" && !returnTo) {
+      accessOrigin = null;
       activeModal = "connect";
     }
 
@@ -547,52 +560,6 @@
     const providerMeta = providers.find((p) => p.key === providerKey);
 
     return providerMeta?.name ?? providerKey;
-  }
-
-  function isAuthorizationReconnectRequired(
-    authorization: ProviderAuthorizationPayload | null | undefined,
-  ): boolean {
-    return (
-      authorization?.status === "inactive" ||
-      authorization?.auth_health === "reauthorization_required"
-    );
-  }
-
-  function authorizationHealthLabel(
-    authorization: ProviderAuthorizationPayload | null | undefined,
-  ): string | null {
-    if (!authorization) {
-      return null;
-    }
-
-    return isAuthorizationReconnectRequired(authorization)
-      ? "Reauthorization required"
-      : authorization.auth_health === "healthy"
-        ? "Healthy"
-        : authorization.auth_health
-          ? "Authorization error"
-          : null;
-  }
-
-  function authorizationCardClass(
-    authorization: ProviderAuthorizationPayload,
-    selected: boolean,
-  ): string {
-    const reconnectRequired = isAuthorizationReconnectRequired(authorization);
-
-    if (selected && reconnectRequired) {
-      return "border-(--button-danger-bg) bg-(--danger-soft) shadow-sm";
-    }
-
-    if (selected) {
-      return "border-(--accent) bg-(--surface-muted) shadow-sm";
-    }
-
-    if (reconnectRequired) {
-      return "border-(--button-danger-bg) bg-(--danger-soft)";
-    }
-
-    return "border-(--panel-border) bg-(--surface) hover:border-(--accent) hover:bg-(--surface-muted)";
   }
 
   function handleConnectSubmit(
@@ -699,58 +666,10 @@
       selectedAuthorizationId = "";
     }
   });
-  // Track if resources are loading for selected authorization
-  let resourcesLoading = $derived(
-    selectedAuthorizationId !== "" &&
-      !providerResourcesAll[selectedAuthorizationId] &&
-      hasClickedLoad,
-  );
-  // Group OAuth accounts by provider
-  let oauthAccountsByProvider = $derived(
-    user_oauth_accounts.reduce(
-      (acc, account) => {
-        if (!acc[account.provider]) acc[account.provider] = [];
-        acc[account.provider].push(account);
-        return acc;
-      },
-      {} as Record<string, UserOAuthAccountPayload[]>,
-    ),
-  );
   let selectedProviderMeta = $derived(
     providers.find((p) => p.key === selectedProvider) ?? null,
   );
-  let selectedOAuthProvider = $derived(
-    selectedProviderMeta?.oauth_provider ?? null,
-  );
-  let selectedProviderInstance = $derived(
-    effectiveProviderInstances.find(
-      (instance) => instance.id === selectedProviderInstanceId,
-    ) ?? null,
-  );
-  let providerSupportsSelectedInstanceOAuth = $derived(
-    !providerNeedsInstance ||
-      selectedProviderInstance?.auth_mode === "oauth2" ||
-      selectedProviderInstance?.auth_mode === "oauth2_and_token",
-  );
-  let selectedProviderSupportsOAuth = $derived(
-    selectedProviderMeta?.oauth_available === true &&
-      null !== selectedOAuthProvider &&
-      providerSupportsSelectedInstanceOAuth,
-  );
-  let selectedOAuthAccounts = $derived(
-    null !== selectedOAuthProvider
-      ? (oauthAccountsByProvider[selectedOAuthProvider] ?? [])
-      : [],
-  );
-  let selectedOAuthIconProvider = $derived(selectedOAuthProvider ?? "github");
-  // Check if we have OAuth for selected provider
-  let hasOAuthForSelected = $derived(selectedOAuthAccounts.length > 0);
   let isGenericGitProvider = $derived(selectedProvider === "generic_git");
-  let providerSupportsSelectedInstanceToken = $derived(
-    !providerNeedsInstance ||
-      selectedProviderInstance?.auth_mode === "token" ||
-      selectedProviderInstance?.auth_mode === "oauth2_and_token",
-  );
   let needsAuthorization = $derived(filteredAuthorizations.length === 0);
   let selectedAuthorization = $derived(
     filteredAuthorizations.find((a) => a.id === selectedAuthorizationId) ??
@@ -759,33 +678,10 @@
   let selectedAuthorizationRequiresReconnect = $derived(
     isAuthorizationReconnectRequired(selectedAuthorization),
   );
-  let providerResources = $derived(
-    selectedAuthorization
-      ? (providerResourcesAll[selectedAuthorization.id] ?? [])
-      : [],
-  );
-  $effect(() => {
-    if (providerResources.length === 1 && hasClickedLoad) {
-      const resource = providerResources[0];
-      if (!existingSourceUrls.has(resource.canonical_url)) {
-        selectedResources = [resource.canonical_url];
-      }
-    }
-  });
-  let requiresAuthorizationSelection = $derived(
-    filteredAuthorizations.length > 1 && "" === selectedAuthorizationId,
-  );
-  let publishesPrivateRepository = $derived(
-    connectVisibility === "public" &&
-      providerResources.some(
-        (resource) =>
-          resource.private &&
-          selectedResources.includes(resource.canonical_url),
-      ),
-  );
+  let usesRepositoryUrl = $derived(isGenericGitProvider || showManualUrl);
   let hasManualRepositoryUrl = $derived(selectedRepositoryUrl.trim() !== "");
   let connectSourceCount = $derived(
-    isGenericGitProvider
+    usesRepositoryUrl
       ? hasManualRepositoryUrl
         ? 1
         : 0
@@ -793,49 +689,65 @@
   );
   let canConnectSource = $derived(
     selectedProviderMeta?.capabilities?.supports_synchronization !== false &&
-      (isGenericGitProvider
-        ? hasManualRepositoryUrl && !selectedAuthorizationRequiresReconnect
-        : (!needsAuthorization || showAdvancedConnect) &&
-          (!requiresAuthorizationSelection || showAdvancedConnect) &&
+      !selectedAuthorizationRequiresReconnect &&
+      (usesRepositoryUrl
+        ? hasManualRepositoryUrl
+        : !needsAuthorization &&
+          !(
+            filteredAuthorizations.length > 1 && selectedAuthorizationId === ""
+          ) &&
           selectedResources.length > 0),
   );
+  // Only active, configured access counts as available.
+  let hasSavedAccess = $derived(
+    activeModal === "connect"
+      ? filteredAuthorizations.some((a) => !isAuthorizationReconnectRequired(a))
+      : manageableAuthorizations.some(
+          (a) => a.configured && a.status === "active",
+        ),
+  );
 </script>
+
+<svelte:window onkeydown={handleDialogKeydown} />
 
 <div
   class="fixed inset-0 z-[60] overflow-y-auto bg-(--page-bg)/70 backdrop-blur"
   onclick={handleClose}
-  onkeydown={(event) => event.key === "Escape" && handleClose()}
   role="presentation"
   tabindex="-1"
 >
-  <div class="container mx-auto min-h-full px-4 py-6 md:py-10">
+  <div class="container mx-auto flex min-h-full items-center px-4 py-4">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       bind:this={dialog}
       onclick={(event) => event.stopPropagation()}
-      onkeydown={handleDialogKeydown}
       role="dialog"
       aria-modal="true"
       aria-label={activeModal === "connect"
         ? "Add source"
         : "Manage provider access"}
       tabindex="-1"
+      class="mx-auto w-full max-w-[40rem]"
     >
       <Card
-        className="mx-auto max-h-[calc(100vh-3rem)] max-w-3xl overflow-y-auto rounded-[1.9rem] p-6 md:p-8"
+        padding="p-0"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[1.9rem]"
       >
-        <div class="flex items-start justify-between gap-4">
-          <SectionHeading
-            eyebrow={activeModal === "connect"
-              ? "Add source"
-              : "Provider access"}
-            title={activeModal === "connect"
-              ? `Connect a source to ${organization?.name || resolvedBranding.name}`
-              : "Manage provider access"}
-            description={activeModal === "connect"
-              ? "Choose a provider first. If access already exists, Packio will reuse it automatically."
-              : "Provider authorization is stored at the organization level and reused across multiple sources."}
-            className="max-w-2xl"
-          />
+        <div
+          class="flex items-start justify-between gap-4 px-5 pt-5 pb-3 sm:px-6"
+        >
+          <div>
+            <h2 class="text-xl font-semibold" style="color: var(--page-ink);">
+              {activeModal === "connect"
+                ? "Add source"
+                : "Manage provider access"}
+            </h2>
+            {#if activeModal === "access"}
+              <p class="mt-1 text-sm ui-muted">
+                Access is saved for this organization
+              </p>
+            {/if}
+          </div>
           <Button
             type="button"
             variant="iconSmall"
@@ -846,893 +758,183 @@
           </Button>
         </div>
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-          <!-- Sidebar -->
-          <div class="grid gap-3 self-start">
-            {#each selectableProviders as provider (provider.key)}
-              <div
-                role="button"
-                tabindex="0"
-                class={`rounded-[1.25rem] border p-4 text-left transition cursor-pointer ${
-                  selectedProvider === provider.key
-                    ? "ui-card"
-                    : "ui-inset hover:border-(--accent)"
-                }`}
-                onclick={() => resetConnectFlow(provider.key)}
-                onkeydown={(event) =>
-                  event.key === "Enter" && resetConnectFlow(provider.key)}
+        <div
+          class="grid min-h-0 flex-1 content-start gap-5 overflow-y-auto px-5 py-3 sm:px-6"
+        >
+          <div class="grid gap-2">
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">Provider</span>
+              <Select
+                id="source-provider"
+                className="w-full"
+                value={selectedProvider}
+                onchange={(event) =>
+                  resetConnectFlow(event.currentTarget.value)}
               >
-                <div class="flex items-start justify-between gap-3">
-                  <span class="font-medium ui-title">{provider.name}</span>
-                  <span
-                    class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      provider.capabilities?.supports_synchronization
-                        ? "ui-badge-accent"
-                        : "ui-badge-muted"
-                    }`}
-                  >
-                    {provider.capabilities?.supports_synchronization
-                      ? "ready"
-                      : "soon"}
-                  </span>
-                </div>
-                <span class="mt-2 block text-xs leading-6 ui-muted">
-                  {provider.description}
-                </span>
-              </div>
-            {/each}
+                {#each selectableProviders as provider (provider.key)}
+                  <option value={provider.key}>{provider.name}</option>
+                {/each}
+              </Select>
+            </label>
+            <p class="text-sm ui-muted" aria-live="polite">
+              {hasSavedAccess ? "Saved access available" : "No saved access"}
+            </p>
           </div>
 
-          <!-- Main Content -->
-          {#if activeModal === "access"}
-            <div class="grid gap-5">
-              {#if providerNeedsInstance}
-                <InsetCard className="p-5">
-                  <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title">
-                      {selectedProviderNoun} instance
-                    </span>
-                    <Select
-                      className="rounded-2xl px-4 py-3 text-sm w-full h-14"
-                      value={selectedProviderInstanceId}
-                      onchange={(event) =>
-                        selectProviderInstance(event.currentTarget.value)}
-                    >
-                      {#each manageableProviderInstances as instance (instance.id)}
-                        <option value={instance.id}>
-                          {instance.label} ({instance.base_url})
-                        </option>
-                      {/each}
-                    </Select>
-                  </label>
-                </InsetCard>
-              {/if}
-
-              <InsetCard className="p-5">
-                <div class="flex items-start justify-between gap-3">
-                  <div>
-                    <p class="font-medium ui-title">
-                      Saved {providerName(selectedProvider)} access
-                    </p>
-                    <p class="mt-1 text-sm ui-muted">
-                      {manageableAuthorizations.length > 0
-                        ? `${manageableAuthorizations.length} authorization${manageableAuthorizations.length === 1 ? "" : "s"} managed for this provider.`
-                        : `No saved ${providerName(selectedProvider)} authorization yet.`}
-                    </p>
-                  </div>
-                </div>
-                <div class="mt-4 grid gap-3">
-                  {#if manageableAuthorizations.length === 0}
-                    <p class="text-sm ui-muted">
-                      Authorize this provider once, then source connect flows
-                      can reuse it automatically.
-                    </p>
-                  {:else}
-                    {#each manageableAuthorizations as authorization (authorization.id)}
-                      <div
-                        class={`rounded-xl border p-3 text-sm ${authorizationCardClass(
-                          authorization,
-                          false,
-                        )}`}
-                      >
-                        <div class="flex items-start justify-between gap-3">
-                          <div>
-                            <div class="flex flex-wrap items-center gap-2">
-                              <p class="font-medium ui-title">
-                                {authorization.account_name ||
-                                  authorization.auth_strategy}
-                              </p>
-                              {#if authorizationHealthLabel(authorization)}
-                                <span
-                                  class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                                    isAuthorizationReconnectRequired(
-                                      authorization,
-                                    )
-                                      ? "ui-badge-danger"
-                                      : "ui-badge-accent"
-                                  }`}
-                                >
-                                  {authorizationHealthLabel(authorization)}
-                                </span>
-                              {/if}
-                            </div>
-                            {#if authorization.masked_value}
-                              <p class="mt-1 text-xs font-mono ui-muted">
-                                {authorization.masked_value}
-                              </p>
-                            {/if}
-                            <p class="mt-1 text-xs ui-muted">
-                              {authorization.status}
-                            </p>
-                            {#if isAuthorizationReconnectRequired(authorization)}
-                              <p class="mt-1 text-xs text-(--danger)">
-                                Reauthorization required
-                              </p>
-                              {#if authorization.auth_failure_reason}
-                                <p class="mt-0.5 text-xs ui-muted">
-                                  {authorization.auth_failure_reason}
-                                </p>
-                              {/if}
-                            {/if}
-                          </div>
-                          <Button
-                            type="button"
-                            variant="icon"
-                            className="w-8 h-8 text-(--muted)"
-                            aria-label="Delete authorization"
-                            onclick={() => onDeleteAuthorization(authorization)}
-                          >
-                            <Trash2
-                              aria-hidden="true"
-                              size={14}
-                              strokeWidth={2}
-                            />
-                          </Button>
-                        </div>
-                      </div>
-                    {/each}
-                  {/if}
-                </div>
-              </InsetCard>
-
-              <!-- OAuth Section -->
-              {#if selectedProviderSupportsOAuth}
-                <InsetCard className="p-5">
-                  <p class="font-medium ui-title">Authorize via OAuth</p>
-                  <p class="mt-1 text-sm ui-muted">
-                    Connect source access for {providerName(selectedProvider)}.
-                    Login accounts are shown only as a reference.
-                  </p>
-                  <div class="mt-4 grid gap-3">
-                    {#if hasOAuthForSelected}
-                      {#each selectedOAuthAccounts as account (account.id)}
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          className="rounded-3xl px-5 flex items-center gap-3 justify-start h-auto py-3"
-                          onclick={() =>
-                            redirectToSourceOAuth(account.provider)}
-                        >
-                          <OAuthIcon provider={selectedOAuthIconProvider} />
-                          <div class="flex flex-col items-start leading-tight">
-                            <span>Connect source access</span>
-                            <span class="text-xs text-muted">
-                              Signed in as {account.provider_username ??
-                                account.provider_email ??
-                                providerName(account.provider)}
-                            </span>
-                          </div>
-                        </Button>
-                      {/each}
-                    {:else}
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="rounded-full px-5 inline-flex items-center gap-2 justify-start"
-                        onclick={() =>
-                          selectedOAuthProvider &&
-                          connectOAuth(selectedOAuthProvider)}
-                      >
-                        <OAuthIcon provider={selectedOAuthIconProvider} />
-                        <span>
-                          Connect with {providerName(selectedProvider)}
-                        </span>
-                      </Button>
-                    {/if}
-                  </div>
-                </InsetCard>
-
-                {#if providerSupportsSelectedInstanceToken}
-                  <div class="relative py-2">
-                    <div class="absolute inset-0 flex items-center">
-                      <div
-                        class="w-full border-t border-(--panel-border)"
-                      ></div>
-                    </div>
-                    <div class="relative flex justify-center">
-                      <span class="bg-(--surface) px-3 text-sm ui-muted">
-                        or enter token manually
-                      </span>
-                    </div>
-                  </div>
-                {/if}
-              {/if}
-
-              {#if providerSupportsSelectedInstanceToken}
-                <form
-                  class="grid gap-4"
-                  method="POST"
-                  action={withOrganization("/sources/authorizations")}
-                  onsubmit={(event) => {
-                    event.preventDefault();
-                    onAccessSubmit(
-                      event as SubmitEvent & {
-                        currentTarget: EventTarget & HTMLFormElement;
-                      },
-                    );
-                  }}
-                >
-                  <input
-                    type="hidden"
-                    name="provider"
-                    value={selectedProvider}
-                  />
-                  {#if returnTo}
-                    <input type="hidden" name="return_to" value={returnTo} />
-                  {/if}
-                  {#if providerNeedsInstance}
-                    <input
-                      type="hidden"
-                      name="provider_instance_id"
-                      value={selectedProviderInstanceId}
-                    />
-                  {/if}
-                  {#if selectedProviderIsSelfHosted && !providerNeedsInstance}
-                    <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title">
-                        {selectedProviderNoun} instance URL
-                      </span>
-                      <Input
-                        className="w-full h-14"
-                        name="instance_url"
-                        type="url"
-                        autocomplete="off"
-                        placeholder={selectedProvider === "gitlab_self_hosted"
-                          ? "https://gitlab.mycompany.com"
-                          : "https://git.mycompany.com"}
-                        bind:value={instanceUrl}
-                      />
-                    </label>
-                  {/if}
-                  <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title">
-                      {providerName(selectedProvider)} authorization token
-                    </span>
-                    <Input
-                      className="w-full h-14"
-                      name="authorization_token"
-                      type="password"
-                      autocomplete="off"
-                      placeholder="Paste a provider token with repository read access"
-                      required
-                    />
-                  </label>
-                  {#if selectedProvider === "generic_git"}
-                    <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title">
-                        Auth scheme
-                      </span>
-                      <Select
-                        className="rounded-2xl px-4 py-3 text-sm w-full h-14"
-                        name="auth_scheme"
-                      >
-                        <option value="bearer">Bearer token</option>
-                        <option value="basic">
-                          Basic auth (username:token)
-                        </option>
-                      </Select>
-                    </label>
-                  {/if}
-                  <div class="flex flex-wrap gap-3">
-                    <Button
-                      className="rounded-full px-5"
-                      type="submit"
-                      variant="primary"
-                    >
-                      Save provider access
-                    </Button>
-                    {#if !returnTo}
-                      <Button
-                        className="rounded-full px-5"
-                        type="button"
-                        variant="secondary"
-                        onclick={() => (activeModal = "connect")}
-                      >
-                        Continue to add source
-                      </Button>
-                    {/if}
-                  </div>
-                </form>
-              {:else}
-                <InsetCard className="p-5">
-                  <p class="font-medium ui-title">Token authorization</p>
-                  <p class="mt-1 text-sm ui-muted">
-                    This {selectedProviderNoun} instance is configured for OAuth only.
-                  </p>
-                </InsetCard>
-              {/if}
-              {#if returnTo}
-                <p class="text-sm ui-muted">
-                  Access is saved for the whole organization and can be used by
-                  other sources.
-                </p>
-                <div>
-                  <Button
-                    className="rounded-full px-5"
-                    type="button"
-                    variant="secondary"
-                    onclick={handleClose}
-                  >
-                    Done
-                  </Button>
-                </div>
-              {/if}
-            </div>
-          {:else}
-            <form
-              class="grid gap-5"
-              method="POST"
-              action={withOrganization("/sources/connect")}
-              onsubmit={(event) => {
-                event.preventDefault();
-                handleConnectSubmit(
-                  event as SubmitEvent & {
-                    currentTarget: EventTarget & HTMLFormElement;
-                  },
-                );
-              }}
+          {#if result && result.failed.length > 0 && activeModal === "connect"}
+            <div
+              role="alert"
+              class="grid gap-1 rounded-xl px-3 py-2 text-sm ui-badge-danger"
             >
-              <input type="hidden" name="provider" value={selectedProvider} />
-              {#if providerNeedsInstance}
-                <input
-                  type="hidden"
-                  name="provider_instance_id"
-                  value={selectedProviderInstanceId}
-                />
+              {#if result.queued.length + result.skipped.length > 0}
+                <p>
+                  Connected: {[...result.queued, ...result.skipped].join(", ")}
+                </p>
               {/if}
-              {#if selectedAuthorizationId}
-                <input
-                  type="hidden"
-                  name="authorization_id"
-                  value={selectedAuthorizationId}
-                />
-              {/if}
-              {#each selectedResources as resourceUrl (resourceUrl)}
-                {@const resource = providerResources.find(
-                  (r) => r.canonical_url === resourceUrl,
-                )}
-                <input
-                  type="hidden"
-                  name="resource_urls[]"
-                  value={resourceUrl}
-                />
-                {#if resource?.default_ref}
-                  <input
-                    type="hidden"
-                    name={`resource_default_refs[${resourceUrl}]`}
-                    value={resource.default_ref}
-                  />
-                {/if}
-              {/each}
-
-              {#if providerNeedsInstance}
-                <InsetCard className="p-5">
-                  <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title">
-                      {selectedProviderNoun} instance
-                    </span>
-                    <Select
-                      className="rounded-2xl px-4 py-3 text-sm w-full h-14"
-                      value={selectedProviderInstanceId}
-                      onchange={(event) =>
-                        selectProviderInstance(event.currentTarget.value)}
-                    >
-                      {#each selectableProviderInstances as instance (instance.id)}
-                        <option value={instance.id}>
-                          {instance.label} ({instance.base_url})
-                        </option>
-                      {/each}
-                    </Select>
-                  </label>
-                </InsetCard>
-              {/if}
-
-              <InsetCard className="p-5">
-                <p class="font-medium ui-title">1. Provider access</p>
-                {#if needsAuthorization}
-                  <p class="mt-2 text-sm leading-6 ui-muted">
-                    {#if isGenericGitProvider}
-                      No saved {providerName(selectedProvider)} authorization is available
-                      for this organization yet. Public repositories can still be
-                      connected by URL; private repositories need saved access or
-                      a one-off token.
-                    {:else}
-                      No saved {providerName(selectedProvider)} authorization is available
-                      for this organization yet. Save provider access first, then
-                      continue with repository selection.
-                    {/if}
-                  </p>
-                  <div class="mt-4">
-                    <Button
-                      className="rounded-full px-5"
-                      type="button"
-                      variant="secondary"
-                      onclick={() => (activeModal = "access")}
-                    >
-                      Authorize {providerName(selectedProvider)}
-                    </Button>
-                  </div>
-                {:else if filteredAuthorizations.length === 1}
-                  <p class="mt-2 text-sm leading-6 ui-muted">
-                    Using saved authorization
-                    <span class="font-medium ui-title">
-                      {selectedAuthorization?.account_name ||
-                        selectedAuthorization?.auth_strategy}
-                    </span> automatically.
-                  </p>
-                  {#if selectedAuthorization?.auth_health === "reauthorization_required"}
-                    <p class="mt-2 text-sm text-(--danger)">
-                      This authorization needs reconnection before repositories
-                      can be loaded.
-                      {#if selectedAuthorization?.auth_failure_reason}
-                        <span class="block mt-1 text-xs ui-muted">
-                          Reason: {selectedAuthorization.auth_failure_reason}
-                        </span>
-                      {/if}
-                    </p>
-                    <div class="mt-3">
-                      <Button
-                        className="rounded-full px-5"
-                        type="button"
-                        variant="secondary"
-                        onclick={() => (activeModal = "access")}
-                      >
-                        Reconnect {providerName(selectedProvider)}
-                      </Button>
-                    </div>
-                  {/if}
-                {:else}
-                  <div class="mt-4 grid gap-2">
-                    <span class="text-sm font-medium ui-title">
-                      Choose saved authorization
-                    </span>
-                    <div class="grid gap-3">
-                      {#each filteredAuthorizations as authorization (authorization.id)}
-                        {@const selected =
-                          selectedAuthorizationId === authorization.id}
-                        <button
-                          type="button"
-                          class={`w-full rounded-2xl border p-4 text-left transition ${authorizationCardClass(
-                            authorization,
-                            selected,
-                          )}`}
-                          aria-pressed={selected}
-                          onclick={() => selectAuthorization(authorization.id)}
-                        >
-                          <div class="flex items-start justify-between gap-3">
-                            <div class="min-w-0 flex-1">
-                              <div class="flex flex-wrap items-center gap-2">
-                                <span class="font-medium ui-title">
-                                  {authorization.account_name ||
-                                    authorization.auth_strategy}
-                                </span>
-                                <span
-                                  class="ui-badge-muted rounded-full px-2.5 py-1 text-[11px] font-medium"
-                                >
-                                  {authorization.status}
-                                </span>
-                                {#if authorizationHealthLabel(authorization)}
-                                  <span
-                                    class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                                      isAuthorizationReconnectRequired(
-                                        authorization,
-                                      )
-                                        ? "ui-badge-danger"
-                                        : "ui-badge-accent"
-                                    }`}
-                                  >
-                                    {authorizationHealthLabel(authorization)}
-                                  </span>
-                                {/if}
-                                {#if selected}
-                                  <span
-                                    class="ui-badge-accent rounded-full px-2.5 py-1 text-[11px] font-medium"
-                                  >
-                                    Selected
-                                  </span>
-                                {/if}
-                              </div>
-                              {#if authorization.masked_value}
-                                <p class="mt-2 text-xs font-mono ui-muted">
-                                  {authorization.masked_value}
-                                </p>
-                              {/if}
-                              {#if authorization.auth_failure_reason}
-                                <p
-                                  class={`mt-2 text-xs ${
-                                    isAuthorizationReconnectRequired(
-                                      authorization,
-                                    )
-                                      ? "text-(--danger)"
-                                      : "ui-muted"
-                                  }`}
-                                >
-                                  {authorization.auth_failure_reason}
-                                </p>
-                              {/if}
-                            </div>
-                            <div class="shrink-0 pt-0.5">
-                              <span
-                                class={`inline-flex h-5 w-5 items-center justify-center rounded-full border text-[11px] font-medium ${
-                                  selected
-                                    ? "border-(--accent) bg-(--accent) text-white"
-                                    : "border-(--panel-border) ui-muted"
-                                }`}
-                              >
-                                {selected ? "✓" : ""}
-                              </span>
-                            </div>
-                          </div>
-                        </button>
-                      {/each}
-                    </div>
-                  </div>
-                  {#if selectedAuthorization?.auth_health === "reauthorization_required"}
-                    <p class="mt-2 text-sm text-(--danger)">
-                      This authorization needs reconnection before repositories
-                      can be loaded.
-                      {#if selectedAuthorization?.auth_failure_reason}
-                        <span class="block mt-1 text-xs ui-muted">
-                          Reason: {selectedAuthorization.auth_failure_reason}
-                        </span>
-                      {/if}
-                    </p>
-                    <div class="mt-2">
-                      <Button
-                        className="rounded-full px-5"
-                        type="button"
-                        variant="secondary"
-                        onclick={() => (activeModal = "access")}
-                      >
-                        Reconnect {providerName(selectedProvider)}
-                      </Button>
-                    </div>
-                  {/if}
-                {/if}
-              </InsetCard>
-
-              <InsetCard className="p-5">
-                <p class="font-medium ui-title">2. Repository</p>
-                {#if isGenericGitProvider}
-                  <div class="mt-4 grid gap-4">
-                    <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title">
-                        Repository URL
-                      </span>
-                      <Input
-                        name="repository_url"
-                        placeholder="https://codeberg.org/owner/repository.git"
-                        bind:value={selectedRepositoryUrl}
-                        required
-                      />
-                    </label>
-                    <label class="grid gap-2">
-                      <span class="text-sm font-medium ui-title">
-                        composer.json path
-                      </span>
-                      <Input
-                        name="composer_json_path"
-                        placeholder="composer.json"
-                      />
-                    </label>
-                    <p class="text-sm leading-6 ui-muted">
-                      Generic Git uses the repository URL directly; repository
-                      discovery is not available for this provider.
-                    </p>
-                  </div>
-                {:else if !needsAuthorization && selectedAuthorization}
-                  {#if selectedAuthorizationRequiresReconnect}
-                    <p class="mt-2 text-sm leading-6 text-(--danger)">
-                      This authorization must be reconnected before repositories
-                      can be loaded.
-                    </p>
-                    {#if selectedAuthorization.auth_failure_reason}
-                      <p class="mt-2 text-xs ui-muted">
-                        Reason: {selectedAuthorization.auth_failure_reason}
-                      </p>
-                    {/if}
-                    <div class="mt-4 flex flex-wrap gap-3">
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="rounded-full px-5"
-                        onclick={() => (activeModal = "access")}
-                      >
-                        Reconnect {providerName(selectedProvider)}
-                      </Button>
-                    </div>
-                  {:else if resourcesLoading}
-                    <div class="mt-4 flex items-center gap-3">
-                      <div
-                        class="h-5 w-5 animate-spin rounded-full border-2 border-(--border) border-t-transparent"
-                      ></div>
-                      <span class="text-sm ui-muted">
-                        Loading repositories...
-                      </span>
-                    </div>
-                  {:else if !hasClickedLoad}
-                    <p class="mt-2 text-sm leading-6 ui-muted">
-                      Click Load to fetch available repositories for this
-                      authorization.
-                    </p>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      className="rounded-full px-5 mt-3"
-                      onclick={() => {
-                        hasClickedLoad = true;
-                        const auth = providerAuthorizationsAll.find(
-                          (a) => a.id === selectedAuthorizationId,
-                        );
-                        if (auth) {
-                          fetchResourcesForAuth(
-                            selectedAuthorizationId,
-                            auth.provider,
-                          );
-                        }
-                      }}
-                    >
-                      Load repositories
-                    </Button>
-                  {:else if providerResources.length === 0}
-                    <p class="mt-2 text-sm leading-6 ui-muted">
-                      No repositories were discovered for this authorization
-                      yet. You can still enter a repository URL manually in
-                      Advanced.
-                    </p>
-                  {:else if providerResources.length === 1}
-                    <p class="mt-2 text-sm leading-6 ui-muted">
-                      Repository <span class="font-medium ui-title">
-                        {providerResources[0].name}
-                      </span> was selected automatically.
-                    </p>
-                  {:else}
-                    <div class="mt-4 grid gap-2">
-                      <span class="text-sm font-medium ui-title">
-                        Select repositories ({selectedResources.length} selected)
-                      </span>
-                      <div
-                        class="max-h-60 overflow-y-auto rounded-2xl border border-(--panel-border) bg-(--surface) p-3"
-                      >
-                        {#each providerResources as resource (resource.canonical_url)}
-                          {@const isAlreadyConnected = existingSourceUrls.has(
-                            resource.canonical_url,
-                          )}
-                          <label
-                            class="flex items-start gap-3 rounded-lg p-2 {isAlreadyConnected
-                              ? 'opacity-50'
-                              : 'cursor-pointer hover:bg-(--surface-muted)'}"
-                          >
-                            <input
-                              type="checkbox"
-                              value={resource.canonical_url}
-                              disabled={isAlreadyConnected}
-                              checked={selectedResources.includes(
-                                resource.canonical_url,
-                              )}
-                              onchange={(event) => {
-                                if (event.currentTarget.checked) {
-                                  selectedResources = [
-                                    ...selectedResources,
-                                    resource.canonical_url,
-                                  ];
-                                } else {
-                                  selectedResources = selectedResources.filter(
-                                    (url) => url !== resource.canonical_url,
-                                  );
-                                }
-                              }}
-                              class="mt-0.5 h-4 w-4 rounded border-(--panel-border) disabled:cursor-not-allowed"
-                            />
-                            <span class="flex flex-col gap-0.5">
-                              <span class="text-sm">
-                                {resource.name}{#if resource.private}<span
-                                    class="ml-1 text-xs ui-muted"
-                                  >
-                                    · private
-                                  </span>{/if}
-                              </span>
-                              {#if isAlreadyConnected}<span
-                                  class="text-xs ui-badge-success"
-                                >
-                                  ✓ Already connected
-                                </span>{/if}
-                            </span>
-                          </label>
-                        {/each}
-                      </div>
-                      {#if selectedResources.length > 0}
-                        <button
-                          type="button"
-                          class="text-left text-xs ui-link-accent"
-                          onclick={() => (selectedResources = [])}
-                        >
-                          Clear selection
-                        </button>
-                      {/if}
-                    </div>
-                  {/if}
-                {:else}
-                  <p class="mt-2 text-sm leading-6 ui-muted">
-                    Repository discovery becomes available after provider access
-                    is configured.
-                  </p>
-                {/if}
-              </InsetCard>
-
-              <InsetCard className="p-5">
-                <p class="font-medium ui-title">3. Review and connect</p>
-                <div class="mt-4 grid gap-4">
-                  <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title">Visibility</span>
-                    <Select bind:value={connectVisibility} name="visibility">
-                      <option value="public">Public</option>
-                      <option value="private">Private</option>
-                    </Select>
-                  </label>
-
-                  {#if publishesPrivateRepository}
-                    <p
-                      role="alert"
-                      class="rounded-xl px-3 py-2 text-sm ui-badge-danger"
-                    >
-                      A selected repository is private. With Public visibility,
-                      its packages will be publicly available.
-                    </p>
-                  {/if}
-
-                  <label class="grid gap-2">
-                    <span class="text-sm font-medium ui-title">
-                      Keep last releases
-                    </span>
-                    <Input
-                      name="keep_last_releases"
-                      type="number"
-                      min="0"
-                      step="1"
-                      bind:value={keepLastReleases}
-                    />
-                    <span class="text-xs ui-muted">
-                      Limits active release versions, keeping the highest
-                      version numbers. Older versions are hidden from the
-                      registry and remain in package history. Dev versions do
-                      not count toward the limit. 0 disables the limit.
-                    </span>
-                  </label>
-
-                  <Button
-                    type="button"
-                    variant="soft"
-                    className="mr-auto inline-flex items-center gap-2 px-3 py-2 text-xs"
-                    aria-expanded={showAdvancedConnect}
-                    onclick={() => (showAdvancedConnect = !showAdvancedConnect)}
-                  >
-                    {#if showAdvancedConnect}<span aria-hidden="true">▼</span> Hide
-                      advanced{:else}<span aria-hidden="true">▶</span> Show advanced{/if}
-                  </Button>
-
-                  {#if showAdvancedConnect}
-                    <div
-                      class="grid gap-4 rounded-[1.25rem] border border-(--panel-border) p-4"
-                    >
-                      {#if !isGenericGitProvider}
-                        <label class="grid gap-2">
-                          <span class="text-sm font-medium ui-title">
-                            Repository URL fallback
-                          </span>
-                          <Input
-                            name="repository_url"
-                            placeholder="https://github.com/vendor/package"
-                            bind:value={selectedRepositoryUrl}
-                          />
-                        </label>
-                      {/if}
-                      <label class="grid gap-2">
-                        <span class="text-sm font-medium ui-title">
-                          One-off token override
-                        </span>
-                        <Input
-                          name="authorization_token"
-                          type="password"
-                          autocomplete="off"
-                          placeholder="Optional fallback when saved access is unavailable"
-                        />
-                      </label>
-                    </div>
-                  {/if}
-
-                  <div class="ui-code rounded-xl p-4 text-sm ui-muted">
-                    <p>
-                      <span class="font-medium ui-title">Provider:</span>
-                      {providerName(selectedProvider)}
-                    </p>
-                    <p class="mt-2">
-                      <span class="font-medium ui-title">Access:</span>
-                      {selectedAuthorization?.account_name ||
-                        selectedAuthorization?.auth_strategy ||
-                        "manual entry required"}
-                    </p>
-                    <div class="mt-2">
-                      <span class="font-medium ui-title">Repositories:</span>
-                      {#if isGenericGitProvider && hasManualRepositoryUrl}
-                        <ul class="mt-1 list-inside list-disc">
-                          <li class="break-all text-sm">
-                            {selectedRepositoryUrl}
-                          </li>
-                        </ul>
-                      {:else if selectedResources.length > 0}
-                        <ul class="mt-1 list-inside list-disc">
-                          {#each selectedResources as resourceUrl (resourceUrl)}
-                            <li class="break-all text-sm">
-                              {providerResources.find(
-                                (r) => r.canonical_url === resourceUrl,
-                              )?.name || resourceUrl}
-                            </li>
-                          {/each}
-                        </ul>
-                      {:else}
-                        <span class="ui-muted">
-                          select repositories above or enter a repository URL
-                        </span>
-                      {/if}
-                    </div>
-                    <p class="mt-2">
-                      <span class="font-medium ui-title">
-                        Release retention:
-                      </span>
-                      {Number(keepLastReleases) > 0
-                        ? `latest ${Number(keepLastReleases)} releases`
-                        : "all releases"}
-                    </p>
-                  </div>
-
-                  <div class="flex flex-wrap gap-3">
-                    <Button
-                      className="rounded-full px-5"
-                      type="submit"
-                      variant="primary"
-                      disabled={!canConnectSource || isSubmitting}
-                    >
-                      {#if isSubmitting}Connecting {connectSourceCount} source(s)...{:else}Connect
-                        {connectSourceCount || ""} source{connectSourceCount ===
-                        1
-                          ? ""
-                          : "s"}{/if}
-                    </Button>
-                    <Button
-                      className="rounded-full px-5"
-                      type="button"
-                      variant="secondary"
-                      onclick={handleClose}
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </InsetCard>
-            </form>
+              <p>
+                Needs retry:
+                {result.failed
+                  .map((item) => `${item.repository} (${item.message})`)
+                  .join(", ")}
+              </p>
+            </div>
           {/if}
+
+          {#key selectedProvider}
+            {#if activeModal === "access"}
+              <ProviderAccessPanel
+                {selectedProvider}
+                {selectedProviderInstanceId}
+                {selectedProviderMeta}
+                {selectedProviderNoun}
+                {selectedProviderIsSelfHosted}
+                {providerNeedsInstance}
+                {manageableProviderInstances}
+                {manageableAuthorizations}
+                {user_oauth_accounts}
+                {returnTo}
+                formId={accessFormId}
+                bind:tokenFormOpen={accessTokenFormOpen}
+                errors={accessErrors}
+                saved={accessSaved + oauthSaved}
+                {providerName}
+                {withOrganization}
+                onSelectProviderInstance={selectProviderInstance}
+                {onDeleteAuthorization}
+                {onAccessSubmit}
+                onOAuthRedirect={redirectToSourceOAuth}
+                onOAuthConnect={connectOAuth}
+              />
+            {:else}
+              <AddSourceForm
+                {selectedProvider}
+                {selectedProviderInstanceId}
+                {selectedProviderNoun}
+                {providerNeedsInstance}
+                {needsAuthorization}
+                {selectedAuthorization}
+                {selectedAuthorizationRequiresReconnect}
+                formId={connectFormId}
+                {selectableProviderInstances}
+                {filteredAuthorizations}
+                bind:providerResourcesAll
+                bind:selectedAuthorizationId
+                bind:selectedResources
+                bind:selectedRepositoryUrl
+                bind:connectVisibility
+                bind:keepLastReleases
+                bind:showAdvancedConnect
+                bind:showManualUrl
+                bind:hasClickedLoad
+                {existingSourceUrls}
+                {organization}
+                {providerName}
+                {withOrganization}
+                onSelectProviderInstance={selectProviderInstance}
+                onAuthorizationFailed={(authorizationId) =>
+                  applyAuthorizationFailureState(
+                    authorizationId,
+                    null,
+                    authorizationRejectedMessage,
+                  )}
+                onOpenAccess={() => {
+                  accessOrigin = "connect";
+                  activeModal = "access";
+                }}
+                onSubmit={handleConnectSubmit}
+              />
+            {/if}
+          {/key}
         </div>
+
+        {#if activeModal === "access"}
+          <div
+            class="flex flex-wrap items-center justify-end gap-3 border-t border-(--panel-border) px-5 py-4 sm:px-6"
+          >
+            {#if accessOrigin === "connect"}
+              <Button
+                className="rounded-full px-5"
+                type="button"
+                variant="secondary"
+                onclick={() => {
+                  accessOrigin = null;
+                  activeModal = "connect";
+                }}
+              >
+                Continue to add source
+              </Button>
+            {/if}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="secondary"
+              onclick={handleClose}
+            >
+              Done
+            </Button>
+            {#if accessTokenFormOpen}
+              <Button
+                className="rounded-full px-5"
+                type="submit"
+                form={accessFormId}
+                variant="primary"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? "Saving…" : "Save provider access"}
+              </Button>
+            {/if}
+          </div>
+        {:else}
+          <div
+            class="flex flex-wrap items-center justify-end gap-3 border-t border-(--panel-border) px-5 py-4 sm:px-6"
+          >
+            {#if connectSourceCount > 0}
+              <span class="mr-auto text-sm ui-muted">
+                {connectSourceCount} selected · {connectVisibility === "public"
+                  ? "Public"
+                  : "Private"}
+              </span>
+            {/if}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="secondary"
+              onclick={handleClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full px-5"
+              type="submit"
+              form={connectFormId}
+              variant="primary"
+              disabled={!canConnectSource || isSubmitting}
+            >
+              {#if isSubmitting}Connecting…{:else if connectSourceCount > 1}Connect
+                {connectSourceCount} sources{:else}Connect source{/if}
+            </Button>
+          </div>
+        {/if}
       </Card>
     </div>
   </div>

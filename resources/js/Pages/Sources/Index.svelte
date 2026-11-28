@@ -13,7 +13,6 @@
   import SourcesFilterToolbar from "./Partials/SourcesFilterToolbar.svelte";
   import SourceConnectionModal from "./Partials/SourceConnectionModal.svelte";
   import ProviderAuthorizationDeleteModal from "./Partials/ProviderAuthorizationDeleteModal.svelte";
-  import { mergeBranding } from "@/lib/branding";
   import { apiClient, Endpoints } from "@/lib/api";
   import { cleanQuery, queryString, type QueryValue } from "@/lib/queryFilters";
   import {
@@ -22,6 +21,7 @@
     storeListViewMode,
     type ListViewMode,
   } from "@/lib/listViewMode";
+  import type { PackioFlashPayload } from "@/types/flash";
   import type { AppPageProps } from "@/types/app";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
@@ -36,6 +36,7 @@
     SourcesIndexStatsPayload,
     SourcesIndexPageProps,
     UserOAuthAccountPayload,
+    ValidationErrors,
   } from "@/types/pages";
 
   const defaultPagination: PaginationPayload<SourceListItem> = {
@@ -90,7 +91,6 @@
     filters?: SourceIndexFilters;
     source_urls?: string[];
     pagination?: PaginationPayload<SourceListItem>;
-    branding?: SourcesIndexPageProps["branding"];
     organization?: OrganizationSummary | null;
     initial_list_view_mode?: ListViewMode;
     can_manage_sources?: boolean;
@@ -109,7 +109,6 @@
     filters = defaultSourceFilters,
     source_urls = [],
     pagination = defaultPagination,
-    branding = {},
     organization = null,
     initial_list_view_mode = "grid",
     can_manage_sources = false,
@@ -121,7 +120,6 @@
   let listViewMode: ListViewMode = $state("grid");
   let listViewModeInitialized = $state(false);
 
-  let resolvedBranding = $derived(mergeBranding(branding ?? {}));
   type ModalView = "access" | "connect" | null;
 
   let activeModal: ModalView = $state(null);
@@ -130,6 +128,11 @@
   let initialProviderInstanceId = $state("");
   let returnTo = $state("");
   let isSubmitting = $state(false);
+  let accessErrors = $state<ValidationErrors>({});
+  let accessSaved = $state(0);
+  let connectResult = $state<
+    PackioFlashPayload["source_connect_result"] | null
+  >(null);
   let scrollLockApplied = false;
   let previousBodyOverflow = "";
   let previousBodyPaddingRight = "";
@@ -285,6 +288,7 @@
 
   function closeModal(clearSavedState = true): void {
     activeModal = null;
+    connectResult = null;
     // Clear saved modal state to prevent reopening on next visit
     if (clearSavedState && typeof window !== "undefined") {
       sessionStorage.removeItem("sources_modal_state");
@@ -420,6 +424,10 @@
     }
 
     isSubmitting = true;
+    connectResult = null;
+    if (url.includes("/authorizations")) {
+      accessErrors = {};
+    }
 
     // Convert FormData to object, properly handling arrays
     const formData = new FormData(form);
@@ -452,18 +460,29 @@
     router.post(form.action, data as Record<string, string>, {
       preserveState: true,
       preserveScroll: true,
-      onSuccess: () => {
+      onSuccess: (page) => {
         isSubmitting = false;
         const url = form.action;
         if (url.includes("/authorizations")) {
-          form.reset();
+          accessSaved += 1;
         } else if (url.includes("/sources/connect")) {
+          const result = page.flash?.source_connect_result;
+          if (result && result.failed.length > 0) {
+            // Partial result: stay in the dialog with only the failed repositories selected.
+            connectResult = result;
+            sessionStorage.removeItem("sources_connect_success");
+            sessionStorage.removeItem("sources_modal_state");
+            return;
+          }
           closeModal(false);
           setTimeout(() => (activeModal = "connect"), 0);
         }
       },
-      onError: () => {
+      onError: (errors) => {
         isSubmitting = false;
+        if (form.action.includes("/authorizations")) {
+          accessErrors = errors as unknown as ValidationErrors;
+        }
         if (
           form.action.includes("/sources/connect") &&
           typeof window !== "undefined"
@@ -658,12 +677,14 @@
       sourceProviderInstances={source_provider_instances}
       {existingSourceUrls}
       {organization}
-      {resolvedBranding}
       {isSubmitting}
       {user_oauth_accounts}
       {initialProvider}
       {initialProviderInstanceId}
       {returnTo}
+      {connectResult}
+      {accessErrors}
+      {accessSaved}
       onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}

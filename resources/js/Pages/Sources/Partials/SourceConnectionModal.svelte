@@ -1141,14 +1141,16 @@
                     >
                       Save provider access
                     </Button>
-                    <Button
-                      className="rounded-full px-5"
-                      type="button"
-                      variant="secondary"
-                      onclick={() => (activeModal = "connect")}
-                    >
-                      Continue to add source
-                    </Button>
+                    {#if !returnTo}
+                      <Button
+                        className="rounded-full px-5"
+                        type="button"
+                        variant="secondary"
+                        onclick={() => (activeModal = "connect")}
+                      >
+                        Continue to add source
+                      </Button>
+                    {/if}
                   </div>
                 </form>
               {:else}

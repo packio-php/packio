@@ -639,6 +639,9 @@ describe("SourceConnectionModal", () => {
     it("shows Done and the note only with returnTo, and Done closes", async () => {
       const without = renderModal({ activeModal: "access" });
       expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
+      expect(
+        screen.getByRole("button", { name: "Continue to add source" }),
+      ).toBeInTheDocument();
       cleanup();
 
       const modal = renderModal({ activeModal: "access", returnTo });
@@ -648,6 +651,9 @@ describe("SourceConnectionModal", () => {
       await fireEvent.click(screen.getByRole("button", { name: "Done" }));
       expect(modal.onClose).toHaveBeenCalledOnce();
       expect(without.onClose).not.toHaveBeenCalled();
+      expect(
+        screen.queryByRole("button", { name: "Continue to add source" }),
+      ).toBeNull();
     });
 
     it("sends return_to with the token form", () => {

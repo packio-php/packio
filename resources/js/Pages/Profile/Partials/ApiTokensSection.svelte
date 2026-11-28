@@ -377,9 +377,7 @@
 
     <div class="mt-6 grid gap-3">
       {#if api_tokens.length === 0}
-        <div class="rounded-xl border border-dashed px-4 py-6">
-          <p class="text-sm ui-muted">No API tokens yet</p>
-        </div>
+        <p class="text-sm ui-muted">No API tokens yet</p>
       {:else}
         {#each api_tokens as token (token.id)}
           <InsetCard as="article" className="p-4">

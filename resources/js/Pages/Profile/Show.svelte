@@ -41,8 +41,11 @@
       Profile
     </h2>
 
-    <div class="grid grid-cols-1 items-start gap-6 xl:grid-cols-2">
-      <Card className="rounded-[1.75rem] p-6">
+    <!-- Tokens span an extra 1fr row, so a taller token list grows that row and history keeps its place. -->
+    <div
+      class="grid grid-cols-1 items-start gap-6 xl:grid-cols-[62fr_38fr] xl:grid-rows-[auto_auto_1fr]"
+    >
+      <Card className="rounded-[1.75rem] p-6 xl:col-start-1 xl:row-start-1">
         <section aria-label="Account">
           <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
             <div class="min-w-0 break-words text-xl font-semibold ui-title">
@@ -65,9 +68,13 @@
         <SignInMethodsSection {profile} {oauth_accounts} />
       </Card>
 
-      <ApiTokensSection {profile} {api_tokens} />
-    </div>
+      <div class="xl:col-start-2 xl:row-span-3 xl:row-start-1">
+        <ApiTokensSection {profile} {api_tokens} />
+      </div>
 
-    <SignInHistorySection {sign_in_history} />
+      <div class="xl:col-start-1 xl:row-start-2">
+        <SignInHistorySection {sign_in_history} />
+      </div>
+    </div>
   </section>
 </AppShell>

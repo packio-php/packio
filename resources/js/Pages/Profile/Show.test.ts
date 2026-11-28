@@ -96,18 +96,20 @@ describe("Profile show page", () => {
     expect(screen.queryByText(/Updated/)).not.toBeInTheDocument();
   });
 
-  it("places account and sign-in methods left, API tokens right, history below", () => {
+  it("places account, sign-in methods and history left, API tokens right", () => {
     const { container } = render(ProfileShow, { props: { profile } });
 
     const account = container.querySelector('[aria-label="Account"]')!;
     const methods = container.querySelector("#sign-in-methods")!;
     const tokens = container.querySelector("#api-tokens")!;
     const history = container.querySelector("#sign-in-history")!;
-    const grid = tokens.parentElement!;
+    const grid = tokens.parentElement!.parentElement!;
 
     expect(account.parentElement).toBe(methods.parentElement);
     expect(grid.contains(account)).toBe(true);
-    expect(grid.contains(history)).toBe(false);
+    expect(grid.contains(history)).toBe(true);
+    expect(tokens.parentElement!.className).toContain("xl:col-start-2");
+    expect(history.parentElement!.className).toContain("xl:col-start-1");
     expect(
       account.compareDocumentPosition(methods) &
         Node.DOCUMENT_POSITION_FOLLOWING,

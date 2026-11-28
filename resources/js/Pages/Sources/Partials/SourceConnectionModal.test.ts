@@ -878,5 +878,60 @@ describe("SourceConnectionModal", () => {
         screen.getByRole("button", { name: "Connect source" }),
       ).toBeEnabled();
     });
+
+    it("drops the previous access's load error when another access is chosen", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        ok: false,
+        status: 500,
+        error: "Boom",
+      } as never);
+      renderModal({
+        providerAuthorizationsAll: [
+          authorization,
+          { ...authorization, id: "auth-2", account_name: "hubot" },
+        ],
+      });
+      await fireEvent.change(screen.getByLabelText("Saved access"), {
+        target: { value: "auth-1" },
+      });
+      await load();
+      expect(await screen.findByRole("alert")).toHaveTextContent("Boom");
+
+      await fireEvent.change(screen.getByLabelText("Saved access"), {
+        target: { value: "auth-2" },
+      });
+
+      expect(screen.queryByText("Boom")).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Load repositories" }),
+      ).toBeInTheDocument();
+    });
+
+    it("connects a manually entered repository URL without resource_urls", async () => {
+      const modal = renderModal();
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Enter repository URL" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Connect source" }),
+      ).toBeDisabled();
+      await fireEvent.input(screen.getByLabelText("Repository URL"), {
+        target: { value: "https://github.com/vendor/private" },
+      });
+      const submit = screen.getByRole("button", { name: "Connect source" });
+      expect(submit).toBeEnabled();
+      await fireEvent.click(submit);
+
+      expect(modal.onConnectSubmit).toHaveBeenCalledOnce();
+      const form = document.getElementById(
+        "add-source-form",
+      ) as HTMLFormElement;
+      const data = new FormData(form);
+      expect(data.get("repository_url")).toBe(
+        "https://github.com/vendor/private",
+      );
+      expect(data.get("authorization_id")).toBe("auth-1");
+      expect(data.getAll("resource_urls[]")).toEqual([]);
+    });
   });
 });

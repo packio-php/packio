@@ -273,31 +273,37 @@
         </Button>
       {/if}
     {:else if !needsAuthorization && selectedAuthorization && !selectedAuthorizationRequiresReconnect}
-      <RepositoryPicker
-        {selectedAuthorization}
-        {providerResources}
-        bind:providerResourcesAll
-        bind:selectedResources
-        bind:hasClickedLoad
-        {existingSourceUrls}
-        {organization}
-        {onAuthorizationFailed}
-      >
-        <Button
-          type="button"
-          variant="soft"
-          className="px-3 py-2 text-xs"
-          onclick={() => (showManualUrl = true)}
+      {#key selectedAuthorization.id}
+        <RepositoryPicker
+          {selectedAuthorization}
+          {providerResources}
+          bind:providerResourcesAll
+          bind:selectedResources
+          bind:hasClickedLoad
+          {existingSourceUrls}
+          {organization}
+          {onAuthorizationFailed}
         >
-          Enter repository URL
-        </Button>
-      </RepositoryPicker>
+          <Button
+            type="button"
+            variant="soft"
+            className="px-3 py-2 text-xs"
+            onclick={() => (showManualUrl = true)}
+          >
+            Enter repository URL
+          </Button>
+        </RepositoryPicker>
+      {/key}
     {:else}
       <Button
         type="button"
         variant="soft"
         className="mr-auto px-3 py-2 text-xs"
-        onclick={() => (showManualUrl = true)}
+        onclick={() => {
+          showManualUrl = true;
+          // The one-off token lives in Advanced; reveal it when there is no saved access.
+          showAdvancedConnect = showAdvancedConnect || needsAuthorization;
+        }}
       >
         Enter repository URL
       </Button>

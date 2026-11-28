@@ -655,7 +655,7 @@
   // Only active, configured access counts as available.
   let hasSavedAccess = $derived(
     activeModal === "connect"
-      ? filteredAuthorizations.length > 0
+      ? filteredAuthorizations.some((a) => !isAuthorizationReconnectRequired(a))
       : manageableAuthorizations.some(
           (a) => a.configured && a.status === "active",
         ),

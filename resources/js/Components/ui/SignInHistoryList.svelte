@@ -16,7 +16,10 @@
   {#if showZone}
     <p class="mb-2 text-xs ui-muted">Local time ({browserTimeZone()})</p>
   {/if}
-  <TableFrame ariaLabel="Sign-in history" tableClassName="whitespace-nowrap">
+  <TableFrame
+    ariaLabel="Sign-in history"
+    tableClassName="whitespace-nowrap text-[13px]!"
+  >
     <thead>
       <tr>
         <th class="px-4 py-3">Time</th>

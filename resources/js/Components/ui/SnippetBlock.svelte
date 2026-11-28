@@ -1,28 +1,19 @@
 <script>
   import CopyButton from "@/Components/ui/CopyButton.svelte";
-  import Link from "@/Components/core/Link.svelte";
   import InsetCard from "@/Components/ui/InsetCard.svelte";
 
   let {
     title = "",
     content = "",
     copyContent = "",
+    copyLabel = "",
+    copyText = "",
     multiline = false,
     className = "",
-    actionPlaceholder = "",
-    actionHref = "",
-    actionLabel = "",
+    actions = undefined,
   } = $props();
 
   const copiedContent = $derived(copyContent || content);
-  const shouldRenderAction = $derived(
-    Boolean(actionPlaceholder) &&
-      Boolean(actionHref) &&
-      content.includes(actionPlaceholder),
-  );
-  const contentParts = $derived(
-    shouldRenderAction ? content.split(actionPlaceholder) : [content],
-  );
 </script>
 
 <InsetCard className={`min-w-0 p-4 ${className}`.trim()}>
@@ -33,32 +24,24 @@
       <span></span>
     {/if}
 
-    <CopyButton
-      value={copiedContent}
-      label={title ? `Copy ${title}` : "Copy"}
-    />
+    <div class="flex items-center gap-2">
+      {@render actions?.()}
+      <CopyButton
+        value={copiedContent}
+        label={copyLabel || (title ? `Copy ${title}` : "Copy")}
+        text={copyText}
+      />
+    </div>
   </div>
 
   {#if multiline}
     <pre
-      class="ui-code mt-3 min-w-0 overflow-x-auto rounded-xl p-3 text-xs">{#if shouldRenderAction}{contentParts[0]}<Link
-          class="ui-button-secondary inline-flex h-6 items-center rounded-lg px-2 text-[0.7rem] font-medium"
-          href={actionHref}>{actionLabel}</Link
-        >{contentParts
-          .slice(1)
-          .join(actionPlaceholder)}{:else}{content}{/if}</pre>
+      class="ui-code mt-3 min-w-0 overflow-x-auto rounded-xl p-3 text-xs">{content}</pre>
   {:else}
     <code
       class="ui-code mt-3 block min-w-0 overflow-x-auto rounded-xl px-3 py-2 text-xs"
     >
-      {#if shouldRenderAction}{contentParts[0]}<Link
-          class="ui-button-secondary inline-flex h-6 items-center rounded-lg px-2 text-[0.7rem] font-medium"
-          href={actionHref}
-        >
-          {actionLabel}
-        </Link>{contentParts
-          .slice(1)
-          .join(actionPlaceholder)}{:else}{content}{/if}
+      {content}
     </code>
   {/if}
 </InsetCard>

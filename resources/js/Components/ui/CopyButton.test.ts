@@ -37,7 +37,7 @@ describe("CopyButton", () => {
     expect(navigator.clipboard.writeText).not.toHaveBeenCalled();
   });
 
-  it("keeps default state when clipboard write fails", async () => {
+  it("shows a failure state when clipboard write fails", async () => {
     vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
       new Error("denied"),
     );
@@ -47,7 +47,35 @@ describe("CopyButton", () => {
     await fireEvent.click(screen.getByRole("button", { name: "Copy token" }));
 
     expect(
+      screen.getByRole("button", { name: "Copy failed" }),
+    ).toBeInTheDocument();
+
+    vi.advanceTimersByTime(1500);
+    await tick();
+
+    expect(
       screen.getByRole("button", { name: "Copy token" }),
+    ).toBeInTheDocument();
+  });
+
+  it("renders a visible text label with copied and failed states", async () => {
+    render(CopyButton, {
+      props: { value: "x", label: "Copy", text: "Copy JSON" },
+    });
+
+    await fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
+    expect(navigator.clipboard.writeText).toHaveBeenCalledWith("x");
+    expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
+
+    vi.advanceTimersByTime(1500);
+    await tick();
+    vi.mocked(navigator.clipboard.writeText).mockRejectedValueOnce(
+      new Error("denied"),
+    );
+    await fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
+
+    expect(
+      screen.getByRole("button", { name: "Copy failed" }),
     ).toBeInTheDocument();
   });
 });

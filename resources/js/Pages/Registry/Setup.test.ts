@@ -16,12 +16,18 @@ const baseProps = {
   public_packages: [{ name: "acme/pub" }],
 };
 
+function step(n: number): HTMLElement {
+  return screen
+    .getByRole("heading", { name: new RegExp(`^${n}\\.`) })
+    .closest("li") as HTMLElement;
+}
+
 function copyValue() {
   return vi.mocked(navigator.clipboard.writeText);
 }
 
-async function copied(name: string): Promise<string> {
-  await fireEvent.click(screen.getAllByRole("button", { name })[0]);
+async function copied(name: string, index = 0): Promise<string> {
+  await fireEvent.click(screen.getAllByRole("button", { name })[index]);
   const calls = copyValue().mock.calls;
   return calls[calls.length - 1][0];
 }
@@ -39,36 +45,36 @@ describe("Registry setup page", () => {
 
   it("switches to CI JSON without touching steps 2 and 3", async () => {
     render(Setup, { props: baseProps as never });
+    const before = [step(2).textContent, step(3).textContent];
 
     await fireEvent.click(screen.getByRole("button", { name: "CI" }));
+
+    expect([step(2).textContent, step(3).textContent]).toEqual(before);
 
     expect(screen.getByRole("button", { name: "CI" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
-    const json = JSON.parse(await copied("Copy JSON"));
+    const json = JSON.parse(await copied("Copy COMPOSER_AUTH JSON"));
     expect(json["http-basic"][host].username).toBe("token");
-    expect(screen.getByText("composer require vendor/package")).toBeVisible();
-    expect(
-      document.body.textContent?.match(/"url": "[^"]*\/private"/),
-    ).not.toBeNull();
   });
 
   it("copies the repository JSON and the bare URL", async () => {
     render(Setup, { props: baseProps as never });
 
-    const json = await copied("Copy JSON");
+    const json = await copied("Copy repository JSON");
     expect(json).toContain(`"url": "https://${host}/private"`);
     expect(JSON.parse(json).repositories[0].type).toBe("composer");
-    expect(await copied("Copy URL")).toBe(`https://${host}/private`);
+    expect(await copied("Copy repository URL")).toBe(`https://${host}/private`);
   });
 
-  it("falls back to the public URL when there is no private one", () => {
+  it("falls back to the public URL when there is no private one", async () => {
     render(Setup, {
       props: { ...baseProps, private_bootstrap: null } as never,
     });
 
-    expect(document.body.textContent).toContain(`https://${host}/public"`);
+    expect(step(2).textContent).toContain(`"url": "https://${host}/public"`);
+    expect(await copied("Copy repository URL")).toBe(`https://${host}/public`);
   });
 
   it("prefers the registry host over the base URL", () => {
@@ -129,8 +135,6 @@ describe("Registry setup page", () => {
     });
 
     expect(document.querySelector("details")).not.toHaveAttribute("open");
-    expect(
-      screen.getAllByText(/No public packages yet/).length,
-    ).toBeGreaterThan(0);
+    expect(screen.getAllByText(/No public packages yet/)).toHaveLength(1);
   });
 });

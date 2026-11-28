@@ -60,7 +60,7 @@ describe("CopyButton", () => {
 
   it("renders a visible text label with copied and failed states", async () => {
     render(CopyButton, {
-      props: { value: "x", label: "Copy", text: "Copy JSON" },
+      props: { value: "x", text: "Copy JSON" },
     });
 
     await fireEvent.click(screen.getByRole("button", { name: "Copy JSON" }));
@@ -77,5 +77,15 @@ describe("CopyButton", () => {
     expect(
       screen.getByRole("button", { name: "Copy failed" }),
     ).toBeInTheDocument();
+  });
+
+  it("uses the label as accessible name of a text button", () => {
+    render(CopyButton, {
+      props: { value: "x", label: "Copy repository JSON", text: "Copy JSON" },
+    });
+
+    expect(
+      screen.getByRole("button", { name: "Copy repository JSON" }),
+    ).toHaveTextContent("Copy JSON");
   });
 });

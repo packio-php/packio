@@ -3,14 +3,18 @@
   import Button from "@/Components/ui/Button.svelte";
 
   // `text` renders a visible label instead of the icon.
-  let { value = "", label = "Copy", text = "" } = $props();
+  let { value = "", label = "", text = "" } = $props();
 
   let status = $state("idle");
   let resetTimeout = null;
 
   const failedLabel = "Copy failed";
   let name = $derived(
-    status === "copied" ? "Copied" : status === "failed" ? failedLabel : label,
+    status === "copied"
+      ? "Copied"
+      : status === "failed"
+        ? failedLabel
+        : label || "Copy",
   );
 
   async function copy() {
@@ -41,6 +45,7 @@
     variant="soft"
     className="shrink-0 !px-3 !py-1.5"
     onclick={copy}
+    aria-label={label || status !== "idle" ? name : undefined}
     title={name}
   >
     {status === "idle" ? text : name}

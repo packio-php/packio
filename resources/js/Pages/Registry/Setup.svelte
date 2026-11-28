@@ -1,7 +1,6 @@
 <script lang="ts">
   import AppShell from "@/Layouts/AppShell.svelte";
   import Card from "@/Components/ui/Card.svelte";
-  import Button from "@/Components/ui/Button.svelte";
   import Link from "@/Components/core/Link.svelte";
   import SectionHeading from "@/Components/ui/SectionHeading.svelte";
   import SnippetBlock from "@/Components/ui/SnippetBlock.svelte";
@@ -65,6 +64,13 @@
     publicOpen ?? (anonymousAccessEnabled && hasPublicPackages),
   );
 
+  const toggleBaseClass =
+    "inline-flex h-9 cursor-pointer items-center rounded-lg border px-3 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_60%,transparent)]";
+  const toggleActiveClass =
+    "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-ink)]";
+  const toggleInactiveClass =
+    "border-transparent text-[var(--page-muted)] hover:bg-[var(--surface-strong)] hover:text-[var(--accent-ink)]";
+
   let localCommand = $derived(
     `composer config --global --auth http-basic.${composerHost} token YOUR_REGISTRY_TOKEN`,
   );
@@ -106,7 +112,6 @@
     <SectionHeading
       title="Composer setup"
       description={`Install packages from ${organization?.name ?? resolvedBranding.name} with Composer.`}
-      className="max-w-3xl"
     />
 
     <Card className="rounded-[1.9rem] p-6">
@@ -124,15 +129,14 @@
 
           <div class="flex gap-2" role="group" aria-label="Authentication mode">
             {#each [["local", "Local development"], ["ci", "CI"]] as [mode, label] (mode)}
-              <Button
+              <button
                 type="button"
-                variant="soft"
-                className={authMode === mode ? "ui-badge-accent" : ""}
+                class={`${toggleBaseClass} ${authMode === mode ? toggleActiveClass : toggleInactiveClass}`}
                 aria-pressed={authMode === mode}
                 onclick={() => (authMode = mode as "local" | "ci")}
               >
                 {label}
-              </Button>
+              </button>
             {/each}
           </div>
 
@@ -147,7 +151,7 @@
             <SnippetBlock
               content={ciJson}
               multiline={true}
-              copyLabel="Copy JSON"
+              copyLabel="Copy COMPOSER_AUTH JSON"
               copyText="Copy JSON"
             />
             <p class="text-sm ui-muted">
@@ -162,13 +166,13 @@
           <SnippetBlock
             content={composerJsonSnippet}
             multiline={true}
-            copyLabel="Copy JSON"
+            copyLabel="Copy repository JSON"
             copyText="Copy JSON"
           >
             {#snippet actions()}
               <CopyButton
                 value={repositoryUrl}
-                label="Copy URL"
+                label="Copy repository URL"
                 text="Copy URL"
               />
             {/snippet}
@@ -230,7 +234,7 @@
         <div class="mt-4 grid gap-3">
           {#if !hasPublicPackages}
             <p class="text-sm ui-muted">
-              No public packages yet. {anonymousAccessEnabled
+              {anonymousAccessEnabled
                 ? "Public packages will install from this URL without a token."
                 : "Anonymous access is disabled in organization settings."}
             </p>
@@ -257,22 +261,15 @@
             </div>
           {/if}
 
-          <div class="flex items-center justify-between gap-3">
-            <code
-              class="ui-code min-w-0 break-all rounded-xl px-3 py-2 text-xs"
-            >
-              {public_bootstrap}
-            </code>
-            <CopyButton
-              value={public_bootstrap}
-              label="Copy public URL"
-              text="Copy URL"
-            />
-          </div>
+          <SnippetBlock
+            content={public_bootstrap}
+            copyLabel="Copy public repository URL"
+            copyText="Copy URL"
+          />
           <SnippetBlock
             content={publicComposerJsonSnippet}
             multiline={true}
-            copyLabel="Copy public JSON"
+            copyLabel="Copy public repository JSON"
             copyText="Copy JSON"
           />
         </div>

@@ -208,6 +208,50 @@ describe("SourceConnectionModal", () => {
     expect(document.activeElement).toBe(last);
   });
 
+  it("handles Escape and Tab after the focused control unmounts", async () => {
+    const view = renderModal({ providerAuthorizationsAll: [] });
+    const configure = screen.getByRole("button", {
+      name: "Configure provider access",
+    });
+    configure.focus();
+    await fireEvent.click(configure);
+    expect(document.activeElement).not.toBe(configure);
+    await waitFor(() =>
+      expect(document.activeElement).toBe(
+        document.querySelector("#source-provider"),
+      ),
+    );
+
+    (document.activeElement as HTMLElement).blur();
+    expect(document.activeElement).toBe(document.body);
+    await fireEvent.keyDown(document.body, { key: "Tab" });
+    expect(screen.getByRole("dialog").contains(document.activeElement)).toBe(
+      true,
+    );
+
+    (document.activeElement as HTMLElement).blur();
+    await fireEvent.keyDown(document.body, { key: "Escape" });
+    expect(view.onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves Escape to a dialog stacked on top", async () => {
+    const view = renderModal();
+    const other = document.createElement("div");
+    other.setAttribute("role", "dialog");
+    document.body.append(other);
+    await fireEvent.keyDown(other, { key: "Escape" });
+    other.remove();
+    expect(view.onClose).not.toHaveBeenCalled();
+  });
+
+  it("disables the footer Save while submitting", async () => {
+    renderModal({ activeModal: "access", isSubmitting: true });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Add provider access" }),
+    );
+    expect(screen.getByRole("button", { name: "Saving…" })).toBeDisabled();
+  });
+
   it("filters providers, loads resources, and submits selected modal state", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       ok: true,

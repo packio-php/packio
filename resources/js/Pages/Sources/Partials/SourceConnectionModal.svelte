@@ -52,7 +52,14 @@
     }
   }
 
+  // On the window, not the dialog: when the focused control unmounts, focus falls to <body>.
   function handleDialogKeydown(event: KeyboardEvent): void {
+    // A dialog stacked on top (delete confirmation) handles its own keys.
+    const target = event.target instanceof Element ? event.target : null;
+    const owner = target?.closest('[role="dialog"]');
+    if (owner && owner !== dialog) {
+      return;
+    }
     if (event.key === "Escape") {
       onClose();
     } else if (event.key === "Tab") {
@@ -280,6 +287,18 @@
 
     return false;
   }
+
+  // Focus must not stay on a control that the mode switch removed.
+  let shownMode = untrack(() => activeModal);
+  $effect(() => {
+    if (activeModal === shownMode) {
+      return;
+    }
+    shownMode = activeModal;
+    void tick().then(() =>
+      dialog?.querySelector<HTMLElement>("#source-provider")?.focus(),
+    );
+  });
 
   // Restore state from sessionStorage if available
   onMount(() => {
@@ -689,18 +708,19 @@
   );
 </script>
 
+<svelte:window onkeydown={handleDialogKeydown} />
+
 <div
   class="fixed inset-0 z-[60] overflow-y-auto bg-(--page-bg)/70 backdrop-blur"
   onclick={handleClose}
-  onkeydown={(event) => event.key === "Escape" && handleClose()}
   role="presentation"
   tabindex="-1"
 >
   <div class="container mx-auto flex min-h-full items-center px-4 py-4">
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div
       bind:this={dialog}
       onclick={(event) => event.stopPropagation()}
-      onkeydown={handleDialogKeydown}
       role="dialog"
       aria-modal="true"
       aria-label={activeModal === "connect"
@@ -766,8 +786,10 @@
               role="alert"
               class="grid gap-1 rounded-xl px-3 py-2 text-sm ui-badge-danger"
             >
-              {#if result.queued.length > 0}
-                <p>Connected: {result.queued.join(", ")}</p>
+              {#if result.queued.length + result.skipped.length > 0}
+                <p>
+                  Connected: {[...result.queued, ...result.skipped].join(", ")}
+                </p>
               {/if}
               <p>
                 Needs retry:
@@ -876,8 +898,9 @@
                 type="submit"
                 form={accessFormId}
                 variant="primary"
+                disabled={isSubmitting}
               >
-                Save provider access
+                {isSubmitting ? "Saving…" : "Save provider access"}
               </Button>
             {/if}
           </div>

@@ -471,6 +471,7 @@
             // Partial result: stay in the dialog with only the failed repositories selected.
             connectResult = result;
             sessionStorage.removeItem("sources_connect_success");
+            sessionStorage.removeItem("sources_modal_state");
             return;
           }
           closeModal(false);

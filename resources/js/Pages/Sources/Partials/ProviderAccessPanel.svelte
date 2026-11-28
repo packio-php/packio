@@ -158,64 +158,61 @@
     </label>
   {/if}
 
-  <p role="status" class="text-sm ui-title empty:hidden">
+  <p role="status" class="text-sm ui-title">
     {#if showSaved}Access saved for this organization{/if}
   </p>
 
-  <div class="grid gap-2">
-    {#if manageableAuthorizations.length > 0}
-      <ul class="grid gap-2">
-        {#each manageableAuthorizations as authorization (authorization.id)}
-          <li
-            class="flex items-center justify-between gap-3 rounded-xl border border-(--panel-border) px-3 py-2 text-sm"
-          >
-            <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-              <span class="font-medium ui-title">
-                {authorization.account_name || authorization.auth_strategy}
-              </span>
-              <span
-                class={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
-                  isAuthorizationReconnectRequired(authorization)
-                    ? "ui-badge-danger"
-                    : "ui-badge-accent"
-                }`}
-              >
-                {authorizationHealthLabel(authorization) ??
-                  authorization.status}
-              </span>
-              {#if authorization.masked_value}
-                <span class="font-mono text-xs ui-muted">
-                  {authorization.masked_value}
-                </span>
-              {/if}
-              {#if authorization.provider_instance_id}
-                <span class="text-xs ui-muted">
-                  {manageableProviderInstances.find(
-                    (instance) =>
-                      instance.id === authorization.provider_instance_id,
-                  )?.label}
-                </span>
-              {/if}
-              {#if isAuthorizationReconnectRequired(authorization) && authorization.auth_failure_reason}
-                <span class="w-full text-xs ui-muted">
-                  {authorization.auth_failure_reason}
-                </span>
-              {/if}
-            </div>
-            <Button
-              type="button"
-              variant="icon"
-              className="h-8 w-8 shrink-0 text-(--muted)"
-              aria-label="Delete authorization"
-              onclick={() => onDeleteAuthorization(authorization)}
+  {#if manageableAuthorizations.length > 0}
+    <ul class="grid gap-2">
+      {#each manageableAuthorizations as authorization (authorization.id)}
+        <li
+          class="flex items-center justify-between gap-3 rounded-xl border border-(--panel-border) px-3 py-2 text-sm"
+        >
+          <div class="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+            <span class="font-medium ui-title">
+              {authorization.account_name || authorization.auth_strategy}
+            </span>
+            <span
+              class={`rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                isAuthorizationReconnectRequired(authorization)
+                  ? "ui-badge-danger"
+                  : "ui-badge-accent"
+              }`}
             >
-              <Trash2 aria-hidden="true" size={14} strokeWidth={2} />
-            </Button>
-          </li>
-        {/each}
-      </ul>
-    {/if}
-  </div>
+              {authorizationHealthLabel(authorization) ?? authorization.status}
+            </span>
+            {#if authorization.masked_value}
+              <span class="font-mono text-xs ui-muted">
+                {authorization.masked_value}
+              </span>
+            {/if}
+            {#if authorization.provider_instance_id}
+              <span class="text-xs ui-muted">
+                {manageableProviderInstances.find(
+                  (instance) =>
+                    instance.id === authorization.provider_instance_id,
+                )?.label}
+              </span>
+            {/if}
+            {#if isAuthorizationReconnectRequired(authorization) && authorization.auth_failure_reason}
+              <span class="w-full text-xs ui-muted">
+                {authorization.auth_failure_reason}
+              </span>
+            {/if}
+          </div>
+          <Button
+            type="button"
+            variant="icon"
+            className="h-8 w-8 shrink-0 text-(--muted)"
+            aria-label="Delete authorization"
+            onclick={() => onDeleteAuthorization(authorization)}
+          >
+            <Trash2 aria-hidden="true" size={14} strokeWidth={2} />
+          </Button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 
   <div class="grid gap-4">
     <Button

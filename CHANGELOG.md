@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- The Composer setup page is a compact three-step guide (authentication for local development or CI, repository, install) with a collapsible Public repository block; copy buttons show Copied or Copy failed.
 - The package catalog is compact, with an always-visible search, a Filters panel and applied-filter chips.
 - The package page shows a summary with the `composer require` command, expandable version rows with confirmed hide/restore, and a collapsible Source details block.
 - The profile page is redesigned: on wide screens the account card with sign-in methods and sign-in history form the wider left column and API tokens the right one, so growing the token list does not move the history, and the header shows "Personal account".

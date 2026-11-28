@@ -781,10 +781,31 @@ describe("SourceConnectionModal", () => {
       ).not.toBeNull();
     });
 
-    it("shows the empty line and an open form without saved access", () => {
+    it("shows the footer Save button only while the token form is open", async () => {
+      renderModal({ activeModal: "access" });
+      const addButton = screen.getByRole("button", {
+        name: "Add provider access",
+      });
+
+      expect(
+        screen.queryByRole("button", { name: "Save provider access" }),
+      ).toBeNull();
+      await fireEvent.click(addButton);
+      const save = screen.getByRole("button", { name: "Save provider access" });
+      expect(save).toHaveAttribute("type", "submit");
+      expect(save).toHaveAttribute("form", "provider-access-form");
+      expect(document.getElementById("provider-access-form")).not.toBeNull();
+      await fireEvent.click(addButton);
+      expect(
+        screen.queryByRole("button", { name: "Save provider access" }),
+      ).toBeNull();
+    });
+
+    it("shows a single empty line and an open form without saved access", () => {
       renderModal({ activeModal: "access", providerAuthorizationsAll: [] });
 
-      expect(screen.getByText(/No saved GitHub access yet/)).toBeVisible();
+      expect(screen.getAllByText(/No saved/)).toHaveLength(1);
+      expect(screen.getByText("No saved access")).toBeVisible();
       expect(
         document.querySelector('input[name="authorization_token"]'),
       ).toHaveAttribute("type", "password");

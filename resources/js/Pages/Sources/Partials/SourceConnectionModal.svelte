@@ -23,6 +23,8 @@
   import { isAuthorizationReconnectRequired } from "./authorizationStatus";
 
   const connectFormId = "add-source-form";
+  const accessFormId = "provider-access-form";
+  let accessTokenFormOpen = $state(false);
   const authorizationRejectedMessage =
     "The provider rejected this access. Reconnect it to load repositories.";
 
@@ -789,6 +791,8 @@
                 {manageableAuthorizations}
                 {user_oauth_accounts}
                 {returnTo}
+                formId={accessFormId}
+                bind:tokenFormOpen={accessTokenFormOpen}
                 errors={accessErrors}
                 saved={accessSaved + oauthSaved}
                 {providerName}
@@ -861,11 +865,21 @@
             <Button
               className="rounded-full px-5"
               type="button"
-              variant="primary"
+              variant="secondary"
               onclick={handleClose}
             >
               Done
             </Button>
+            {#if accessTokenFormOpen}
+              <Button
+                className="rounded-full px-5"
+                type="submit"
+                form={accessFormId}
+                variant="primary"
+              >
+                Save provider access
+              </Button>
+            {/if}
           </div>
         {:else}
           <div

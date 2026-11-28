@@ -29,9 +29,12 @@
     manageableAuthorizations: ProviderAuthorizationPayload[];
     user_oauth_accounts: UserOAuthAccountPayload[];
     returnTo: string;
+    formId: string;
     // Validation errors of the last failed save, and a counter bumped on every successful save.
     errors?: ValidationErrors;
     saved?: number;
+    // True while the token form is shown; the shell then renders its submit button in the footer.
+    tokenFormOpen?: boolean;
     providerName: (providerKey: string) => string;
     withOrganization: (path: string) => string;
     onSelectProviderInstance: (providerInstanceId: string) => void;
@@ -55,6 +58,7 @@
     manageableAuthorizations,
     user_oauth_accounts,
     returnTo,
+    formId,
     providerName,
     withOrganization,
     onSelectProviderInstance,
@@ -64,6 +68,7 @@
     onOAuthConnect,
     errors = {},
     saved = 0,
+    tokenFormOpen = $bindable(false),
   }: Props = $props();
 
   let instanceUrl = $state("");
@@ -127,6 +132,9 @@
       selectedProviderInstance?.auth_mode === "token" ||
       selectedProviderInstance?.auth_mode === "oauth2_and_token",
   );
+  $effect(() => {
+    tokenFormOpen = addOpen && providerSupportsSelectedInstanceToken;
+  });
 </script>
 
 <div class="grid gap-5">
@@ -155,11 +163,7 @@
   </p>
 
   <div class="grid gap-2">
-    {#if manageableAuthorizations.length === 0}
-      <p class="text-sm ui-muted">
-        No saved {providerName(selectedProvider)} access yet.
-      </p>
-    {:else}
+    {#if manageableAuthorizations.length > 0}
       <ul class="grid gap-2">
         {#each manageableAuthorizations as authorization (authorization.id)}
           <li
@@ -266,6 +270,7 @@
 
       {#if providerSupportsSelectedInstanceToken}
         <form
+          id={formId}
           class="grid gap-4"
           method="POST"
           action={withOrganization("/sources/authorizations")}
@@ -331,15 +336,6 @@
               </Select>
             </label>
           {/if}
-          <div>
-            <Button
-              className="rounded-full px-5"
-              type="submit"
-              variant="primary"
-            >
-              Save provider access
-            </Button>
-          </div>
         </form>
       {:else}
         <p class="text-sm ui-muted">

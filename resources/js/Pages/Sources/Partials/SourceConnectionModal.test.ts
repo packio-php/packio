@@ -7,6 +7,7 @@ import {
 } from "@testing-library/svelte";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiClient } from "@/lib/api";
+import { toast } from "@/lib/toast";
 import { router } from "@/test/inertia";
 import SourceConnectionModal from "./SourceConnectionModal.svelte";
 import type {
@@ -111,6 +112,11 @@ type ModalTestProps = {
   initialProvider: string;
   initialProviderInstanceId: string;
   returnTo: string;
+  connectResult?: {
+    queued: string[];
+    skipped: string[];
+    failed: { repository: string; message: string }[];
+  } | null;
   onClose: () => void;
   onConnectSubmit: (
     event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -211,11 +217,9 @@ describe("SourceConnectionModal", () => {
 
     expect(screen.getAllByText("GitHub").length).toBeGreaterThan(0);
     expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/Older versions are hidden from the registry/),
-    ).toHaveTextContent(
-      "Dev versions do not count toward the limit. 0 disables the limit.",
-    );
+    expect(screen.getByText("0 = no limit")).toBeInTheDocument();
+    expect(screen.getByRole("combobox", { name: "Provider" })).toHaveFocus();
+    expect(screen.getByText("Saved access available")).toBeInTheDocument();
 
     await fireEvent.click(
       screen.getByRole("button", { name: "Load repositories" }),
@@ -230,7 +234,7 @@ describe("SourceConnectionModal", () => {
     expect(await screen.findAllByText("vendor/package")).not.toHaveLength(0);
 
     await fireEvent.click(
-      screen.getByRole("button", { name: "Connect 1 source" }),
+      screen.getByRole("button", { name: "Connect source" }),
     );
 
     expect(modal.onConnectSubmit).toHaveBeenCalledOnce();
@@ -249,7 +253,9 @@ describe("SourceConnectionModal", () => {
     const visibility = screen.getByRole("combobox", { name: "Visibility" });
 
     await fireEvent.change(visibility, { target: { value: "public" } });
-    await fireEvent.click(screen.getByText("GitLab"));
+    await fireEvent.change(screen.getByRole("combobox", { name: "Provider" }), {
+      target: { value: "gitlab_self_hosted" },
+    });
 
     expect(screen.getByRole("combobox", { name: "Visibility" })).toHaveValue(
       "private",
@@ -286,7 +292,7 @@ describe("SourceConnectionModal", () => {
     await fireEvent.change(visibility, { target: { value: "public" } });
     expect(screen.getByRole("alert")).toHaveTextContent(warning);
     expect(
-      screen.getByRole("button", { name: "Connect 1 source" }),
+      screen.getByRole("button", { name: "Connect source" }),
     ).toBeEnabled();
 
     await fireEvent.change(visibility, { target: { value: "private" } });
@@ -309,7 +315,7 @@ describe("SourceConnectionModal", () => {
       screen.queryByRole("button", { name: "Load repositories" }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: /Connect\s+sources/ }),
+      screen.getByRole("button", { name: "Connect source" }),
     ).toBeDisabled();
   });
 
@@ -420,9 +426,7 @@ describe("SourceConnectionModal", () => {
       ],
     });
 
-    expect(
-      screen.getByText(/No saved GitLab authorization is available/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No saved GitLab access yet/)).toBeInTheDocument();
     expect(screen.queryByText("octocat")).not.toBeInTheDocument();
   });
 
@@ -439,9 +443,7 @@ describe("SourceConnectionModal", () => {
       ],
     });
 
-    expect(
-      screen.getByText(/No saved GitLab authorization is available/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/No saved GitLab access yet/)).toBeInTheDocument();
     expect(screen.queryByText("octocat")).not.toBeInTheDocument();
   });
 
@@ -480,13 +482,9 @@ describe("SourceConnectionModal", () => {
       sourceProviderInstances: [gitlabInstance],
     });
 
+    expect(screen.getByText(/No saved GitLab access yet/)).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "No saved GitLab authorization is available for this organization yet. Save provider access first, then continue with repository selection.",
-      ),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Authorize GitLab" }),
+      screen.getByRole("button", { name: "Configure provider access" }),
     ).toBeInTheDocument();
     expect(
       screen.queryByText("Reauthorization required"),
@@ -573,7 +571,9 @@ describe("SourceConnectionModal", () => {
       providerAuthorizationsAll: [],
     });
 
-    await fireEvent.click(screen.getByRole("button", { name: /Forgejo/ }));
+    await fireEvent.change(screen.getByRole("combobox", { name: "Provider" }), {
+      target: { value: "forgejo_self_hosted" },
+    });
 
     const select = screen.getByLabelText("Forgejo instance");
     expect(select).toHaveValue(forgejoInstance.id);
@@ -755,5 +755,128 @@ describe("SourceConnectionModal", () => {
     });
 
     expect(screen.getByText("Forgejo instance URL")).toBeInTheDocument();
+  });
+
+  describe("repository loading", () => {
+    const repo = (name: string): ProviderResourcePayload => ({
+      id: name,
+      name,
+      canonical_url: `https://github.com/${name}`,
+      default_ref: "main",
+      private: false,
+      provider: "github",
+    });
+    const load = () =>
+      fireEvent.click(
+        screen.getByRole("button", { name: "Load repositories" }),
+      );
+
+    it("clears the selection when the provider changes", async () => {
+      vi.mocked(apiClient.get).mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { resources: [repo("vendor/a"), repo("vendor/b")] },
+      });
+      renderModal({ providers: [githubProvider, gitlabProvider] });
+      await load();
+      await fireEvent.click(await screen.findByLabelText("vendor/a"));
+      expect(screen.getByText("1 selected · Private")).toBeInTheDocument();
+
+      const provider = screen.getByRole("combobox", { name: "Provider" });
+      await fireEvent.change(provider, {
+        target: { value: "gitlab_self_hosted" },
+      });
+      await fireEvent.change(provider, { target: { value: "github" } });
+
+      expect(screen.queryByText(/\d+ selected ·/)).not.toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Load repositories" }),
+      ).toBeInTheDocument();
+    });
+
+    it("ignores a response that arrives after the provider changed", async () => {
+      const errorToast = vi.spyOn(toast, "error").mockImplementation(() => "");
+      let resolve!: (value: never) => void;
+      vi.mocked(apiClient.get).mockReturnValue(
+        new Promise((r) => (resolve = r)),
+      );
+      renderModal({ providers: [githubProvider, gitlabProvider] });
+      await load();
+      await fireEvent.change(
+        screen.getByRole("combobox", { name: "Provider" }),
+        { target: { value: "gitlab_self_hosted" } },
+      );
+
+      resolve({ ok: false, status: 500, error: "Late failure" } as never);
+      await new Promise((r) => setTimeout(r, 0));
+
+      expect(errorToast).not.toHaveBeenCalled();
+      expect(screen.queryByText("Late failure")).not.toBeInTheDocument();
+    });
+
+    it("shows the load error with Retry", async () => {
+      vi.mocked(apiClient.get)
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          error: "Boom",
+        } as never)
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          data: { resources: [repo("vendor/a"), repo("vendor/b")] },
+        });
+      renderModal();
+      await load();
+
+      expect(await screen.findByRole("alert")).toHaveTextContent("Boom");
+      await fireEvent.click(screen.getByRole("button", { name: "Retry" }));
+
+      expect(await screen.findByLabelText("vendor/a")).toBeInTheDocument();
+      expect(screen.queryByText("Boom")).not.toBeInTheDocument();
+    });
+
+    it("explains a rejected access (401) and offers to configure access again", async () => {
+      const errorToast = vi.spyOn(toast, "error").mockImplementation(() => "");
+      vi.mocked(apiClient.get).mockResolvedValue({
+        ok: false,
+        status: 401,
+        error: "Unauthorized",
+      } as never);
+      renderModal();
+      await load();
+
+      expect(
+        await screen.findByRole("button", {
+          name: "Configure provider access",
+        }),
+      ).toBeInTheDocument();
+      expect(errorToast).toHaveBeenCalledWith(
+        expect.stringContaining("rejected this access"),
+      );
+    });
+
+    it("keeps only failed repositories selected after a partial result", () => {
+      renderModal({
+        connectResult: {
+          queued: ["https://github.com/vendor/a"],
+          skipped: [],
+          failed: [
+            { repository: "https://github.com/vendor/b", message: "No access" },
+          ],
+        },
+      });
+
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Connected: https://github.com/vendor/a",
+      );
+      expect(screen.getByRole("alert")).toHaveTextContent(
+        "Needs retry: https://github.com/vendor/b (No access)",
+      );
+      expect(screen.getByText("1 selected · Private")).toBeInTheDocument();
+      expect(
+        screen.getByRole("button", { name: "Connect source" }),
+      ).toBeEnabled();
+    });
   });
 });

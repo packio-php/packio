@@ -1,10 +1,10 @@
 <script lang="ts">
   import { X } from "@lucide/svelte";
   import { router } from "@inertiajs/svelte";
-  import { onMount, tick } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
-  import SectionHeading from "@/Components/ui/SectionHeading.svelte";
+  import Select from "@/Components/ui/Select.svelte";
   import { toast } from "@/lib/toast";
   import { apiClient } from "@/lib/api";
   import type { ToastPosition, ToastType } from "@/types/toast";
@@ -16,8 +16,14 @@
     UserOAuthAccountPayload,
   } from "@/types/pages";
   import type { OrganizationSummary } from "@/types/organization";
+  import type { PackioFlashPayload } from "@/types/flash";
   import AddSourceForm from "./AddSourceForm.svelte";
   import ProviderAccessPanel from "./ProviderAccessPanel.svelte";
+  import { isAuthorizationReconnectRequired } from "./authorizationStatus";
+
+  const connectFormId = "add-source-form";
+  const authorizationRejectedMessage =
+    "The provider rejected this access. Reconnect it to load repositories.";
 
   let dialog: HTMLElement | undefined = $state();
 
@@ -70,6 +76,7 @@
     initialProvider?: string;
     initialProviderInstanceId?: string;
     returnTo?: string;
+    connectResult?: PackioFlashPayload["source_connect_result"] | null;
     onClose: () => void;
     onConnectSubmit: (
       event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -93,12 +100,12 @@
     sourceProviderInstances = [],
     existingSourceUrls,
     organization,
-    resolvedBranding,
     isSubmitting,
     user_oauth_accounts = [],
     initialProvider = "",
     initialProviderInstanceId = "",
     returnTo = "",
+    connectResult = null,
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -119,6 +126,21 @@
   let showAdvancedConnect = $state(false);
   let oauthPopup: Window | null = null;
   let hasClickedLoad = $state(false);
+  let showManualUrl = $state(false);
+  // Where access mode was entered from; the connect wizard resumes after a successful authorization.
+  let accessOrigin: "connect" | null = $state(null);
+  let result = $state<PackioFlashPayload["source_connect_result"] | null>(null);
+
+  // After a partial connect only the failed repositories stay selected.
+  $effect(() => {
+    const latest = connectResult;
+    untrack(() => {
+      result = latest;
+      if (latest && latest.failed.length > 0 && !showManualUrl) {
+        selectedResources = latest.failed.map((item) => item.repository);
+      }
+    });
+  });
 
   type BackendToastPayload = {
     type?: ToastType | null;
@@ -241,7 +263,7 @@
   // Restore state from sessionStorage if available
   onMount(() => {
     window.addEventListener("message", handleSourceOAuthMessage);
-    dialog?.focus();
+    (dialog?.querySelector<HTMLElement>("#source-provider") ?? dialog)?.focus();
 
     const savedModalState = sessionStorage.getItem("sources_modal_state");
     const connectSuccess = sessionStorage.getItem("sources_connect_success");
@@ -288,7 +310,9 @@
     connectVisibility = "private";
     keepLastReleases = "0";
     showAdvancedConnect = false;
+    showManualUrl = false;
     hasClickedLoad = false;
+    result = null;
   }
 
   function selectProviderInstance(providerInstanceId: string): void {
@@ -301,6 +325,7 @@
     selectedResources = [];
     selectedRepositoryUrl = "";
     hasClickedLoad = false;
+    result = null;
   }
 
   async function createAuthorizationFromOAuth(
@@ -360,6 +385,7 @@
         const errorMessage = applyAuthorizationFailureState(
           authorization.id,
           null,
+          authorizationRejectedMessage,
         );
         if (errorMessage) {
           toast.error(errorMessage);
@@ -597,6 +623,43 @@
   let selectedProviderMeta = $derived(
     providers.find((p) => p.key === selectedProvider) ?? null,
   );
+  let isGenericGitProvider = $derived(selectedProvider === "generic_git");
+  let needsAuthorization = $derived(filteredAuthorizations.length === 0);
+  let selectedAuthorization = $derived(
+    filteredAuthorizations.find((a) => a.id === selectedAuthorizationId) ??
+      null,
+  );
+  let selectedAuthorizationRequiresReconnect = $derived(
+    isAuthorizationReconnectRequired(selectedAuthorization),
+  );
+  let usesRepositoryUrl = $derived(isGenericGitProvider || showManualUrl);
+  let hasManualRepositoryUrl = $derived(selectedRepositoryUrl.trim() !== "");
+  let connectSourceCount = $derived(
+    usesRepositoryUrl
+      ? hasManualRepositoryUrl
+        ? 1
+        : 0
+      : selectedResources.length,
+  );
+  let canConnectSource = $derived(
+    selectedProviderMeta?.capabilities?.supports_synchronization !== false &&
+      !selectedAuthorizationRequiresReconnect &&
+      (usesRepositoryUrl
+        ? hasManualRepositoryUrl
+        : !needsAuthorization &&
+          !(
+            filteredAuthorizations.length > 1 && selectedAuthorizationId === ""
+          ) &&
+          selectedResources.length > 0),
+  );
+  // Only active, configured access counts as available.
+  let hasSavedAccess = $derived(
+    activeModal === "connect"
+      ? filteredAuthorizations.length > 0
+      : manageableAuthorizations.some(
+          (a) => a.configured && a.status === "active",
+        ),
+  );
 </script>
 
 <div
@@ -606,7 +669,7 @@
   role="presentation"
   tabindex="-1"
 >
-  <div class="container mx-auto min-h-full px-4 py-6 md:py-10">
+  <div class="container mx-auto flex min-h-full items-center px-4 py-4">
     <div
       bind:this={dialog}
       onclick={(event) => event.stopPropagation()}
@@ -617,23 +680,27 @@
         ? "Add source"
         : "Manage provider access"}
       tabindex="-1"
+      class="mx-auto w-full max-w-[40rem]"
     >
       <Card
-        className="mx-auto max-h-[calc(100vh-3rem)] max-w-3xl overflow-y-auto rounded-[1.9rem] p-6 md:p-8"
+        padding="p-0"
+        className="flex max-h-[calc(100dvh-2rem)] flex-col overflow-hidden rounded-[1.9rem]"
       >
-        <div class="flex items-start justify-between gap-4">
-          <SectionHeading
-            eyebrow={activeModal === "connect"
-              ? "Add source"
-              : "Provider access"}
-            title={activeModal === "connect"
-              ? `Connect a source to ${organization?.name || resolvedBranding.name}`
-              : "Manage provider access"}
-            description={activeModal === "connect"
-              ? "Choose a provider first. If access already exists, Packio will reuse it automatically."
-              : "Provider authorization is stored at the organization level and reused across multiple sources."}
-            className="max-w-2xl"
-          />
+        <div
+          class="flex items-start justify-between gap-4 px-5 pt-5 pb-3 sm:px-6"
+        >
+          <div>
+            <h2 class="text-xl font-semibold" style="color: var(--page-ink);">
+              {activeModal === "connect"
+                ? "Add source"
+                : "Manage provider access"}
+            </h2>
+            {#if activeModal === "access"}
+              <p class="mt-1 text-sm ui-muted">
+                Access is saved for this organization
+              </p>
+            {/if}
+          </div>
           <Button
             type="button"
             variant="iconSmall"
@@ -644,97 +711,146 @@
           </Button>
         </div>
 
-        <div class="mt-6 grid gap-6 lg:grid-cols-[16rem_minmax(0,1fr)]">
-          <!-- Sidebar -->
-          <div class="grid gap-3 self-start">
-            {#each selectableProviders as provider (provider.key)}
-              <div
-                role="button"
-                tabindex="0"
-                class={`rounded-[1.25rem] border p-4 text-left transition cursor-pointer ${
-                  selectedProvider === provider.key
-                    ? "ui-card"
-                    : "ui-inset hover:border-(--accent)"
-                }`}
-                onclick={() => resetConnectFlow(provider.key)}
-                onkeydown={(event) =>
-                  event.key === "Enter" && resetConnectFlow(provider.key)}
+        <div
+          class="grid min-h-0 flex-1 content-start gap-5 overflow-y-auto px-5 py-3 sm:px-6"
+        >
+          <div class="grid gap-2">
+            <label class="grid gap-2">
+              <span class="text-sm font-medium ui-title">Provider</span>
+              <Select
+                id="source-provider"
+                className="w-full"
+                value={selectedProvider}
+                onchange={(event) =>
+                  resetConnectFlow(event.currentTarget.value)}
               >
-                <div class="flex items-start justify-between gap-3">
-                  <span class="font-medium ui-title">{provider.name}</span>
-                  <span
-                    class={`rounded-full px-2.5 py-1 text-[11px] font-medium ${
-                      provider.capabilities?.supports_synchronization
-                        ? "ui-badge-accent"
-                        : "ui-badge-muted"
-                    }`}
-                  >
-                    {provider.capabilities?.supports_synchronization
-                      ? "ready"
-                      : "soon"}
-                  </span>
-                </div>
-                <span class="mt-2 block text-xs leading-6 ui-muted">
-                  {provider.description}
-                </span>
-              </div>
-            {/each}
+                {#each selectableProviders as provider (provider.key)}
+                  <option value={provider.key}>{provider.name}</option>
+                {/each}
+              </Select>
+            </label>
+            <p class="text-sm ui-muted" aria-live="polite">
+              {hasSavedAccess ? "Saved access available" : "No saved access"}
+            </p>
           </div>
 
-          <!-- Main Content -->
-          {#if activeModal === "access"}
-            <ProviderAccessPanel
-              {selectedProvider}
-              {selectedProviderInstanceId}
-              {selectedProviderMeta}
-              {selectedProviderNoun}
-              {selectedProviderIsSelfHosted}
-              {providerNeedsInstance}
-              {manageableProviderInstances}
-              {manageableAuthorizations}
-              {user_oauth_accounts}
-              {returnTo}
-              {providerName}
-              {withOrganization}
-              onSelectProviderInstance={selectProviderInstance}
-              {onDeleteAuthorization}
-              {onAccessSubmit}
-              onOAuthRedirect={redirectToSourceOAuth}
-              onOAuthConnect={connectOAuth}
-              onOpenConnect={() => (activeModal = "connect")}
-              onClose={handleClose}
-            />
-          {:else}
-            <AddSourceForm
-              {selectedProvider}
-              {selectedProviderInstanceId}
-              {selectedProviderMeta}
-              {selectedProviderNoun}
-              {providerNeedsInstance}
-              {selectableProviderInstances}
-              {filteredAuthorizations}
-              bind:providerResourcesAll
-              bind:selectedAuthorizationId
-              bind:selectedResources
-              bind:selectedRepositoryUrl
-              bind:connectVisibility
-              bind:keepLastReleases
-              bind:showAdvancedConnect
-              bind:hasClickedLoad
-              {existingSourceUrls}
-              {organization}
-              {isSubmitting}
-              {providerName}
-              {withOrganization}
-              onSelectProviderInstance={selectProviderInstance}
-              onAuthorizationFailed={(authorizationId) =>
-                applyAuthorizationFailureState(authorizationId, null)}
-              onOpenAccess={() => (activeModal = "access")}
-              onSubmit={handleConnectSubmit}
-              onClose={handleClose}
-            />
+          {#if result && result.failed.length > 0 && activeModal === "connect"}
+            <div
+              role="alert"
+              class="grid gap-1 rounded-xl px-3 py-2 text-sm ui-badge-danger"
+            >
+              {#if result.queued.length > 0}
+                <p>Connected: {result.queued.join(", ")}</p>
+              {/if}
+              <p>
+                Needs retry:
+                {result.failed
+                  .map((item) => `${item.repository} (${item.message})`)
+                  .join(", ")}
+              </p>
+            </div>
           {/if}
+
+          {#key selectedProvider}
+            {#if activeModal === "access"}
+              <ProviderAccessPanel
+                {selectedProvider}
+                {selectedProviderInstanceId}
+                {selectedProviderMeta}
+                {selectedProviderNoun}
+                {selectedProviderIsSelfHosted}
+                {providerNeedsInstance}
+                {manageableProviderInstances}
+                {manageableAuthorizations}
+                {user_oauth_accounts}
+                {returnTo}
+                {accessOrigin}
+                {providerName}
+                {withOrganization}
+                onSelectProviderInstance={selectProviderInstance}
+                {onDeleteAuthorization}
+                {onAccessSubmit}
+                onOAuthRedirect={redirectToSourceOAuth}
+                onOAuthConnect={connectOAuth}
+                onOpenConnect={() => {
+                  accessOrigin = null;
+                  activeModal = "connect";
+                }}
+                onClose={handleClose}
+              />
+            {:else}
+              <AddSourceForm
+                {selectedProvider}
+                {selectedProviderInstanceId}
+                {selectedProviderNoun}
+                {providerNeedsInstance}
+                {needsAuthorization}
+                {selectedAuthorization}
+                {selectedAuthorizationRequiresReconnect}
+                formId={connectFormId}
+                {selectableProviderInstances}
+                {filteredAuthorizations}
+                bind:providerResourcesAll
+                bind:selectedAuthorizationId
+                bind:selectedResources
+                bind:selectedRepositoryUrl
+                bind:connectVisibility
+                bind:keepLastReleases
+                bind:showAdvancedConnect
+                bind:showManualUrl
+                bind:hasClickedLoad
+                {existingSourceUrls}
+                {organization}
+                {providerName}
+                {withOrganization}
+                onSelectProviderInstance={selectProviderInstance}
+                onAuthorizationFailed={(authorizationId) =>
+                  applyAuthorizationFailureState(
+                    authorizationId,
+                    null,
+                    authorizationRejectedMessage,
+                  )}
+                onOpenAccess={() => {
+                  accessOrigin = "connect";
+                  activeModal = "access";
+                }}
+                onSubmit={handleConnectSubmit}
+              />
+            {/if}
+          {/key}
         </div>
+
+        {#if activeModal === "connect"}
+          <div
+            class="flex flex-wrap items-center justify-end gap-3 border-t border-(--panel-border) px-5 py-4 sm:px-6"
+          >
+            {#if connectSourceCount > 0}
+              <span class="mr-auto text-sm ui-muted">
+                {connectSourceCount} selected · {connectVisibility === "public"
+                  ? "Public"
+                  : "Private"}
+              </span>
+            {/if}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="secondary"
+              onclick={handleClose}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-full px-5"
+              type="submit"
+              form={connectFormId}
+              variant="primary"
+              disabled={!canConnectSource || isSubmitting}
+            >
+              {#if isSubmitting}Connecting…{:else if connectSourceCount > 1}Connect
+                {connectSourceCount} sources{:else}Connect source{/if}
+            </Button>
+          </div>
+        {/if}
       </Card>
     </div>
   </div>

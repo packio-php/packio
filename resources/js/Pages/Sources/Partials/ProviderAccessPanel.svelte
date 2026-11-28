@@ -28,6 +28,8 @@
     manageableAuthorizations: ProviderAuthorizationPayload[];
     user_oauth_accounts: UserOAuthAccountPayload[];
     returnTo: string;
+    // Set when access mode was opened from the connect wizard (auto-return, used later).
+    accessOrigin?: "connect" | null;
     providerName: (providerKey: string) => string;
     withOrganization: (path: string) => string;
     onSelectProviderInstance: (providerInstanceId: string) => void;

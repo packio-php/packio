@@ -188,7 +188,7 @@ describe("Sources index page", () => {
     );
 
     await fireEvent.click(
-      screen.getByRole("button", { name: "Connect 1 source" }),
+      screen.getByRole("button", { name: "Connect source" }),
     );
 
     await waitFor(() => {
@@ -465,7 +465,11 @@ describe("Sources index page", () => {
       opener.focus();
       await fireEvent.click(opener);
       const dialog = await screen.findByRole("dialog", { name });
-      await waitFor(() => expect(dialog).toHaveFocus());
+      await waitFor(() =>
+        expect(
+          within(dialog).getByRole("combobox", { name: "Provider" }),
+        ).toHaveFocus(),
+      );
 
       await fireEvent.keyDown(dialog, { key: "Escape" });
       await waitFor(() => expect(opener).toHaveFocus());

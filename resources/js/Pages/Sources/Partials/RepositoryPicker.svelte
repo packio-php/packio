@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy, type Snippet } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
   import { toast } from "@/lib/toast";
   import { apiClient } from "@/lib/api";
@@ -19,6 +20,8 @@
     organization: OrganizationSummary | null;
     // Marks the authorization as needing reconnection; returns the message to show.
     onAuthorizationFailed: (authorizationId: string) => string;
+    // Extra actions rendered next to "Load repositories".
+    children?: Snippet;
   }
 
   let {
@@ -30,7 +33,13 @@
     existingSourceUrls,
     organization,
     onAuthorizationFailed,
+    children,
   }: Props = $props();
+
+  let loadError = $state("");
+  // Bumped per request and on unmount: a response is applied only if it is still the latest.
+  let requestSeq = 0;
+  onDestroy(() => requestSeq++);
 
   async function fetchResourcesForAuth(
     authorization: ProviderAuthorizationPayload,
@@ -44,12 +53,19 @@
       return;
     }
 
+    const seq = ++requestSeq;
+    loadError = "";
     const org = organization?.slug ?? "";
     const result = await apiClient.get<{
       resources: ProviderResourcePayload[];
     }>(
       `/organization/${org}/sources/authorizations/${authorizationId}/resources?provider=${encodeURIComponent(authorization.provider)}`,
     );
+
+    // Provider or authorization changed (or the picker went away) while loading.
+    if (seq !== requestSeq || selectedAuthorization.id !== authorizationId) {
+      return;
+    }
 
     if (result.ok) {
       providerResourcesAll = {
@@ -58,58 +74,70 @@
       };
     } else if (result.status === 401) {
       const errorMessage = onAuthorizationFailed(authorizationId);
-      if (errorMessage) {
-        toast.error(errorMessage);
-      }
+      loadError = errorMessage || result.error;
+      toast.error(loadError);
     } else {
-      toast.error(result.error);
-      providerResourcesAll = {
-        ...providerResourcesAll,
-        [authorizationId]: [],
-      };
+      loadError = result.error;
     }
   }
 
   let resourcesLoading = $derived(
-    !providerResourcesAll[selectedAuthorization.id] && hasClickedLoad,
+    !providerResourcesAll[selectedAuthorization.id] &&
+      hasClickedLoad &&
+      !loadError,
   );
 </script>
 
+<div class="flex flex-wrap items-center gap-2">
+  {#if !hasClickedLoad}
+    <Button
+      type="button"
+      variant="secondary"
+      className="rounded-full px-5"
+      onclick={() => {
+        hasClickedLoad = true;
+        fetchResourcesForAuth(selectedAuthorization);
+      }}
+    >
+      Load repositories
+    </Button>
+  {/if}
+  {@render children?.()}
+</div>
+
 {#if resourcesLoading}
-  <div class="mt-4 flex items-center gap-3">
+  <div class="flex items-center gap-3" role="status">
     <div
       class="h-5 w-5 animate-spin rounded-full border-2 border-(--border) border-t-transparent"
     ></div>
     <span class="text-sm ui-muted"> Loading repositories... </span>
   </div>
+{:else if loadError}
+  <div class="grid gap-2">
+    <p role="alert" class="text-sm text-(--danger)">{loadError}</p>
+    <Button
+      type="button"
+      variant="secondary"
+      className="mr-auto rounded-full px-5"
+      onclick={() => fetchResourcesForAuth(selectedAuthorization)}
+    >
+      Retry
+    </Button>
+  </div>
 {:else if !hasClickedLoad}
-  <p class="mt-2 text-sm leading-6 ui-muted">
-    Click Load to fetch available repositories for this authorization.
-  </p>
-  <Button
-    type="button"
-    variant="secondary"
-    className="rounded-full px-5 mt-3"
-    onclick={() => {
-      hasClickedLoad = true;
-      fetchResourcesForAuth(selectedAuthorization);
-    }}
-  >
-    Load repositories
-  </Button>
+  <!-- nothing loaded yet -->
 {:else if providerResources.length === 0}
-  <p class="mt-2 text-sm leading-6 ui-muted">
-    No repositories were discovered for this authorization yet. You can still
-    enter a repository URL manually in Advanced.
+  <p class="text-sm leading-6 ui-muted">
+    No repositories found. You can enter a repository URL instead.
   </p>
 {:else if providerResources.length === 1}
-  <p class="mt-2 text-sm leading-6 ui-muted">
+  <p class="text-sm leading-6 ui-muted">
     Repository <span class="font-medium ui-title">
       {providerResources[0].name}
     </span> was selected automatically.
   </p>
 {:else}
-  <div class="mt-4 grid gap-2">
+  <div class="grid gap-2">
     <span class="text-sm font-medium ui-title">
       Select repositories ({selectedResources.length} selected)
     </span>

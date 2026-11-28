@@ -22,6 +22,7 @@
     storeListViewMode,
     type ListViewMode,
   } from "@/lib/listViewMode";
+  import type { PackioFlashPayload } from "@/types/flash";
   import type { AppPageProps } from "@/types/app";
   import type { AuthPayload } from "@/types/auth";
   import type { OrganizationSummary } from "@/types/organization";
@@ -130,6 +131,9 @@
   let initialProviderInstanceId = $state("");
   let returnTo = $state("");
   let isSubmitting = $state(false);
+  let connectResult = $state<
+    PackioFlashPayload["source_connect_result"] | null
+  >(null);
   let scrollLockApplied = false;
   let previousBodyOverflow = "";
   let previousBodyPaddingRight = "";
@@ -285,6 +289,7 @@
 
   function closeModal(clearSavedState = true): void {
     activeModal = null;
+    connectResult = null;
     // Clear saved modal state to prevent reopening on next visit
     if (clearSavedState && typeof window !== "undefined") {
       sessionStorage.removeItem("sources_modal_state");
@@ -420,6 +425,7 @@
     }
 
     isSubmitting = true;
+    connectResult = null;
 
     // Convert FormData to object, properly handling arrays
     const formData = new FormData(form);
@@ -452,12 +458,19 @@
     router.post(form.action, data as Record<string, string>, {
       preserveState: true,
       preserveScroll: true,
-      onSuccess: () => {
+      onSuccess: (page) => {
         isSubmitting = false;
         const url = form.action;
         if (url.includes("/authorizations")) {
           form.reset();
         } else if (url.includes("/sources/connect")) {
+          const result = page.flash?.source_connect_result;
+          if (result && result.failed.length > 0) {
+            // Partial result: stay in the dialog with only the failed repositories selected.
+            connectResult = result;
+            sessionStorage.removeItem("sources_connect_success");
+            return;
+          }
           closeModal(false);
           setTimeout(() => (activeModal = "connect"), 0);
         }
@@ -664,6 +677,7 @@
       {initialProvider}
       {initialProviderInstanceId}
       {returnTo}
+      {connectResult}
       onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}

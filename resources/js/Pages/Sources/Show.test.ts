@@ -81,7 +81,7 @@ describe("Source details page", () => {
     );
   });
 
-  it("renders every audit entry with a shared event and timestamp", () => {
+  it("renders every audit entry with a shared event and timestamp", async () => {
     setPageUrl("/organization/acme/sources/source-1");
 
     renderPage(
@@ -114,6 +114,7 @@ describe("Source details page", () => {
       ],
     );
 
+    await fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
     expect(screen.getAllByText("publication.github.completed")).toHaveLength(3);
     expect(screen.getAllByText("Publication github completed")).toHaveLength(3);
   });
@@ -190,7 +191,6 @@ describe("Source details page", () => {
       expect(screen.getByText("Last success:")).toBeInTheDocument();
       expect(screen.getByText("Last failure:")).toBeInTheDocument();
       expect(screen.getByText("2 packages · 7 releases")).toBeInTheDocument();
-      expect(screen.getByText(/Recent deliveries \(4\)/)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Re-sync source" }),
       ).toBeEnabled();
@@ -483,14 +483,16 @@ describe("Source details page", () => {
       expect(screen.queryByText("1.2.3")).toBeNull();
     });
 
-    it("shows audit label with the key and an empty line", () => {
+    it("shows audit label with the key and an empty line", async () => {
       const { unmount } = renderActions();
+      await fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
 
       expect(screen.getByText("Source synchronized")).toBeInTheDocument();
       expect(screen.getByText("source.sync")).toBeInTheDocument();
       unmount();
 
       renderActions({}, { audit: [] });
+      await fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
       expect(
         screen.getByText("No audit entries for this source yet."),
       ).toBeInTheDocument();
@@ -571,6 +573,120 @@ describe("Source details page", () => {
       expect(
         screen.queryByRole("button", { name: "Delete source" }),
       ).toBeNull();
+    });
+  });
+
+  describe("activity card", () => {
+    const events = [
+      {
+        created_at: "2026-07-04T10:52:27+00:00",
+        delivery_id: "d-1",
+        event: "push",
+        message: "Bad signature",
+        status: "rejected",
+      },
+    ];
+
+    function renderActivity(
+      overrides: Partial<SourceDetailsPayload> = {},
+      extra: Record<string, unknown> = {},
+    ) {
+      return render(SourcesShow, {
+        props: {
+          audit: [
+            {
+              event: "source.sync",
+              id: "a1",
+              occurred_at: "2026-07-04T10:52:27+00:00",
+            },
+          ],
+          can_manage_sources: true,
+          organization,
+          source: { ...source, ...overrides },
+          webhook_events: events,
+          ...extra,
+        },
+      });
+    }
+
+    it("has two tabs, deliveries first, and switches by click and arrow keys", async () => {
+      renderActivity();
+
+      expect(screen.getByRole("tablist", { name: "Activity" })).toBeTruthy();
+      const deliveries = screen.getByRole("tab", {
+        name: "Webhook deliveries (1)",
+      });
+      const audit = screen.getByRole("tab", { name: "Audit log" });
+      expect(deliveries).toHaveAttribute("aria-selected", "true");
+      expect(deliveries).toHaveAttribute("tabindex", "0");
+      expect(audit).toHaveAttribute("tabindex", "-1");
+      expect(screen.getByRole("tabpanel")).toHaveAttribute(
+        "aria-labelledby",
+        deliveries.id,
+      );
+      expect(screen.getByText("Bad signature")).toBeInTheDocument();
+      expect(screen.getByText("d-1")).toBeInTheDocument();
+      expect(screen.queryByText("Source synchronized")).toBeNull();
+
+      await fireEvent.click(audit);
+      expect(audit).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByText("Source synchronized")).toBeInTheDocument();
+      expect(screen.queryByText("Bad signature")).toBeNull();
+
+      await fireEvent.keyDown(audit, { key: "ArrowLeft" });
+      expect(deliveries).toHaveAttribute("aria-selected", "true");
+      expect(deliveries).toHaveFocus();
+      await fireEvent.keyDown(deliveries, { key: "ArrowRight" });
+      expect(audit).toHaveAttribute("aria-selected", "true");
+      expect(audit).toHaveFocus();
+      expect(screen.getByText("Source synchronized")).toBeInTheDocument();
+    });
+
+    it("keeps the selected tab when props refresh", async () => {
+      const { rerender } = renderActivity();
+      await fireEvent.click(screen.getByRole("tab", { name: "Audit log" }));
+      await rerender({ webhook_events: [] });
+      expect(screen.getByRole("tab", { name: "Audit log" })).toHaveAttribute(
+        "aria-selected",
+        "true",
+      );
+    });
+
+    it("shows the empty deliveries text inside the tab and no line in the webhook card", () => {
+      renderActivity({}, { webhook_events: [] });
+
+      expect(screen.getByRole("tabpanel")).toHaveTextContent(
+        "No deliveries yet",
+      );
+      expect(screen.queryByText("Last delivery:")).toBeNull();
+    });
+
+    it("shows only the last delivery line in the webhook card, not the list", () => {
+      renderActivity();
+
+      expect(screen.getByText("Last delivery:")).toBeInTheDocument();
+      expect(screen.queryByText(/recent/)).toBeNull();
+      expect(screen.getAllByText(/rejected/)).toHaveLength(2);
+    });
+
+    it("shows Reprocess to managers only", () => {
+      const { unmount } = renderActivity();
+      expect(
+        screen.getByRole("button", { name: "Reprocess" }),
+      ).toBeInTheDocument();
+      unmount();
+
+      renderActivity({}, { can_manage_sources: false });
+      expect(screen.queryByRole("button", { name: "Reprocess" })).toBeNull();
+    });
+
+    it("shows only the audit log for generic git sources", () => {
+      renderActivity({ provider: "generic_git" });
+
+      expect(screen.queryByRole("tablist")).toBeNull();
+      expect(screen.queryByRole("tab")).toBeNull();
+      expect(screen.getByText("Source synchronized")).toBeInTheDocument();
+      expect(screen.queryByText("Bad signature")).toBeNull();
     });
   });
 });

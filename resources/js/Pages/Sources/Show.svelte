@@ -78,6 +78,39 @@
   let rotating = $state(false);
   let lastDelivery = $derived(webhook_events[0] ?? null);
   let supportsWebhookProcessing = $derived(source.provider !== "generic_git");
+  type ActivityTab = "deliveries" | "audit";
+  // Local state, so it survives the polling reload; generic Git has no deliveries tab.
+  let chosenTab = $state<ActivityTab>("deliveries");
+  let activeTab = $derived<ActivityTab>(
+    supportsWebhookProcessing ? chosenTab : "audit",
+  );
+  const activityTabs: ActivityTab[] = ["deliveries", "audit"];
+  let tabButtons = $state<Record<ActivityTab, HTMLButtonElement | undefined>>({
+    deliveries: undefined,
+    audit: undefined,
+  });
+
+  function onTabKeydown(event: KeyboardEvent): void {
+    const index = activityTabs.indexOf(activeTab);
+    const next =
+      event.key === "ArrowRight"
+        ? (index + 1) % activityTabs.length
+        : event.key === "ArrowLeft"
+          ? (index - 1 + activityTabs.length) % activityTabs.length
+          : event.key === "Home"
+            ? 0
+            : event.key === "End"
+              ? activityTabs.length - 1
+              : -1;
+
+    if (next < 0) {
+      return;
+    }
+
+    event.preventDefault();
+    chosenTab = activityTabs[next];
+    tabButtons[chosenTab]?.focus();
+  }
   let sync = $derived(syncSummary(source));
   let syncing = $derived(source.sync_job_status != null);
   // Mirrors SourceResyncHandler: only active sources can be re-synced; archiving deactivates.
@@ -400,7 +433,7 @@
     </Card>
   </section>
 
-  <section class="grid gap-6 lg:grid-cols-2">
+  <section class="grid items-start gap-6 lg:grid-cols-2">
     <Card className="min-w-0 rounded-[1.75rem] p-6">
       <SectionHeading eyebrow="Source settings" className="mb-4" />
       <div class="mt-4 grid gap-4">
@@ -588,15 +621,12 @@
                 settings.
               </p>
             {/if}
-            <p>
-              <span class="font-medium ui-title">Deliveries:</span>
-              {#if lastDelivery}
-                {stats.deliveries_count ?? webhook_events.length} recent · last {lastDelivery.status}
-                at {formatDate(lastDelivery.created_at)}
-              {:else}
-                No deliveries yet
-              {/if}
-            </p>
+            {#if lastDelivery}
+              <p>
+                <span class="font-medium ui-title">Last delivery:</span>
+                {lastDelivery.status} at {formatDate(lastDelivery.created_at)}
+              </p>
+            {/if}
             {#if can_manage_sources && source.supports_auto_registration && !source.webhook_registered}
               <form
                 method="POST"
@@ -672,64 +702,6 @@
               {/if}
             </div>
           </details>
-
-          <InsetCard className="p-4 text-sm ui-muted">
-            <p class="font-medium ui-title">
-              Recent deliveries ({stats.deliveries_count ?? 0})
-            </p>
-            <div class="mt-4 grid max-h-[33rem] gap-3 overflow-y-auto">
-              {#if webhook_events.length === 0}
-                <p class="text-sm ui-muted">No webhook deliveries yet.</p>
-              {:else}
-                {#each webhook_events as event (event.delivery_id)}
-                  <div class="ui-code rounded-xl p-3">
-                    <div class="flex items-start justify-between gap-3">
-                      <div class="min-w-0">
-                        <p class="text-sm font-medium ui-title">
-                          {event.event} · {event.status}
-                        </p>
-                        <p class="ui-muted mt-1 text-xs break-all">
-                          {event.delivery_id}
-                        </p>
-                      </div>
-                      {#if canReprocessWebhookEvent(event)}
-                        <form
-                          method="POST"
-                          action={withOrganization(
-                            `/sources/webhooks/${source.id}/${event.delivery_id}/reprocess`,
-                          )}
-                          onsubmit={(event) => {
-                            event.preventDefault();
-                            submit(
-                              event as SubmitEvent & {
-                                currentTarget: EventTarget & HTMLFormElement;
-                              },
-                            );
-                          }}
-                        >
-                          <Button
-                            className="rounded-full px-3 py-1.5 text-xs"
-                            type="submit"
-                            variant="secondary"
-                          >
-                            Reprocess
-                          </Button>
-                        </form>
-                      {/if}
-                    </div>
-                    {#if event.message}
-                      <p class="ui-muted mt-2 text-sm break-words">
-                        {event.message}
-                      </p>
-                    {/if}
-                    <p class="ui-muted mt-2 text-xs">
-                      received {formatDate(event.created_at)}
-                    </p>
-                  </div>
-                {/each}
-              {/if}
-            </div>
-          </InsetCard>
         {:else}
           <InsetCard className="p-4 text-sm ui-muted">
             <p class="font-medium ui-title">Webhooks are not supported</p>
@@ -773,29 +745,148 @@
     </Card>
 
     <Card className="min-w-0 rounded-[1.75rem] p-6">
-      <SectionHeading eyebrow="Audit trail" className="mb-4" />
-      {#if audit.length === 0}
-        <p class="text-sm ui-muted">No audit entries for this source yet.</p>
+      <SectionHeading eyebrow="Activity" className="mb-4" />
+      {#if supportsWebhookProcessing}
+        {@const tabClass = (tab: ActivityTab) =>
+          `cursor-pointer rounded-lg border px-3 py-1.5 text-sm font-medium transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_60%,transparent)] ${
+            activeTab === tab
+              ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-ink)]"
+              : "border-transparent text-[var(--page-muted)] hover:bg-[var(--surface-strong)] hover:text-[var(--accent-ink)]"
+          }`}
+        <div
+          class="mb-4 inline-flex flex-wrap items-center gap-1 rounded-xl border theme-border theme-surface-muted p-1"
+          role="tablist"
+          aria-label="Activity"
+          tabindex="-1"
+          onkeydown={onTabKeydown}
+        >
+          <button
+            bind:this={tabButtons.deliveries}
+            type="button"
+            role="tab"
+            id="activity-tab-deliveries"
+            aria-selected={activeTab === "deliveries"}
+            aria-controls="activity-panel-deliveries"
+            tabindex={activeTab === "deliveries" ? 0 : -1}
+            class={tabClass("deliveries")}
+            onclick={() => (chosenTab = "deliveries")}
+          >
+            Webhook deliveries ({webhook_events.length})
+          </button>
+          <button
+            bind:this={tabButtons.audit}
+            type="button"
+            role="tab"
+            id="activity-tab-audit"
+            aria-selected={activeTab === "audit"}
+            aria-controls="activity-panel-audit"
+            tabindex={activeTab === "audit" ? 0 : -1}
+            class={tabClass("audit")}
+            onclick={() => (chosenTab = "audit")}
+          >
+            Audit log
+          </button>
+        </div>
+      {/if}
+
+      {#if activeTab === "deliveries"}
+        <div
+          role="tabpanel"
+          id="activity-panel-deliveries"
+          aria-labelledby="activity-tab-deliveries"
+          tabindex="0"
+        >
+          {#if webhook_events.length === 0}
+            <p class="text-sm ui-muted">No deliveries yet</p>
+          {:else}
+            <ul class="grid max-h-[33rem] gap-2 overflow-y-auto">
+              {#each webhook_events as event (event.delivery_id)}
+                <li>
+                  <InsetCard className="px-4 py-2.5 text-sm">
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <p class="font-medium ui-title">
+                          {event.event} · {event.status}
+                        </p>
+                        <p class="ui-muted mt-1 text-xs break-all">
+                          {event.delivery_id}
+                        </p>
+                      </div>
+                      {#if canReprocessWebhookEvent(event)}
+                        <form
+                          method="POST"
+                          action={withOrganization(
+                            `/sources/webhooks/${source.id}/${event.delivery_id}/reprocess`,
+                          )}
+                          onsubmit={(event) => {
+                            event.preventDefault();
+                            submit(
+                              event as SubmitEvent & {
+                                currentTarget: EventTarget & HTMLFormElement;
+                              },
+                            );
+                          }}
+                        >
+                          <Button
+                            className="rounded-full px-3 py-1.5 text-xs"
+                            type="submit"
+                            variant="secondary"
+                          >
+                            Reprocess
+                          </Button>
+                        </form>
+                      {/if}
+                    </div>
+                    {#if event.message}
+                      <p class="ui-muted mt-2 break-words">{event.message}</p>
+                    {/if}
+                    <p class="ui-muted mt-2 text-xs">
+                      received {formatDate(event.created_at)}
+                    </p>
+                  </InsetCard>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {:else}
-        <ul class="grid gap-2">
-          {#each audit as entry (entry.id)}
-            <li>
-              <InsetCard
-                className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
-              >
-                <span class="min-w-0">
-                  <span class="font-medium ui-title">
-                    {auditEventLabel(entry.event)}
-                  </span>
-                  <span class="ui-muted ml-2 text-xs break-all">
-                    {entry.event}
-                  </span>
-                </span>
-                <span class="ui-muted">{formatDate(entry.occurred_at)}</span>
-              </InsetCard>
-            </li>
-          {/each}
-        </ul>
+        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+        <div
+          role={supportsWebhookProcessing ? "tabpanel" : undefined}
+          id="activity-panel-audit"
+          aria-labelledby={supportsWebhookProcessing
+            ? "activity-tab-audit"
+            : undefined}
+          tabindex={supportsWebhookProcessing ? 0 : undefined}
+        >
+          {#if audit.length === 0}
+            <p class="text-sm ui-muted">
+              No audit entries for this source yet.
+            </p>
+          {:else}
+            <ul class="grid gap-2">
+              {#each audit as entry (entry.id)}
+                <li>
+                  <InsetCard
+                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+                  >
+                    <span class="min-w-0">
+                      <span class="font-medium ui-title">
+                        {auditEventLabel(entry.event)}
+                      </span>
+                      <span class="ui-muted ml-2 text-xs break-all">
+                        {entry.event}
+                      </span>
+                    </span>
+                    <span class="ui-muted">
+                      {formatDate(entry.occurred_at)}
+                    </span>
+                  </InsetCard>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
       {/if}
     </Card>
 

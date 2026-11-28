@@ -12,6 +12,7 @@ use Cycle\ORM\ORMInterface;
 use Laminas\ServiceManager\AbstractFactory\ConfigAbstractFactory;
 use Packio\Admin\Api\ProjectSettingsApiFacadeInterface;
 use Packio\Application\Inertia\InertiaNotificationMessenger;
+use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Audit\Api\AuditApiFacadeInterface;
 use Packio\Identity\Api\OAuthApiFacadeInterface;
 use Packio\Organization\Api\OrganizationApiFacadeInterface;
@@ -649,6 +650,7 @@ return [
             SourceAuthorizationStrategyResolver::class,
             InertiaNotificationMessenger::class,
             SourceProviderMetadataCatalog::class,
+            ValidationRedirectState::class,
             LoggerInterface::class,
         ],
         SourceAuthorizationOAuthStoreHandler::class                      => [

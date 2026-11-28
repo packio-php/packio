@@ -15,13 +15,13 @@ use Packio\Publication\Infrastructure\Request\ConnectSourcesCommandFactory;
 use Packio\Publication\Infrastructure\Request\SourceConnectRequest;
 use Packio\Shared\Api\Dto\OrganizationDto;
 use Packio\Shared\Domain\Organization\ActorContext;
+use PackioTest\Unit\Application\Middleware\TestInertia;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
-use Sirix\InertiaPsr15\Service\InertiaInterface;
 use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 
@@ -41,13 +41,7 @@ final class SourceConnectHandlerTest extends TestCase
         $connectSourceOutcome = new ConnectSourceOutcome('repo', 'internal_error', 'safe');
         $useCase              = $this->createMock(ConnectSourcesUseCase::class);
         $useCase->expects(self::once())->method('execute')->with(self::callback(static fn ($command): bool => ['a/b'] === $command->repositories && 'org' === $command->actorContext->organizationId))->willReturn(new ConnectSourcesResult(array_fill(0, $queued, $connectSourceOutcome), array_fill(0, $skipped, $connectSourceOutcome), array_fill(0, $failed, $connectSourceOutcome)));
-        $inertia = $this->createMock(InertiaInterface::class);
-        $inertia->expects(self::once())->method('flash')->with('toasts', [[
-            'type'     => $type,
-            'message'  => $message,
-            'duration' => null,
-            'position' => null,
-        ]]);
+        $inertia       = new TestInertia();
         $serverRequest = RequestContextAttributes::withOrganizationContext(new ServerRequest(), 'example', new OrganizationDto('org', 'example', 'Example'), actorContext: new ActorContext('org', 'user', 'owner'))
             ->withAttribute(SourceConnectRequest::class, new SourceConnectRequest(provider: 'github', resourceUrl: ' a/b '))
             ->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia)
@@ -55,6 +49,20 @@ final class SourceConnectHandlerTest extends TestCase
         $response = new SourceConnectHandler($useCase, new ConnectSourcesCommandFactory(), new InertiaNotificationMessenger())->handle($serverRequest);
         self::assertSame(302, $response->getStatusCode());
         self::assertSame('/organization/example/sources', $response->getHeaderLine('Location'));
+        self::assertSame([[
+            'type'     => $type,
+            'message'  => $message,
+            'duration' => null,
+            'position' => null,
+        ]], $inertia->flash['toasts']);
+        self::assertSame([
+            'queued'  => array_fill(0, $queued, 'repo'),
+            'skipped' => array_fill(0, $skipped, 'repo'),
+            'failed'  => array_fill(0, $failed, [
+                'repository' => 'repo',
+                'message'    => 'safe',
+            ]),
+        ], $inertia->flash['source_connect_result']);
     }
 
     /** @return iterable<string, array{int, int, int, string, string}> */

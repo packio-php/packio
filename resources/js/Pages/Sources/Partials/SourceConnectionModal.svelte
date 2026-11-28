@@ -1,5 +1,6 @@
 <script lang="ts">
   import { Trash2, X } from "@lucide/svelte";
+  import { router } from "@inertiajs/svelte";
   import { onMount, tick } from "svelte";
   import Button from "@/Components/ui/Button.svelte";
   import Card from "@/Components/ui/Card.svelte";
@@ -68,6 +69,9 @@
     resolvedBranding: { name: string };
     isSubmitting: boolean;
     user_oauth_accounts?: UserOAuthAccountPayload[];
+    initialProvider?: string;
+    initialProviderInstanceId?: string;
+    returnTo?: string;
     onClose: () => void;
     onConnectSubmit: (
       event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -94,6 +98,9 @@
     resolvedBranding,
     isSubmitting,
     user_oauth_accounts = [],
+    initialProvider = "",
+    initialProviderInstanceId = "",
+    returnTo = "",
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -309,6 +316,10 @@
       sessionStorage.removeItem("sources_modal_state");
     } else {
       hasClickedLoad = false;
+      if (providers.some((p) => p.key === initialProvider)) {
+        selectedProvider = initialProvider;
+        selectedProviderInstanceId = initialProviderInstanceId;
+      }
     }
 
     return () => {
@@ -374,6 +385,11 @@
       }
 
       providerAuthorizationsAll = [...providerAuthorizationsAll, authorization];
+      if (returnTo && activeModal === "access") {
+        onAuthorizationCreated(authorization);
+        router.visit(returnTo);
+        return;
+      }
       selectedAuthorizationId = authorization.id;
       sessionStorage.setItem(
         "sources_modal_state",
@@ -455,7 +471,10 @@
       return;
     }
 
-    activeModal = "connect";
+    // Opened from a source page: stay in access mode; the authorization step returns there.
+    if (!(returnTo && activeModal === "access")) {
+      activeModal = "connect";
+    }
 
     await createAuthorizationFromOAuth(data.provider, {
       sourceOauthAccountId: data.sourceOAuthAccountId,
@@ -1058,6 +1077,9 @@
                     name="provider"
                     value={selectedProvider}
                   />
+                  {#if returnTo}
+                    <input type="hidden" name="return_to" value={returnTo} />
+                  {/if}
                   {#if providerNeedsInstance}
                     <input
                       type="hidden"
@@ -1136,6 +1158,22 @@
                     This {selectedProviderNoun} instance is configured for OAuth only.
                   </p>
                 </InsetCard>
+              {/if}
+              {#if returnTo}
+                <p class="text-sm ui-muted">
+                  Access is saved for the whole organization and can be used by
+                  other sources.
+                </p>
+                <div>
+                  <Button
+                    className="rounded-full px-5"
+                    type="button"
+                    variant="secondary"
+                    onclick={handleClose}
+                  >
+                    Done
+                  </Button>
+                </div>
               {/if}
             </div>
           {:else}

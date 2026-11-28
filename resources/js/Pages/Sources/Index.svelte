@@ -125,6 +125,10 @@
   type ModalView = "access" | "connect" | null;
 
   let activeModal: ModalView = $state(null);
+  // Set when opened from a source page: preselects the provider and sends the user back there on close.
+  let initialProvider = $state("");
+  let initialProviderInstanceId = $state("");
+  let returnTo = $state("");
   let isSubmitting = $state(false);
   let scrollLockApplied = false;
   let previousBodyOverflow = "";
@@ -173,7 +177,26 @@
 
     const url = new URL(window.location.href);
     if (url.searchParams.has("manage_access")) {
-      url.searchParams.delete("manage_access");
+      const requestedReturn = url.searchParams.get("return_to") ?? "";
+      // Only same-organization source pages: no scheme, no "//", no backslashes or whitespace.
+      if (
+        requestedReturn.startsWith(withOrganization("/sources/")) &&
+        !requestedReturn.includes("//") &&
+        !/[\\\s]/.test(requestedReturn)
+      ) {
+        returnTo = requestedReturn;
+      }
+      initialProvider = url.searchParams.get("provider") ?? "";
+      initialProviderInstanceId =
+        url.searchParams.get("provider_instance_id") ?? "";
+      for (const key of [
+        "manage_access",
+        "provider",
+        "provider_instance_id",
+        "return_to",
+      ]) {
+        url.searchParams.delete(key);
+      }
       window.history.replaceState(
         window.history.state,
         "",
@@ -236,6 +259,11 @@
   async function dismissModal(): Promise<void> {
     if (!activeModal) {
       return; // Escape bubbles through two handlers
+    }
+    if (returnTo) {
+      closeModal();
+      router.visit(returnTo);
+      return;
     }
     const fallbackId =
       activeModal === "access"
@@ -629,6 +657,9 @@
       {resolvedBranding}
       {isSubmitting}
       {user_oauth_accounts}
+      {initialProvider}
+      {initialProviderInstanceId}
+      {returnTo}
       onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}

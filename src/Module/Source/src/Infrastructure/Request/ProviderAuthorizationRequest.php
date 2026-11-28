@@ -21,5 +21,7 @@ final readonly class ProviderAuthorizationRequest
         public string $providerInstanceId = '',
         #[Regex('#^$|^(bearer|basic)$#')]
         public string $authScheme = '',
+        // Validated against the current organization in the handler; anything else is ignored.
+        public string $returnTo = '',
     ) {}
 }

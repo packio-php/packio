@@ -369,6 +369,80 @@ describe("Sources index page", () => {
     expect(window.location.search).toBe("?page=2");
   });
 
+  describe("opened from a source page", () => {
+    const sourcePath = "/organization/acme/sources/source-1";
+    const renderPage = () =>
+      render(SourcesIndex, {
+        props: {
+          organization,
+          providers: [githubProvider, genericProvider],
+          source_stats: { active: 0, archived: 0, total: 0 },
+          can_manage_sources: true,
+        },
+      });
+    const open = (query: string) =>
+      window.history.replaceState(
+        {},
+        "",
+        `/organization/acme/sources?manage_access=1&${query}`,
+      );
+
+    it("preselects the provider and strips the params", async () => {
+      open(
+        `provider=generic_git&return_to=${encodeURIComponent(`${sourcePath}?tab=activity`)}`,
+      );
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      expect(
+        within(dialog).getByLabelText(/Generic Git authorization token/),
+      ).toBeInTheDocument();
+      expect(window.location.search).toBe("");
+    });
+
+    it("visits returnTo on close", async () => {
+      vi.mocked(router.visit).mockClear();
+      open(
+        `provider=github&return_to=${encodeURIComponent(`${sourcePath}?tab=activity`)}`,
+      );
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(router.visit).toHaveBeenCalledWith(`${sourcePath}?tab=activity`),
+      );
+      expect(router.visit).toHaveBeenCalledTimes(1);
+    });
+
+    it.each([
+      ["external", "https://evil.test/organization/acme/sources/source-1"],
+      ["protocol-relative", "//evil.test/organization/acme/sources/x"],
+      ["other organization", "/organization/other/sources/source-1"],
+      ["list page", "/organization/acme/sources"],
+    ])("ignores a %s return_to", async (_name, target) => {
+      vi.mocked(router.visit).mockClear();
+      open(`provider=github&return_to=${encodeURIComponent(target)}`);
+      renderPage();
+
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      expect(within(dialog).queryByRole("button", { name: "Done" })).toBeNull();
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(
+          screen.queryByRole("dialog", { name: "Manage provider access" }),
+        ).toBeNull(),
+      );
+      expect(router.visit).not.toHaveBeenCalled();
+    });
+  });
+
   describe("focus return", () => {
     const renderPage = () =>
       render(SourcesIndex, {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { usePage } from "@inertiajs/svelte";
+  import { SvelteURLSearchParams } from "svelte/reactivity";
   import { router } from "@inertiajs/svelte";
 
   import AppShell from "@/Layouts/AppShell.svelte";
@@ -188,7 +189,29 @@
     return fallback;
   }
 
-  let backUrl = $derived(safeBackUrl(usePage<AppPageProps>().url ?? ""));
+  const page = usePage<AppPageProps>();
+  let backUrl = $derived(safeBackUrl(page.url ?? ""));
+
+  // Opens the access dialog on the list for this source's provider and returns here when done.
+  let manageAccessHref = $derived.by(() => {
+    const detailsPath = withOrganization(`/sources/${source.id}`);
+    const here = page.url ?? "";
+    const params = new SvelteURLSearchParams({ manage_access: "1" });
+    if (source.provider) {
+      params.set("provider", source.provider);
+    }
+    if (source.provider_instance_id) {
+      params.set("provider_instance_id", source.provider_instance_id);
+    }
+    params.set(
+      "return_to",
+      here === detailsPath || here.startsWith(`${detailsPath}?`)
+        ? here
+        : detailsPath,
+    );
+
+    return withOrganization(`/sources?${params}`);
+  });
 
   function maskedSecret(secret: string): string {
     if (!secret) {
@@ -403,10 +426,7 @@
         {/if}
         {#if showManageAccess}
           <p>
-            <Link
-              class="ui-link-accent font-medium"
-              href={withOrganization("/sources?manage_access=1")}
-            >
+            <Link class="ui-link-accent font-medium" href={manageAccessHref}>
               Manage provider access
             </Link>
             {#if source.credentials?.auth_failure_reason}
@@ -493,7 +513,7 @@
               </Button>
               <Link
                 class="ui-link-accent self-center text-sm font-medium"
-                href={withOrganization("/sources?manage_access=1")}
+                href={manageAccessHref}
               >
                 Manage provider access
               </Link>

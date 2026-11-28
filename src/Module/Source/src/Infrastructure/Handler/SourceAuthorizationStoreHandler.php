@@ -26,6 +26,9 @@ use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
 use Sirix\Mezzio\Valinor\Attribute\MapRequest;
 use Throwable;
 
+use function preg_match;
+use function preg_quote;
+
 #[Authenticated]
 #[Can('sources.manage', [
     'organization' => RequestContextAttributes::CURRENT_ORGANIZATION,
@@ -96,6 +99,12 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
             $this->inertiaNotificationMessenger->toast($request, 'error', 'Provider authorization failed.');
         }
 
-        return new RedirectResponse('/organization/' . $organizationDto->slug . '/sources');
+        $base = '/organization/' . $organizationDto->slug . '/sources';
+
+        return new RedirectResponse(
+            1 === preg_match('#\A' . preg_quote($base, '#') . '/[0-9a-fA-F-]{36}(\?[A-Za-z0-9_=&%.\-]*)?\z#', $form->returnTo)
+                ? $form->returnTo
+                : $base,
+        );
     }
 }

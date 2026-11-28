@@ -288,7 +288,7 @@ describe("Source details page", () => {
       })) {
         expect(link).toHaveAttribute(
           "href",
-          "/organization/acme/sources?manage_access=1",
+          "/organization/acme/sources?manage_access=1&provider=github&return_to=%2Forganization%2Facme%2Fsources%2Fsource-1",
         );
       }
     });
@@ -340,7 +340,10 @@ describe("Source details page", () => {
       expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
       expect(
         screen.getAllByRole("link", { name: "Manage provider access" }).at(-1),
-      ).toHaveAttribute("href", "/organization/acme/sources?manage_access=1");
+      ).toHaveAttribute(
+        "href",
+        "/organization/acme/sources?manage_access=1&provider=github&return_to=%2Forganization%2Facme%2Fsources%2Fsource-1",
+      );
 
       await fireEvent.click(
         screen.getByRole("button", { name: "Edit settings" }),

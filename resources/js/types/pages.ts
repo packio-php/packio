@@ -736,6 +736,7 @@ export interface SourceDetailsPayload {
   name: string;
   packages_active: boolean;
   provider?: string;
+  provider_instance_id?: string | null;
   provider_label?: string;
   status?: "active" | "deleting";
   type: string;

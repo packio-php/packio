@@ -173,6 +173,7 @@ final readonly class SourceDetailsPageDataBuilder
                 'provider_label'          => $this->sourceProviderLabelResolver->resolve(
                     $sourceDto->provider,
                 ),
+                'provider_instance_id'    => $sourceDto->providerConfig['provider_instance_id'] ?? null,
                 'name'                    => $sourceName,
                 'type'                    => $sourceDto->type,
                 'url'                     => $sourceDto->url,

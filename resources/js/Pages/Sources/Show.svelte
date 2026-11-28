@@ -809,12 +809,13 @@
         </div>
       {/if}
 
-      {#if activeTab === "deliveries"}
+      {#if supportsWebhookProcessing}
         <div
           role="tabpanel"
           id="activity-panel-deliveries"
           aria-labelledby="activity-tab-deliveries"
           tabindex="0"
+          hidden={activeTab !== "deliveries"}
         >
           {#if webhook_events.length === 0}
             <p class="text-sm ui-muted">No deliveries yet</p>
@@ -869,45 +870,41 @@
             </ul>
           {/if}
         </div>
-      {:else}
-        <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-        <div
-          role={supportsWebhookProcessing ? "tabpanel" : undefined}
-          id="activity-panel-audit"
-          aria-labelledby={supportsWebhookProcessing
-            ? "activity-tab-audit"
-            : undefined}
-          tabindex={supportsWebhookProcessing ? 0 : undefined}
-        >
-          {#if audit.length === 0}
-            <p class="text-sm ui-muted">
-              No audit entries for this source yet.
-            </p>
-          {:else}
-            <ul class="grid gap-2">
-              {#each audit as entry (entry.id)}
-                <li>
-                  <InsetCard
-                    className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
-                  >
-                    <span class="min-w-0">
-                      <span class="font-medium ui-title">
-                        {auditEventLabel(entry.event)}
-                      </span>
-                      <span class="ui-muted ml-2 text-xs break-all">
-                        {entry.event}
-                      </span>
-                    </span>
-                    <span class="ui-muted">
-                      {formatDate(entry.occurred_at)}
-                    </span>
-                  </InsetCard>
-                </li>
-              {/each}
-            </ul>
-          {/if}
-        </div>
       {/if}
+      <div
+        role={supportsWebhookProcessing ? "tabpanel" : undefined}
+        id="activity-panel-audit"
+        aria-labelledby={supportsWebhookProcessing
+          ? "activity-tab-audit"
+          : undefined}
+        hidden={activeTab !== "audit"}
+      >
+        {#if audit.length === 0}
+          <p class="text-sm ui-muted">No audit entries for this source yet.</p>
+        {:else}
+          <ul class="grid gap-2">
+            {#each audit as entry (entry.id)}
+              <li>
+                <InsetCard
+                  className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-2.5 text-sm"
+                >
+                  <span class="min-w-0">
+                    <span class="font-medium ui-title">
+                      {auditEventLabel(entry.event)}
+                    </span>
+                    <span class="ui-muted ml-2 text-xs break-all">
+                      {entry.event}
+                    </span>
+                  </span>
+                  <span class="ui-muted">
+                    {formatDate(entry.occurred_at)}
+                  </span>
+                </InsetCard>
+              </li>
+            {/each}
+          </ul>
+        {/if}
+      </div>
     </Card>
 
     {#if can_manage_sources}

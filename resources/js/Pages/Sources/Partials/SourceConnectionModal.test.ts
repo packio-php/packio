@@ -171,6 +171,25 @@ describe("SourceConnectionModal", () => {
     vi.spyOn(apiClient, "post").mockReset();
   });
 
+  it("keeps Tab focus inside the dialog", async () => {
+    renderModal();
+    const dialog = screen.getByRole("dialog");
+    const focusable = [
+      ...dialog.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ),
+    ];
+    const first = focusable[0];
+    const last = focusable.at(-1)!;
+
+    last.focus();
+    await fireEvent.keyDown(dialog, { key: "Tab" });
+    expect(document.activeElement).toBe(first);
+
+    await fireEvent.keyDown(dialog, { key: "Tab", shiftKey: true });
+    expect(document.activeElement).toBe(last);
+  });
+
   it("filters providers, loads resources, and submits selected modal state", async () => {
     vi.mocked(apiClient.get).mockResolvedValue({
       ok: true,

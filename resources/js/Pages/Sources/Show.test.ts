@@ -629,12 +629,12 @@ describe("Source details page", () => {
       );
       expect(screen.getByText("Bad signature")).toBeInTheDocument();
       expect(screen.getByText("d-1")).toBeInTheDocument();
-      expect(screen.queryByText("Source synchronized")).toBeNull();
+      expect(screen.getByText("Source synchronized")).not.toBeVisible();
 
       await fireEvent.click(audit);
       expect(audit).toHaveAttribute("aria-selected", "true");
       expect(screen.getByText("Source synchronized")).toBeInTheDocument();
-      expect(screen.queryByText("Bad signature")).toBeNull();
+      expect(screen.getByText("Bad signature")).not.toBeVisible();
 
       await fireEvent.keyDown(audit, { key: "ArrowLeft" });
       expect(deliveries).toHaveAttribute("aria-selected", "true");

@@ -55,13 +55,13 @@ final readonly class SourceResyncHandler implements RequestHandlerInterface
             return new RedirectResponse('/organization/' . $organizationDto->slug . '/sources/' . $sourceId);
         }
 
-        if (null !== $this->sourceApiFacade->activeSourceSyncStatus($source->id, $organizationDto->id)) {
-            $this->inertiaNotificationMessenger->toast($request, 'info', 'A sync is already queued or running.');
-
-            return new RedirectResponse('/organization/' . $organizationDto->slug . '/sources/' . $sourceId);
-        }
-
         try {
+            if (null !== $this->sourceApiFacade->activeSourceSyncStatus($source->id, $organizationDto->id)) {
+                $this->inertiaNotificationMessenger->toast($request, 'info', 'A sync is already queued or running.');
+
+                return new RedirectResponse('/organization/' . $organizationDto->slug . '/sources/' . $sourceId);
+            }
+
             $this->sourceApiFacade->scheduleSourceSync($source->id, $organizationDto->id, 5);
             $this->inertiaNotificationMessenger->flash($request, 'success', 'Re-sync scheduled.');
         } catch (Throwable) {

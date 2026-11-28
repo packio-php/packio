@@ -370,7 +370,8 @@ describe("Sources index page", () => {
   });
 
   describe("opened from a source page", () => {
-    const sourcePath = "/organization/acme/sources/source-1";
+    const sourcePath =
+      "/organization/acme/sources/11111111-1111-4111-8111-111111111111";
     const renderPage = () =>
       render(SourcesIndex, {
         props: {
@@ -424,6 +425,7 @@ describe("Sources index page", () => {
       ["protocol-relative", "//evil.test/organization/acme/sources/x"],
       ["other organization", "/organization/other/sources/source-1"],
       ["list page", "/organization/acme/sources"],
+      ["path traversal", "/organization/acme/sources/../../x"],
     ])("ignores a %s return_to", async (_name, target) => {
       vi.mocked(router.visit).mockClear();
       open(`provider=github&return_to=${encodeURIComponent(target)}`);

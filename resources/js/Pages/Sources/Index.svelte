@@ -178,11 +178,15 @@
     const url = new URL(window.location.href);
     if (url.searchParams.has("manage_access")) {
       const requestedReturn = url.searchParams.get("return_to") ?? "";
-      // Only same-organization source pages: no scheme, no "//", no backslashes or whitespace.
+      // Mirrors the backend rule: one source page of this organization, optional query.
+      const sourcePrefix = withOrganization("/sources/").replace(
+        /[.*+?^${}()|[\]\\]/g,
+        "\\$&",
+      );
       if (
-        requestedReturn.startsWith(withOrganization("/sources/")) &&
-        !requestedReturn.includes("//") &&
-        !/[\\\s]/.test(requestedReturn)
+        new RegExp(
+          `^${sourcePrefix}[0-9a-fA-F-]{36}(\\?[A-Za-z0-9_=&%.\\-]*)?$`,
+        ).test(requestedReturn)
       ) {
         returnTo = requestedReturn;
       }

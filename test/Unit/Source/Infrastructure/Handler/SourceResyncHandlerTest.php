@@ -20,9 +20,11 @@ use PHPUnit\Framework\MockObject\MockObject;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ResponseInterface;
 use ReflectionClass;
+use RuntimeException;
 use Sirix\InertiaPsr15\Middleware\InertiaMiddleware;
 use Sirix\Mezzio\Rbac\Attribute\Can;
 use Sirix\Mezzio\Routing\Attributes\Attribute\Post;
+use Throwable;
 
 #[CoversClass(SourceResyncHandler::class)]
 final class SourceResyncHandlerTest extends TestCase
@@ -87,7 +89,19 @@ final class SourceResyncHandlerTest extends TestCase
         self::assertSame('Re-sync scheduled.', $testInertia->flash['success']);
     }
 
-    private function facade(?string $activeStatus): MockObject&SourceApiFacadeInterface
+    #[Test]
+    public function flashesErrorWhenStatusLookupFails(): void
+    {
+        $sourceApiFacade = $this->facade(null, new RuntimeException('db down'));
+        $sourceApiFacade->expects(self::never())->method('scheduleSourceSync');
+
+        $testInertia = new TestInertia();
+        $this->handle($sourceApiFacade, $testInertia);
+
+        self::assertSame('Unable to schedule re-sync.', $testInertia->flash['error']);
+    }
+
+    private function facade(?string $activeStatus, ?Throwable $failure = null): MockObject&SourceApiFacadeInterface
     {
         $sourceApiFacade = $this->createMock(SourceApiFacadeInterface::class);
         $sourceApiFacade->method('findSource')->willReturn(new SourceDto(
@@ -102,7 +116,12 @@ final class SourceResyncHandlerTest extends TestCase
             defaultRef: 'main',
             organizationId: 'org-1',
         ));
-        $sourceApiFacade->expects(self::once())->method('activeSourceSyncStatus')->with(self::SOURCE_ID, 'org-1')->willReturn($activeStatus);
+        $activeCall = $sourceApiFacade->expects(self::once())->method('activeSourceSyncStatus')->with(self::SOURCE_ID, 'org-1');
+        if ($failure instanceof Throwable) {
+            $activeCall->willThrowException($failure);
+        } else {
+            $activeCall->willReturn($activeStatus);
+        }
 
         return $sourceApiFacade;
     }

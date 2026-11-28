@@ -121,7 +121,7 @@ export function emitRouterEvent(
 
 export function resetInertiaMocks(): void {
   for (const method of Object.values(router)) {
-    method.mockClear();
+    method.mockReset();
   }
   http.onRequest.mockClear();
   http.onResponse.mockClear();

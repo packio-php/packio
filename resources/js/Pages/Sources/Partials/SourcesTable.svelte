@@ -21,18 +21,18 @@
 <TableFrame ariaLabel="Sources" tableClassName="min-w-[720px]">
   <thead>
     <tr>
-      <th class="w-full px-4 py-3">Source</th>
-      <th class="w-px whitespace-nowrap px-4 py-3">Provider</th>
-      <th class="w-px whitespace-nowrap px-4 py-3">State</th>
-      <th class="w-px whitespace-nowrap px-4 py-3">Visibility</th>
-      <th class="w-px whitespace-nowrap px-4 py-3 text-right">Last sync</th>
+      <th class="w-[42%] px-4 py-3">Source</th>
+      <th class="whitespace-nowrap px-4 py-3">Provider</th>
+      <th class="whitespace-nowrap px-4 py-3">State</th>
+      <th class="whitespace-nowrap px-4 py-3">Visibility</th>
+      <th class="w-px whitespace-nowrap px-4 py-3">Last sync</th>
     </tr>
   </thead>
   <tbody>
     {#each sources as source (source.id)}
       {@const sync = syncSummary(source)}
       <tr class="align-top">
-        <td class="w-full max-w-0 px-4 py-3">
+        <td class="w-[42%] max-w-0 px-4 py-3">
           <Link
             class="ui-link-accent block truncate font-semibold"
             href={sourceDetailsUrl(source)}
@@ -41,15 +41,15 @@
             {source.name}
           </Link>
         </td>
-        <td class="w-px whitespace-nowrap px-4 py-3 ui-muted">
+        <td class="whitespace-nowrap px-4 py-3 ui-muted">
           {source.provider_label ?? source.provider ?? "unknown"}
         </td>
-        <td class="w-px whitespace-nowrap px-4 py-3">
+        <td class="whitespace-nowrap px-4 py-3">
           <Badge className="whitespace-nowrap" tone={sourceStateTone(source)}>
             {sourceStateLabel(source)}
           </Badge>
         </td>
-        <td class="w-px whitespace-nowrap px-4 py-3">
+        <td class="whitespace-nowrap px-4 py-3">
           <Badge
             className="whitespace-nowrap"
             tone={source.visibility === "private" ? "danger" : "accent"}
@@ -58,7 +58,7 @@
           </Badge>
         </td>
         <td class="w-px px-4 py-3">
-          <div class="flex items-center justify-end gap-2 whitespace-nowrap">
+          <div class="flex items-center gap-2 whitespace-nowrap">
             <Badge className="whitespace-nowrap" tone={sync.tone}>
               {sync.label}
             </Badge>

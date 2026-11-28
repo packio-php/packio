@@ -55,17 +55,19 @@ describe("Registry setup page", () => {
       "aria-pressed",
       "true",
     );
-    const json = JSON.parse(await copied("Copy COMPOSER_AUTH JSON"));
+    const json = JSON.parse(await copied("Copy JSON for COMPOSER_AUTH"));
     expect(json["http-basic"][host].username).toBe("token");
   });
 
   it("copies the repository JSON and the bare URL", async () => {
     render(Setup, { props: baseProps as never });
 
-    const json = await copied("Copy repository JSON");
+    const json = await copied("Copy JSON for the repository");
     expect(json).toContain(`"url": "https://${host}/private"`);
     expect(JSON.parse(json).repositories[0].type).toBe("composer");
-    expect(await copied("Copy repository URL")).toBe(`https://${host}/private`);
+    expect(await copied("Copy URL of the repository")).toBe(
+      `https://${host}/private`,
+    );
   });
 
   it("falls back to the public URL when there is no private one", async () => {
@@ -74,7 +76,9 @@ describe("Registry setup page", () => {
     });
 
     expect(step(2).textContent).toContain(`"url": "https://${host}/public"`);
-    expect(await copied("Copy repository URL")).toBe(`https://${host}/public`);
+    expect(await copied("Copy URL of the repository")).toBe(
+      `https://${host}/public`,
+    );
   });
 
   it("prefers the registry host over the base URL", () => {
@@ -136,5 +140,37 @@ describe("Registry setup page", () => {
 
     expect(document.querySelector("details")).not.toHaveAttribute("open");
     expect(screen.getAllByText(/No public packages yet/)).toHaveLength(1);
+  });
+
+  it("copies the public URL and public composer.json snippet exactly as shown", async () => {
+    render(Setup, { props: baseProps as never });
+
+    const details = document.querySelector("details") as HTMLElement;
+    const shownUrl = details.querySelector("code")?.textContent?.trim();
+    const shownJson = details.querySelector("pre")?.textContent;
+
+    expect(shownUrl).toBe(`https://${host}/public`);
+    expect(await copied("Copy URL of the public repository")).toBe(shownUrl);
+    expect(await copied("Copy JSON for the public repository")).toBe(shownJson);
+  });
+
+  it("offers the settings link to owners when anonymous access is disabled and no public packages exist", () => {
+    setPageProps({ current_membership: { role: "owner" } });
+    render(Setup, {
+      props: {
+        ...baseProps,
+        organization: { ...baseProps.organization, anonymous_access: false },
+        public_packages: [],
+      } as never,
+    });
+
+    expect(
+      screen.getByText(
+        "Anonymous access is disabled in organization settings.",
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Open organization settings" }),
+    ).toHaveAttribute("href", "/organization/acme/settings");
   });
 });

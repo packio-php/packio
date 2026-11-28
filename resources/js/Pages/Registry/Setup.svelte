@@ -151,7 +151,7 @@
             <SnippetBlock
               content={ciJson}
               multiline={true}
-              copyLabel="Copy COMPOSER_AUTH JSON"
+              copyLabel="Copy JSON for COMPOSER_AUTH"
               copyText="Copy JSON"
             />
             <p class="text-sm ui-muted">
@@ -166,13 +166,13 @@
           <SnippetBlock
             content={composerJsonSnippet}
             multiline={true}
-            copyLabel="Copy repository JSON"
+            copyLabel="Copy JSON for the repository"
             copyText="Copy JSON"
           >
             {#snippet actions()}
               <CopyButton
                 value={repositoryUrl}
-                label="Copy repository URL"
+                label="Copy URL of the repository"
                 text="Copy URL"
               />
             {/snippet}
@@ -263,13 +263,13 @@
 
           <SnippetBlock
             content={public_bootstrap}
-            copyLabel="Copy public repository URL"
+            copyLabel="Copy URL of the public repository"
             copyText="Copy URL"
           />
           <SnippetBlock
             content={publicComposerJsonSnippet}
             multiline={true}
-            copyLabel="Copy public repository JSON"
+            copyLabel="Copy JSON for the public repository"
             copyText="Copy JSON"
           />
         </div>

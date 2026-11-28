@@ -46,7 +46,7 @@
     className="shrink-0 !px-3 !py-1.5"
     onclick={copy}
     aria-label={label || status !== "idle" ? name : undefined}
-    title={name}
+    title={status === "idle" ? label || text : name}
   >
     {status === "idle" ? text : name}
   </Button>

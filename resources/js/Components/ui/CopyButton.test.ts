@@ -81,11 +81,24 @@ describe("CopyButton", () => {
 
   it("uses the label as accessible name of a text button", () => {
     render(CopyButton, {
-      props: { value: "x", label: "Copy repository JSON", text: "Copy JSON" },
+      props: {
+        value: "x",
+        label: "Copy JSON for the repository",
+        text: "Copy JSON",
+      },
     });
 
     expect(
-      screen.getByRole("button", { name: "Copy repository JSON" }),
+      screen.getByRole("button", { name: "Copy JSON for the repository" }),
     ).toHaveTextContent("Copy JSON");
+  });
+
+  it("uses the visible text as title when no label is set", () => {
+    render(CopyButton, { props: { value: "x", text: "Copy JSON" } });
+
+    expect(screen.getByRole("button", { name: "Copy JSON" })).toHaveAttribute(
+      "title",
+      "Copy JSON",
+    );
   });
 });

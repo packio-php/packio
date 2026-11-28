@@ -68,6 +68,8 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
 
         $isSelfHosted = $this->sourceProviderMetadataCatalog->isSelfHosted($form->provider);
 
+        $failed = false;
+
         try {
             $this->sourceApiFacade->authorizeProviderInContext(
                 $actorContext,
@@ -98,6 +100,7 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
 
             $this->inertiaNotificationMessenger->toast($request, 'success', 'Provider authorization saved. Available resources were refreshed.');
         } catch (Throwable $exception) {
+            $failed = true;
             $this->logger?->error('Provider authorization failed.', SafeExceptionContext::forRequest($exception, $request));
             $this->validationRedirectState->errors($request, [
                 'authorization_token' => [
@@ -108,10 +111,11 @@ final readonly class SourceAuthorizationStoreHandler implements RequestHandlerIn
             ]);
         }
 
+        // A failed save returns to the list so the dialog stays open on the form with the error.
         $base = '/organization/' . $organizationDto->slug . '/sources';
 
         return new RedirectResponse(
-            1 === preg_match('#\A' . preg_quote($base, '#') . '/[0-9a-fA-F-]{36}(\?[A-Za-z0-9_=&%.\-]*)?\z#', $form->returnTo)
+            ! $failed && 1 === preg_match('#\A' . preg_quote($base, '#') . '/[0-9a-fA-F-]{36}(\?[A-Za-z0-9_=&%.\-]*)?\z#', $form->returnTo)
                 ? $form->returnTo
                 : $base,
         );

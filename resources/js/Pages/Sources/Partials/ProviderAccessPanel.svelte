@@ -150,11 +150,9 @@
     </label>
   {/if}
 
-  {#if showSaved}
-    <p role="status" class="text-sm ui-title">
-      Access saved for this organization
-    </p>
-  {/if}
+  <p role="status" class="text-sm ui-title empty:hidden">
+    {#if showSaved}Access saved for this organization{/if}
+  </p>
 
   <div class="grid gap-2">
     {#if manageableAuthorizations.length === 0}

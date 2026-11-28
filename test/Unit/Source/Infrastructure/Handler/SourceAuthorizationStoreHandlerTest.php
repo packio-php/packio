@@ -14,6 +14,7 @@ use Packio\Application\Inertia\ValidationRedirectState;
 use Packio\Application\Infrastructure\Http\RequestContextAttributes;
 use Packio\Shared\Api\Dto\OrganizationDto;
 use Packio\Shared\Domain\Organization\ActorContext;
+use Packio\Source\Api\Dto\ProviderAuthorizationDto;
 use Packio\Source\Api\SourceApiFacadeInterface;
 use Packio\Source\Domain\Service\SourceAuthorizationStrategyResolver;
 use Packio\Source\Infrastructure\Handler\SourceAuthorizationStoreHandler;
@@ -92,7 +93,7 @@ final class SourceAuthorizationStoreHandlerTest extends TestCase
         $facade->method('authorizeProviderInContext')->willThrowException($exception);
         $session = new Session([]);
         $inertia = new TestInertia();
-        $request = $this->request('')->withAttribute(SessionMiddleware::SESSION_ATTRIBUTE, $session)->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia);
+        $request = $this->request(self::SOURCE_PATH)->withAttribute(SessionMiddleware::SESSION_ATTRIBUTE, $session)->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, $inertia);
 
         $response = $this->handler($facade)->handle($request);
 
@@ -119,6 +120,7 @@ final class SourceAuthorizationStoreHandlerTest extends TestCase
             ->withAttribute(RequestContextAttributes::CURRENT_ORGANIZATION, new OrganizationDto('org-1', 'my-org', 'My Org'))
             ->withAttribute(RequestContextAttributes::ORGANIZATION_ACTOR_CONTEXT, new ActorContext('org-1', 'user-1', 'owner'))
             ->withAttribute(InertiaMiddleware::INERTIA_ATTRIBUTE, new TestInertia())
+            ->withAttribute(SessionMiddleware::SESSION_ATTRIBUTE, new Session([]))
             ->withAttribute(
                 ProviderAuthorizationRequest::class,
                 new ProviderAuthorizationRequest(provider: 'github', authorizationToken: 't', returnTo: $returnTo),
@@ -139,6 +141,9 @@ final class SourceAuthorizationStoreHandlerTest extends TestCase
 
     private function redirectFor(string $returnTo): string
     {
-        return $this->handler($this->createStub(SourceApiFacadeInterface::class))->handle($this->request($returnTo))->getHeaderLine('Location');
+        $facade = $this->createStub(SourceApiFacadeInterface::class);
+        $facade->method('authorizeProviderInContext')->willReturn(new ProviderAuthorizationDto('auth-1', 'org-1', 'github', 'token', 'active'));
+
+        return $this->handler($facade)->handle($this->request($returnTo))->getHeaderLine('Location');
     }
 }

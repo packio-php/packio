@@ -823,7 +823,22 @@ describe("SourceConnectionModal", () => {
 
       expect(screen.getByText("The token was rejected.")).toBeInTheDocument();
       expect(token).toHaveValue("bad-token");
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(screen.getByRole("status")).toBeEmptyDOMElement();
+    });
+
+    it("keeps the form and error with returnTo", async () => {
+      const view = renderModal({
+        activeModal: "access",
+        providerAuthorizationsAll: [],
+        returnTo: "/organization/acme/sources/source-1",
+      });
+      await view.rerender({
+        accessErrors: { authorization_token: ["Token rejected."] },
+      });
+      expect(screen.getByText("Token rejected.")).toBeInTheDocument();
+      expect(
+        document.querySelector('input[name="authorization_token"]'),
+      ).not.toBeNull();
     });
 
     it("clears and closes the form and confirms after a save", async () => {
@@ -858,12 +873,14 @@ describe("SourceConnectionModal", () => {
         providerAuthorizationsAll: [],
       });
       await view.rerender({ accessSaved: 1 });
-      await screen.findByRole("status");
+      await screen.findByText("Access saved for this organization");
       await fireEvent.change(
         screen.getByRole("combobox", { name: "Provider" }),
         { target: { value: "gitlab_self_hosted" } },
       );
-      expect(screen.queryByRole("status")).toBeNull();
+      expect(
+        screen.queryByText("Access saved for this organization"),
+      ).toBeNull();
     });
 
     it("returns to the wizard after saving when it came from there", async () => {
@@ -886,6 +903,35 @@ describe("SourceConnectionModal", () => {
       expect(screen.getByRole("combobox", { name: "Provider" })).toHaveValue(
         "github",
       );
+    });
+
+    it("stays in access mode after OAuth success from the list", async () => {
+      vi.mocked(apiClient.post).mockResolvedValue({
+        ok: true,
+        status: 200,
+        data: { authorization: { ...authorization, id: "auth-new" } },
+      });
+      const modal = renderModal({ activeModal: "access" });
+
+      window.dispatchEvent(
+        new MessageEvent("message", {
+          origin: window.location.origin,
+          data: {
+            type: "packio:source-oauth",
+            success: true,
+            provider: "github",
+            sourceOAuthAccountId: "oauth-1",
+          },
+        }),
+      );
+
+      await waitFor(() =>
+        expect(modal.onAuthorizationCreated).toHaveBeenCalled(),
+      );
+      expect(
+        screen.getByRole("dialog", { name: "Manage provider access" }),
+      ).toBeInTheDocument();
+      expect(apiClient.get).not.toHaveBeenCalled();
     });
 
     it("stays in access mode after saving when opened from the list", async () => {

@@ -24,24 +24,3 @@ export function authorizationHealthLabel(
         ? "Authorization error"
         : null;
 }
-
-export function authorizationCardClass(
-  authorization: ProviderAuthorizationPayload,
-  selected: boolean,
-): string {
-  const reconnectRequired = isAuthorizationReconnectRequired(authorization);
-
-  if (selected && reconnectRequired) {
-    return "border-(--button-danger-bg) bg-(--danger-soft) shadow-sm";
-  }
-
-  if (selected) {
-    return "border-(--accent) bg-(--surface-muted) shadow-sm";
-  }
-
-  if (reconnectRequired) {
-    return "border-(--button-danger-bg) bg-(--danger-soft)";
-  }
-
-  return "border-(--panel-border) bg-(--surface) hover:border-(--accent) hover:bg-(--surface-muted)";
-}

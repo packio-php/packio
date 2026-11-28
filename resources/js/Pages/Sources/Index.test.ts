@@ -369,6 +369,63 @@ describe("Sources index page", () => {
     expect(window.location.search).toBe("?page=2");
   });
 
+  describe("focus return", () => {
+    const renderPage = () =>
+      render(SourcesIndex, {
+        props: {
+          organization,
+          providers: [githubProvider],
+          source_stats: { active: 0, archived: 0, total: 0 },
+          can_manage_sources: true,
+        },
+      });
+
+    it.each([
+      ["Add source", "Add source"],
+      ["Manage provider access", "Manage provider access"],
+    ])("returns focus to %s after Cancel/Escape", async (name) => {
+      renderPage();
+      const opener = screen.getAllByRole("button", { name })[0];
+      opener.focus();
+      await fireEvent.click(opener);
+      const dialog = await screen.findByRole("dialog", { name });
+      await waitFor(() => expect(dialog).toHaveFocus());
+
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    it("returns focus via the close button", async () => {
+      renderPage();
+      const opener = screen.getAllByRole("button", { name: "Add source" })[0];
+      opener.focus();
+      await fireEvent.click(opener);
+      const dialog = await screen.findByRole("dialog", { name: "Add source" });
+      await fireEvent.click(
+        within(dialog).getAllByRole("button", { name: /close|cancel/i })[0],
+      );
+      await waitFor(() => expect(opener).toHaveFocus());
+    });
+
+    it("falls back to the header button when opened by manage_access", async () => {
+      window.history.replaceState(
+        {},
+        "",
+        "/organization/acme/sources?manage_access=1",
+      );
+      renderPage();
+      const dialog = await screen.findByRole("dialog", {
+        name: "Manage provider access",
+      });
+      await fireEvent.keyDown(dialog, { key: "Escape" });
+      await waitFor(() =>
+        expect(
+          screen.getByRole("button", { name: "Manage provider access" }),
+        ).toHaveFocus(),
+      );
+    });
+  });
+
   it("submits source search with page reset", async () => {
     render(SourcesIndex, {
       props: {

@@ -20,6 +20,38 @@
   } from "@/types/pages";
   import type { OrganizationSummary } from "@/types/organization";
 
+  let dialog: HTMLElement | undefined = $state();
+
+  // Keeps Tab inside the dialog: the page behind it is not reachable while it is open.
+  function trapTab(event: KeyboardEvent): void {
+    const focusable = [
+      ...(dialog?.querySelectorAll<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      ) ?? []),
+    ];
+    const first = focusable[0];
+    const last = focusable.at(-1);
+    if (!first || !last) {
+      return;
+    }
+
+    const active = document.activeElement;
+    const leaving =
+      !dialog?.contains(active) || active === (event.shiftKey ? first : last);
+    if (leaving) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    }
+  }
+
+  function handleDialogKeydown(event: KeyboardEvent): void {
+    if (event.key === "Escape") {
+      onClose();
+    } else if (event.key === "Tab") {
+      trapTab(event);
+    }
+  }
+
   function handleClose(): void {
     hasClickedLoad = false;
     onClose();
@@ -250,6 +282,7 @@
   // Restore state from sessionStorage if available
   onMount(() => {
     window.addEventListener("message", handleSourceOAuthMessage);
+    dialog?.focus();
 
     const savedModalState = sessionStorage.getItem("sources_modal_state");
     const connectSuccess = sessionStorage.getItem("sources_connect_success");
@@ -758,8 +791,9 @@
 >
   <div class="container mx-auto min-h-full px-4 py-6 md:py-10">
     <div
+      bind:this={dialog}
       onclick={(event) => event.stopPropagation()}
-      onkeydown={(event) => event.key === "Escape" && onClose()}
+      onkeydown={handleDialogKeydown}
       role="dialog"
       aria-modal="true"
       aria-label={activeModal === "connect"

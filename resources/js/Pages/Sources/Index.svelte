@@ -1,6 +1,6 @@
 <script lang="ts">
   import { usePage } from "@inertiajs/svelte";
-  import { onDestroy, onMount } from "svelte";
+  import { onDestroy, onMount, tick } from "svelte";
   import { router } from "@inertiajs/svelte";
   import AppShell from "@/Layouts/AppShell.svelte";
   import Button from "@/Components/ui/Button.svelte";
@@ -218,12 +218,37 @@
     storeListViewMode(listViewStorageKey, mode);
   }
 
+  // Element that opened a dialog; focus returns to it on close.
+  let modalOpener: Element | null = null;
+  let deleteOpener: Element | null = null;
+
   function openConnectModal(): void {
+    modalOpener = document.activeElement;
     activeModal = "connect";
   }
 
   function openAccessModal(): void {
+    modalOpener = document.activeElement;
     activeModal = "access";
+  }
+
+  // Real close (button, Escape, backdrop). Dialogs opened without a click fall back to the header button.
+  async function dismissModal(): Promise<void> {
+    if (!activeModal) {
+      return; // Escape bubbles through two handlers
+    }
+    const fallbackId =
+      activeModal === "access"
+        ? "sources-manage-access-button"
+        : "sources-add-source-button";
+    closeModal();
+    await tick();
+    const target =
+      modalOpener instanceof HTMLElement && modalOpener.isConnected
+        ? modalOpener
+        : document.getElementById(fallbackId);
+    modalOpener = null;
+    target?.focus();
   }
 
   function closeModal(clearSavedState = true): void {
@@ -282,6 +307,7 @@
   async function openDeleteModal(
     authorization: ProviderAuthorizationPayload,
   ): Promise<void> {
+    deleteOpener = document.activeElement;
     deleteModal = { authorization, check: null };
 
     const org = organization?.slug ?? "";
@@ -304,8 +330,13 @@
     }
   }
 
-  function closeDeleteModal(): void {
+  async function closeDeleteModal(): Promise<void> {
     deleteModal = { authorization: null, check: null };
+    await tick();
+    if (deleteOpener instanceof HTMLElement && deleteOpener.isConnected) {
+      deleteOpener.focus();
+    }
+    deleteOpener = null;
   }
 
   onDestroy(() => {
@@ -464,6 +495,7 @@
       {#if resolvedCanManage}
         <div class="flex flex-wrap gap-3">
           <Button
+            id="sources-add-source-button"
             className="rounded-full px-5"
             type="button"
             variant="primary"
@@ -473,6 +505,7 @@
             Add source
           </Button>
           <Button
+            id="sources-manage-access-button"
             className="rounded-full px-5"
             type="button"
             variant="secondary"
@@ -596,7 +629,7 @@
       {resolvedBranding}
       {isSubmitting}
       {user_oauth_accounts}
-      onClose={closeModal}
+      onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}
       onDeleteAuthorization={openDeleteModal}

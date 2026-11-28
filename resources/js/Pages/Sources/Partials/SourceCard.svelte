@@ -46,7 +46,7 @@
   <div class="mt-auto flex flex-wrap items-center gap-2 pt-3 text-xs ui-muted">
     <Badge className="whitespace-nowrap" tone={sync.tone}>{sync.label}</Badge>
     {#if sync.at}
-      <span class="whitespace-nowrap">{formatDate(sync.at)}</span>
+      <span class="whitespace-nowrap text-[11px]">{formatDate(sync.at)}</span>
     {/if}
   </div>
 </Card>

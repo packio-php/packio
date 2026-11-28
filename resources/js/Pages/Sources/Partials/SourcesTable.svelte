@@ -58,14 +58,14 @@
           </Badge>
         </td>
         <td class="px-4 py-3">
-          <Badge className="whitespace-nowrap" tone={sync.tone}>
-            {sync.label}
-          </Badge>
-          {#if sync.at}
-            <p class="mt-1 whitespace-nowrap text-xs ui-muted">
-              {formatDate(sync.at)}
-            </p>
-          {/if}
+          <div class="flex items-center gap-2 whitespace-nowrap">
+            <Badge className="whitespace-nowrap" tone={sync.tone}>
+              {sync.label}
+            </Badge>
+            {#if sync.at}
+              <span class="text-[11px] ui-muted">{formatDate(sync.at)}</span>
+            {/if}
+          </div>
         </td>
       </tr>
     {/each}

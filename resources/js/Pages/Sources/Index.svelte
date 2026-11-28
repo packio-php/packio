@@ -13,7 +13,6 @@
   import SourcesFilterToolbar from "./Partials/SourcesFilterToolbar.svelte";
   import SourceConnectionModal from "./Partials/SourceConnectionModal.svelte";
   import ProviderAuthorizationDeleteModal from "./Partials/ProviderAuthorizationDeleteModal.svelte";
-  import { mergeBranding } from "@/lib/branding";
   import { apiClient, Endpoints } from "@/lib/api";
   import { cleanQuery, queryString, type QueryValue } from "@/lib/queryFilters";
   import {
@@ -37,6 +36,7 @@
     SourcesIndexStatsPayload,
     SourcesIndexPageProps,
     UserOAuthAccountPayload,
+    ValidationErrors,
   } from "@/types/pages";
 
   const defaultPagination: PaginationPayload<SourceListItem> = {
@@ -91,7 +91,6 @@
     filters?: SourceIndexFilters;
     source_urls?: string[];
     pagination?: PaginationPayload<SourceListItem>;
-    branding?: SourcesIndexPageProps["branding"];
     organization?: OrganizationSummary | null;
     initial_list_view_mode?: ListViewMode;
     can_manage_sources?: boolean;
@@ -110,7 +109,6 @@
     filters = defaultSourceFilters,
     source_urls = [],
     pagination = defaultPagination,
-    branding = {},
     organization = null,
     initial_list_view_mode = "grid",
     can_manage_sources = false,
@@ -122,7 +120,6 @@
   let listViewMode: ListViewMode = $state("grid");
   let listViewModeInitialized = $state(false);
 
-  let resolvedBranding = $derived(mergeBranding(branding ?? {}));
   type ModalView = "access" | "connect" | null;
 
   let activeModal: ModalView = $state(null);
@@ -131,6 +128,8 @@
   let initialProviderInstanceId = $state("");
   let returnTo = $state("");
   let isSubmitting = $state(false);
+  let accessErrors = $state<ValidationErrors>({});
+  let accessSaved = $state(0);
   let connectResult = $state<
     PackioFlashPayload["source_connect_result"] | null
   >(null);
@@ -426,6 +425,9 @@
 
     isSubmitting = true;
     connectResult = null;
+    if (url.includes("/authorizations")) {
+      accessErrors = {};
+    }
 
     // Convert FormData to object, properly handling arrays
     const formData = new FormData(form);
@@ -462,7 +464,7 @@
         isSubmitting = false;
         const url = form.action;
         if (url.includes("/authorizations")) {
-          form.reset();
+          accessSaved += 1;
         } else if (url.includes("/sources/connect")) {
           const result = page.flash?.source_connect_result;
           if (result && result.failed.length > 0) {
@@ -475,8 +477,11 @@
           setTimeout(() => (activeModal = "connect"), 0);
         }
       },
-      onError: () => {
+      onError: (errors) => {
         isSubmitting = false;
+        if (form.action.includes("/authorizations")) {
+          accessErrors = errors as unknown as ValidationErrors;
+        }
         if (
           form.action.includes("/sources/connect") &&
           typeof window !== "undefined"
@@ -671,13 +676,14 @@
       sourceProviderInstances={source_provider_instances}
       {existingSourceUrls}
       {organization}
-      {resolvedBranding}
       {isSubmitting}
       {user_oauth_accounts}
       {initialProvider}
       {initialProviderInstanceId}
       {returnTo}
       {connectResult}
+      {accessErrors}
+      {accessSaved}
       onClose={dismissModal}
       onConnectSubmit={submit}
       onAccessSubmit={submit}

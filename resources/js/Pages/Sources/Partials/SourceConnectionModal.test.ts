@@ -36,6 +36,17 @@ const githubProvider: SourceProviderPayload = {
   capabilities: { supports_synchronization: true },
 };
 
+const genericGitProvider: SourceProviderPayload = {
+  key: "generic_git",
+  name: "Generic Git",
+  description: "Any Git repository",
+  oauth_available: false,
+  oauth_enabled: false,
+  oauth_provider: null,
+  supports_self_hosted_instances: false,
+  capabilities: { supports_synchronization: true },
+};
+
 const disabledProvider: SourceProviderPayload = {
   key: "coming_soon",
   name: "Coming Soon",
@@ -106,7 +117,6 @@ type ModalTestProps = {
   sourceProviderInstances: SourceProviderInstancePayload[];
   existingSourceUrls: Set<string>;
   organization: typeof organization | null;
-  resolvedBranding: { name: string };
   isSubmitting: boolean;
   user_oauth_accounts: UserOAuthAccountPayload[];
   initialProvider: string;
@@ -117,6 +127,8 @@ type ModalTestProps = {
     skipped: string[];
     failed: { repository: string; message: string }[];
   } | null;
+  accessErrors?: Record<string, string[]>;
+  accessSaved?: number;
   onClose: () => void;
   onConnectSubmit: (
     event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -144,7 +156,6 @@ function renderModal(overrides: Partial<ModalTestProps> = {}) {
     sourceProviderInstances: [],
     existingSourceUrls: new Set<string>(),
     organization,
-    resolvedBranding: { name: "Packio" },
     isSubmitting: false,
     user_oauth_accounts: [],
     initialProvider: "",
@@ -159,9 +170,10 @@ function renderModal(overrides: Partial<ModalTestProps> = {}) {
     ...overrides,
   };
 
-  render(SourceConnectionModal, { props });
+  const { rerender } = render(SourceConnectionModal, { props });
 
   return {
+    rerender: (next: Partial<ModalTestProps>) => rerender(next),
     props,
     onClose,
     onConnectSubmit,
@@ -510,7 +522,12 @@ describe("SourceConnectionModal", () => {
       status: 200,
       data: { resources: [] },
     });
-    const modal = renderModal({ activeModal: "access" });
+    const modal = renderModal({
+      providerAuthorizationsAll: [],
+    });
+    await fireEvent.click(
+      screen.getByRole("button", { name: "Configure provider access" }),
+    );
 
     await fireEvent.click(
       screen.getByRole("button", { name: /Connect with GitHub/ }),
@@ -650,26 +667,15 @@ describe("SourceConnectionModal", () => {
         initialProvider: "missing",
       });
 
-      expect(
-        screen.getByRole("button", { name: /Connect with GitHub/ }),
-      ).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Provider" })).toHaveValue(
+        "github",
+      );
     });
 
-    it("shows Done and the note only with returnTo, and Done closes", async () => {
-      const without = renderModal({ activeModal: "access" });
-      expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
-      expect(
-        screen.getByRole("button", { name: "Continue to add source" }),
-      ).toBeInTheDocument();
-      cleanup();
-
+    it("shows Done without Continue to add source, and Done closes", async () => {
       const modal = renderModal({ activeModal: "access", returnTo });
-      expect(
-        screen.getByText(/Access is saved for the whole organization/),
-      ).toBeInTheDocument();
       await fireEvent.click(screen.getByRole("button", { name: "Done" }));
       expect(modal.onClose).toHaveBeenCalledOnce();
-      expect(without.onClose).not.toHaveBeenCalled();
       expect(
         screen.queryByRole("button", { name: "Continue to add source" }),
       ).toBeNull();
@@ -755,6 +761,144 @@ describe("SourceConnectionModal", () => {
     });
 
     expect(screen.getByText("Forgejo instance URL")).toBeInTheDocument();
+  });
+
+  describe("manage provider access", () => {
+    it("lists saved access with the form collapsed, and opens the form on demand", async () => {
+      renderModal({ activeModal: "access" });
+
+      expect(screen.getByText("octocat")).toBeInTheDocument();
+      expect(screen.getByText("gho_****")).toBeInTheDocument();
+      expect(
+        document.querySelector('input[name="authorization_token"]'),
+      ).toBeNull();
+
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Add provider access" }),
+      );
+      expect(
+        document.querySelector('input[name="authorization_token"]'),
+      ).not.toBeNull();
+    });
+
+    it("shows the empty line and an open form without saved access", () => {
+      renderModal({ activeModal: "access", providerAuthorizationsAll: [] });
+
+      expect(screen.getByText(/No saved GitHub access yet/)).toBeVisible();
+      expect(
+        document.querySelector('input[name="authorization_token"]'),
+      ).toHaveAttribute("type", "password");
+    });
+
+    it("keeps the instance URL field and the Generic Git auth scheme", () => {
+      renderModal({
+        activeModal: "access",
+        providers: [{ ...forgejoProvider, name: "Forgejo Self-Hosted" }],
+        providerAuthorizationsAll: [],
+      });
+      expect(screen.getByText("Forgejo instance URL")).toBeInTheDocument();
+      cleanup();
+
+      renderModal({
+        activeModal: "access",
+        providers: [genericGitProvider],
+        providerAuthorizationsAll: [],
+      });
+      expect(screen.getByLabelText("Auth scheme")).toBeInTheDocument();
+    });
+
+    it("shows the token error in the form and keeps the value", async () => {
+      const view = renderModal({
+        activeModal: "access",
+        providerAuthorizationsAll: [],
+        accessErrors: {},
+      });
+      const token = document.querySelector<HTMLInputElement>(
+        'input[name="authorization_token"]',
+      )!;
+      await fireEvent.input(token, { target: { value: "bad-token" } });
+      await view.rerender({
+        accessErrors: { authorization_token: ["The token was rejected."] },
+      });
+
+      expect(screen.getByText("The token was rejected.")).toBeInTheDocument();
+      expect(token).toHaveValue("bad-token");
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("clears and closes the form and confirms after a save", async () => {
+      const view = renderModal({
+        activeModal: "access",
+        providerAuthorizationsAll: [],
+      });
+      const token = document.querySelector<HTMLInputElement>(
+        'input[name="authorization_token"]',
+      )!;
+      await fireEvent.input(token, { target: { value: "good-token" } });
+      await view.rerender({
+        providerAuthorizationsAll: [authorization],
+        accessSaved: 1,
+      });
+
+      await waitFor(() =>
+        expect(screen.getByRole("status")).toHaveTextContent(
+          "Access saved for this organization",
+        ),
+      );
+      expect(
+        document.querySelector('input[name="authorization_token"]'),
+      ).toBeNull();
+      expect(screen.getByText("octocat")).toBeInTheDocument();
+    });
+
+    it("hides a stale confirmation when the provider changes", async () => {
+      const view = renderModal({
+        activeModal: "access",
+        providers: [githubProvider, gitlabProvider],
+        providerAuthorizationsAll: [],
+      });
+      await view.rerender({ accessSaved: 1 });
+      await screen.findByRole("status");
+      await fireEvent.change(
+        screen.getByRole("combobox", { name: "Provider" }),
+        { target: { value: "gitlab_self_hosted" } },
+      );
+      expect(screen.queryByRole("status")).toBeNull();
+    });
+
+    it("returns to the wizard after saving when it came from there", async () => {
+      const view = renderModal({ providerAuthorizationsAll: [] });
+      await fireEvent.click(
+        screen.getByRole("button", { name: "Configure provider access" }),
+      );
+      expect(
+        screen.getByRole("button", { name: "Continue to add source" }),
+      ).toBeInTheDocument();
+
+      await view.rerender({
+        providerAuthorizationsAll: [authorization],
+        accessSaved: 1,
+      });
+
+      expect(
+        await screen.findByRole("dialog", { name: "Add source" }),
+      ).toBeInTheDocument();
+      expect(screen.getByRole("combobox", { name: "Provider" })).toHaveValue(
+        "github",
+      );
+    });
+
+    it("stays in access mode after saving when opened from the list", async () => {
+      const view = renderModal({ activeModal: "access" });
+      await view.rerender({ accessSaved: 1 });
+
+      expect(
+        screen.getByRole("dialog", { name: "Manage provider access" }),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByRole("button", { name: "Continue to add source" }),
+      ).toBeNull();
+    });
   });
 
   describe("repository loading", () => {

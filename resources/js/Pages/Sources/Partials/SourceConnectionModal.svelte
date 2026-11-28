@@ -14,6 +14,7 @@
     ProviderAuthorizationPayload,
     ProviderResourcePayload,
     UserOAuthAccountPayload,
+    ValidationErrors,
   } from "@/types/pages";
   import type { OrganizationSummary } from "@/types/organization";
   import type { PackioFlashPayload } from "@/types/flash";
@@ -70,13 +71,15 @@
     sourceProviderInstances?: SourceProviderInstancePayload[];
     existingSourceUrls: Set<string>;
     organization: OrganizationSummary | null;
-    resolvedBranding: { name: string };
     isSubmitting: boolean;
     user_oauth_accounts?: UserOAuthAccountPayload[];
     initialProvider?: string;
     initialProviderInstanceId?: string;
     returnTo?: string;
     connectResult?: PackioFlashPayload["source_connect_result"] | null;
+    // Access-form feedback from the page: validation errors of the last failed save, and a counter bumped on each success.
+    accessErrors?: ValidationErrors;
+    accessSaved?: number;
     onClose: () => void;
     onConnectSubmit: (
       event: SubmitEvent & { currentTarget: EventTarget & HTMLFormElement },
@@ -106,6 +109,8 @@
     initialProviderInstanceId = "",
     returnTo = "",
     connectResult = null,
+    accessErrors = {},
+    accessSaved = 0,
     onClose,
     onConnectSubmit,
     onAccessSubmit,
@@ -130,6 +135,20 @@
   // Where access mode was entered from; the connect wizard resumes after a successful authorization.
   let accessOrigin: "connect" | null = $state(null);
   let result = $state<PackioFlashPayload["source_connect_result"] | null>(null);
+  // Bumped when OAuth saves access while staying in access mode.
+  let oauthSaved = $state(0);
+  let lastAccessSaved = untrack(() => accessSaved);
+
+  // A saved token returns to the wizard it came from.
+  $effect(() => {
+    if (accessSaved !== lastAccessSaved) {
+      lastAccessSaved = accessSaved;
+      if (accessOrigin === "connect" && !returnTo) {
+        accessOrigin = null;
+        activeModal = "connect";
+      }
+    }
+  });
 
   // After a partial connect only the failed repositories stay selected.
   $effect(() => {
@@ -356,6 +375,11 @@
         router.visit(returnTo);
         return;
       }
+      if (activeModal === "access") {
+        oauthSaved += 1;
+        onAuthorizationCreated(authorization);
+        return;
+      }
       selectedAuthorizationId = authorization.id;
       sessionStorage.setItem(
         "sources_modal_state",
@@ -438,8 +462,9 @@
       return;
     }
 
-    // Opened from a source page: stay in access mode; the authorization step returns there.
-    if (!(returnTo && activeModal === "access")) {
+    // Access mode stays put unless it was opened from the wizard, which resumes.
+    if (activeModal === "access" && accessOrigin === "connect" && !returnTo) {
+      accessOrigin = null;
       activeModal = "connect";
     }
 
@@ -764,7 +789,8 @@
                 {manageableAuthorizations}
                 {user_oauth_accounts}
                 {returnTo}
-                {accessOrigin}
+                errors={accessErrors}
+                saved={accessSaved + oauthSaved}
                 {providerName}
                 {withOrganization}
                 onSelectProviderInstance={selectProviderInstance}
@@ -772,11 +798,6 @@
                 {onAccessSubmit}
                 onOAuthRedirect={redirectToSourceOAuth}
                 onOAuthConnect={connectOAuth}
-                onOpenConnect={() => {
-                  accessOrigin = null;
-                  activeModal = "connect";
-                }}
-                onClose={handleClose}
               />
             {:else}
               <AddSourceForm
@@ -820,7 +841,33 @@
           {/key}
         </div>
 
-        {#if activeModal === "connect"}
+        {#if activeModal === "access"}
+          <div
+            class="flex flex-wrap items-center justify-end gap-3 border-t border-(--panel-border) px-5 py-4 sm:px-6"
+          >
+            {#if accessOrigin === "connect"}
+              <Button
+                className="rounded-full px-5"
+                type="button"
+                variant="secondary"
+                onclick={() => {
+                  accessOrigin = null;
+                  activeModal = "connect";
+                }}
+              >
+                Continue to add source
+              </Button>
+            {/if}
+            <Button
+              className="rounded-full px-5"
+              type="button"
+              variant="primary"
+              onclick={handleClose}
+            >
+              Done
+            </Button>
+          </div>
+        {:else}
           <div
             class="flex flex-wrap items-center justify-end gap-3 border-t border-(--panel-border) px-5 py-4 sm:px-6"
           >

@@ -434,7 +434,6 @@ describe("Sources index page", () => {
       const dialog = await screen.findByRole("dialog", {
         name: "Manage provider access",
       });
-      expect(within(dialog).queryByRole("button", { name: "Done" })).toBeNull();
       await fireEvent.keyDown(dialog, { key: "Escape" });
       await waitFor(() =>
         expect(

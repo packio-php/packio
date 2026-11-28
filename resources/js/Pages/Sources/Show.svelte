@@ -433,8 +433,8 @@
     </Card>
   </section>
 
-  <section class="grid items-start gap-6 lg:grid-cols-2">
-    <Card className="min-w-0 rounded-[1.75rem] p-6">
+  <section class="grid gap-6 lg:grid-cols-2">
+    <Card className="h-full min-w-0 rounded-[1.75rem] p-6">
       <SectionHeading eyebrow="Source settings" className="mb-4" />
       <div class="mt-4 grid gap-4">
         <InsetCard className="grid gap-2 p-4 text-sm ui-muted">
@@ -583,7 +583,7 @@
       </div>
     </Card>
 
-    <Card className="min-w-0 rounded-[1.75rem] p-6">
+    <Card className="h-full min-w-0 rounded-[1.75rem] p-6">
       <SectionHeading eyebrow="Webhook" className="mb-4" />
       <div class="mt-4 grid gap-4">
         {#if supportsWebhookProcessing}
@@ -771,7 +771,7 @@
             class={tabClass("deliveries")}
             onclick={() => (chosenTab = "deliveries")}
           >
-            Webhook deliveries ({webhook_events.length})
+            Webhook deliveries
           </button>
           <button
             bind:this={tabButtons.audit}

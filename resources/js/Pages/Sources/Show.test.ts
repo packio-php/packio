@@ -614,7 +614,7 @@ describe("Source details page", () => {
 
       expect(screen.getByRole("tablist", { name: "Activity" })).toBeTruthy();
       const deliveries = screen.getByRole("tab", {
-        name: "Webhook deliveries (1)",
+        name: "Webhook deliveries",
       });
       const audit = screen.getByRole("tab", { name: "Audit log" });
       expect(deliveries).toHaveAttribute("aria-selected", "true");

@@ -429,9 +429,7 @@
             </Badge>
           </div>
           {#if source.credentials?.masked_value}
-            <code
-              class="ui-code block overflow-x-auto rounded-xl px-3 py-2 text-xs"
-            >
+            <code class="ui-code block break-all rounded-xl px-3 py-2 text-xs">
               {source.credentials.masked_value}
             </code>
           {/if}
@@ -625,7 +623,9 @@
             {/if}
           </InsetCard>
 
-          <details class="ui-inset rounded-xl border p-4 text-sm ui-muted">
+          <details
+            class="ui-inset min-w-0 rounded-xl border p-4 text-sm ui-muted"
+          >
             <summary class="cursor-pointer font-medium ui-title">
               Connection details
             </summary>
@@ -639,7 +639,7 @@
                   />
                 </div>
                 <code
-                  class="ui-code mt-2 block overflow-x-auto rounded-xl px-3 py-2 text-xs"
+                  class="ui-code mt-2 block break-all rounded-xl px-3 py-2 text-xs"
                 >
                   {source.webhook_url}
                 </code>
@@ -654,7 +654,7 @@
                     />
                   </div>
                   <code
-                    class="ui-code mt-2 block overflow-x-auto rounded-xl px-3 py-2 text-xs"
+                    class="ui-code mt-2 block break-all rounded-xl px-3 py-2 text-xs"
                   >
                     {maskedSecret(source.webhook_secret ?? "")}
                   </code>
